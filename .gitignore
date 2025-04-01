@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv_rascal/
+dist/
+build/
+*.egg-info/
+test_data/
+output/
+.DS_Store
