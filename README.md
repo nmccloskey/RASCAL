@@ -128,9 +128,11 @@ A copy of the poster will be available through Aphasia Access shared resources.
 This repository reflects a clean reinitialization of the development history as of April 2025. Earlier commits were removed to:
 
 1. Respect data privacy for sensitive clinical transcript content, even though all `.cha` files used during development were de-identified
-2. Eliminate unnecessary storage of output, logs, and database files that were not properly excluded in the previous `.gitignore`
+2. Eliminate unnecessary storage of output and test files that were not properly excluded in the previous `.gitignore`
 
 No core functionality or implementation history has been lost, and the full pipeline has been preserved in its final state. All future development will follow a transparent version-controlled workflow.
+
+I will soon include a link to the simulated data used in the testing suite.
 
 ## Acknowledgments
 
