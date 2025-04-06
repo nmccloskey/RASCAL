@@ -1,7 +1,5 @@
 # RASCAL (Resources for Analyzing Speech in Clinical Aphasiology Labs)
 
-## February 2025
-
 RASCAL is a tool designed to facilitate the analysis of speech in clinical aphasiology research. It processes CHAT-formatted (.cha) transcriptions, organizes data into structured tiers, and automates key analytical steps in transcription reliability, CU coding, word counting, and core lexicon analysis.
 
 ---
@@ -50,7 +48,7 @@ RASCAL is a tool designed to facilitate the analysis of speech in clinical aphas
      input_dir: "input"
      output_dir: "output"
      reliability_fraction: 0.2
-     coders: FK,SV,NM
+     coders: XX,YY
      ```
 
 ---
@@ -79,7 +77,7 @@ RASCAL is a tool designed to facilitate the analysis of speech in clinical aphas
 Each function is executed via:
 
 ```bash
-python src/main.py <command>
+python src/rascal/main.py <command>
 ```
 
 | Command | Function                                     | Input                                                     | Output                                                                       |
@@ -105,15 +103,30 @@ python src/main.py <command>
 - RASCAL searches values using exact spelling and capitalization.
 - No spaces allowed in `tiers.txt` (use ` ` for new lines only).
 
-<!-- ---
+## Status and Contact
+
+This tool is released as a public **beta** version and is still under active development. While the core functionality is stable and has been used in research contexts, there are aspects of robustness, error handling, and user-friendliness which still want refinement.
+
+I warmly welcome feedback, feature suggestions, or bug reports. Feel free to reach out by:
+
+- Submitting an issue through the GitHub Issues tab
+
+- Emailing me directly at: nsm [at] temple.edu
+
+Thanks for your interest and collaboration!
 
 ## Citation
 
 If using RASCAL in your research, please cite:
 
-> XXX (Year). Title of the related study. Journal/Conference.
+> McCloskey, N., et al. (2025, April). *The RASCAL pipeline: User-friendly and time-saving computational resources for coding and analyzing language samples*. Poster presented at the Aphasia Access Leadership Summit, Pittsburgh, PA.
 
---- -->
+A copy of the poster will be available through Aphasia Access shared resources.
 
-<!-- For further details, contact: **[Your Lab Contact Information]**
- -->
+## Acknowledgments
+
+RASCAL builds on and integrates functionality from two excellent open-source tools which I highly recommend to researchers and clinicians working with language data:
+
+- [**batchalign2**](https://github.com/TalkBank/batchalign2) – Developed by the TalkBank team, batchalign provides a robust backend for automatic speech recognition. RASCAL is designed to function downstream of this system, leveraging its debulletized `.cha` files as input. This integration allows researchers to significantly expedite batch transcription, which without an ASR springboard might bottleneck discourse analysis.
+
+- [**coreLexicon**](https://github.com/rbcavanaugh/coreLexicon) – A web-based interface for Core Lexicon analysis developed by Rob Cavanaugh. RASCAL interfaces with this tool via Selenium to enable batch submission of samples to an otherwise single-sample system. The underlying functionality and analysis methodology are essential to the Core Lexicon scoring components in RASCAL.
