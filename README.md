@@ -123,6 +123,15 @@ If using RASCAL in your research, please cite:
 
 A copy of the poster will be available through Aphasia Access shared resources.
 
+## Repository Notes
+
+This repository reflects a clean reinitialization of the development history as of April 2025. Earlier commits were removed to:
+
+1. Respect data privacy for sensitive clinical transcript content, even though all `.cha` files used during development were de-identified
+2. Eliminate unnecessary storage of output, logs, and database files that were not properly excluded in the previous `.gitignore`
+
+No core functionality or implementation history has been lost, and the full pipeline has been preserved in its final state. All future development will follow a transparent version-controlled workflow.
+
 ## Acknowledgments
 
 RASCAL builds on and integrates functionality from two excellent open-source tools which I highly recommend to researchers and clinicians working with language data:
