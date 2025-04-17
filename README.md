@@ -56,13 +56,15 @@ RASCAL is a tool designed to facilitate the analysis of speech in clinical aphas
    - When running the pipeline, input/output folders are expected as relative paths (or expanded ~) from the project root.
    - These can be overridden via config.yaml.
 
+   ```plaintext
    rascal/
    ├── src/
    │   └── rascal/
    ├── data/
-   │   ├── input/       # Place your .cha files, tiers.txt, and pre-existing Excel inputs here
-   │   └── output/      # Outputs will be saved here
+   │   ├── input/         # Place your .cha files, tiers.txt, and Excel inputs here
+   │   └── output/        # Outputs will be saved here
    └── config.yaml
+   ```
 
 ---
 
@@ -99,18 +101,19 @@ For example, to run the CU analysis step:
 python src/rascal/main.py f
 ```
 
-Command | Function | Input | Output
-a | select_transcription_reliability_samples() | .cha files | _TranscriptionReliabilitySamples.xlsx, _Reliability.cha files
-b | prepare_utterance_dfs() | .cha files | _Utterances.xlsx
-c | make_CU_coding_files() | b output | _CU_Coding.xlsx, _CUReliabilityCoding.xlsx
-d | analyze_transcription_reliability() | .cha file pairs | _TranscriptionReliabilityAnalysis.xlsx, .txt alignment files
-e | analyze_CU_reliability() | Manually completed c output | _CUReliabilityCoding_BySample.xlsx, _CUReliabilityCodingReport.txt
-f | analyze_CU_coding() | Manually completed c output | _CUCoding_BySample.xlsx, _CUCoding_ByUtterance.xlsx
-g | make_word_count_files() | f output | _WordCounting.xlsx, _WordCountingReliability.xlsx
-h | make_timesheets() | b output | _SpeakingTimes.xlsx
-i | analyze_word_count_reliability() | Manually completed g output | _WordCountingReliabilityResults.xlsx, _WordCountingReliabilityReport.txt
-j | unblind_CUs() | b output, manually completed c, h & i outputs,(optional) ParticipantData.xlsx | Blind/unblind sample data files
-k | run_corelex() | j output | CoreLexDataYYMMDD.xlsx
+| Command | Function                                     | Input                                                                                      | Output                                                                                   |
+| ------- | -------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| a       | select_transcription_reliability_samples()   | .cha files                                                                                 | _TranscriptionReliabilitySamples.xlsx, _Reliability.cha files                           |
+| b       | prepare_utterance_dfs()                      | .cha files                                                                                 | _Utterances.xlsx                                                                         |
+| c       | make_CU_coding_files()                       | b output                                                                                   | _CU_Coding.xlsx, _CUReliabilityCoding.xlsx                                               |
+| d       | analyze_transcription_reliability()          | .cha file pairs                                                                            | _TranscriptionReliabilityAnalysis.xlsx, .txt alignment files                             |
+| e       | analyze_CU_reliability()                     | Manually completed c output                                                                | _CUReliabilityCoding_BySample.xlsx, _CUReliabilityCodingReport.txt                      |
+| f       | analyze_CU_coding()                          | Manually completed c output                                                                | _CUCoding_BySample.xlsx, _CUCoding_ByUtterance.xlsx                                     |
+| g       | make_word_count_files()                      | f output                                                                                   | _WordCounting.xlsx, _WordCountingReliability.xlsx                                       |
+| h       | make_timesheets()                            | b output                                                                                   | _SpeakingTimes.xlsx                                                                      |
+| i       | analyze_word_count_reliability()             | Manually completed g output                                                                | _WordCountingReliabilityResults.xlsx, _WordCountingReliabilityReport.txt                |
+| j       | unblind_CUs()                                | b output, manually completed c, h & i outputs, (optional) ParticipantData.xlsx             | Blind/unblind sample data files                                                          |
+| k       | run_corelex()                                | j output                                                                                   | CoreLexDataYYMMDD.xlsx                                                                   |
 
 ---
 
