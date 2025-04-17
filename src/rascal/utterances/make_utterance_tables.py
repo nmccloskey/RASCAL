@@ -85,5 +85,3 @@ def prepare_utterance_dfs(tiers, chats, output_dir, test=False):
         
     if test:
         return results
-    else:
-        return utterance_dir

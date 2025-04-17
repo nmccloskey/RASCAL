@@ -64,7 +64,7 @@ def make_word_count_files(tiers, frac, input_dir, output_dir, test=False):
     Parameters:
     - tiers (dict): Dictionary of tier objects used for partitioning.
     - frac (float): Fraction of samples to be selected for reliability.
-    - CU_coding_dir (str): Directory containing the CU coding Excel files.
+    - input_dir (str): Directory possibly containing the CU coding Excel files.
     - output_dir (str): Directory where the CU coding files should be saved.
 
     Returns:
@@ -82,7 +82,8 @@ def make_word_count_files(tiers, frac, input_dir, output_dir, test=False):
     results = []
 
     # Convert utterance-level CU coding files to word counting files.
-    for file in tqdm(Path(output_dir).rglob("*_CUCoding_ByUtterance.xlsx"), desc="Generating word count coding files"):
+    cu_utterance_files = list(Path(input_dir).rglob("*_CUCoding_ByUtterance.xlsx")) + list(Path(output_dir).rglob("*_CUCoding_ByUtterance.xlsx"))
+    for file in tqdm(cu_utterance_files, desc="Generating word count coding files"):
         logging.info(f"Processing file: {file}")
         
         # Extract partition tier info from file name.

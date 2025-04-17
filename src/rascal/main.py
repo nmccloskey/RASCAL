@@ -7,13 +7,6 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-BASE_DIR = os.path.expanduser("~/.rascal/")
-INPUT_DIR = os.path.join(BASE_DIR, "input")
-OUTPUT_DIR = os.path.join(BASE_DIR, "output")
-
-os.makedirs(INPUT_DIR, exist_ok=True)
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
 def load_config(config_file):
     """Load configuration settings from a YAML file."""
     with open(config_file, 'r') as file:
@@ -40,9 +33,9 @@ def run_prepare_utterance_dfs(tiers, chats, output_dir):
     from utterances.make_utterance_tables import prepare_utterance_dfs
     return prepare_utterance_dfs(tiers=tiers, chats=chats, output_dir=output_dir, test=False)
 
-def run_make_CU_coding_files(tiers, frac, coders, utterance_dir, output_dir):
+def run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir):
     from utterances.make_CU_coding_files import make_CU_coding_files
-    make_CU_coding_files(tiers=tiers, frac=frac, coders=coders, utterance_dir=utterance_dir, output_dir=output_dir)
+    make_CU_coding_files(tiers=tiers, frac=frac, coders=coders, input_dir=input_dir, output_dir=output_dir)
 
 def run_analyze_transcription_reliability(tiers, input_dir, output_dir):
     from transcription.transcription_reliability_analysis import analyze_transcription_reliability
@@ -72,61 +65,62 @@ def run_unblind_CUs(tiers, input_dir, output_dir):
     from samples.unblind_CUs import unblind_CUs
     unblind_CUs(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
 
-def run_run_corelex(output_dir):
+def run_run_corelex(input_dir, output_dir):
     from samples.corelex import run_corelex
-    run_corelex(output_dir=output_dir)
+    run_corelex(input_dir=input_dir, output_dir=output_dir)
 
 def main(args):
     """Main function to process input arguments and execute appropriate steps."""
     config = load_config('config.yaml')
-    input_dir = config.get('input_dir', 'input')
-    output_dir = config.get('output_dir', 'output')
+    input_dir = config.get('input_dir', 'data/input')
+    output_dir = config.get('output_dir', 'data/output')
     frac = config.get('reliability_fraction', 0.2)
     coders = config.get('coders', '').split(',')
 
-    # Temporary for development
-    base_dir = os.path.dirname(__file__)
-    input_dir = os.path.join(base_dir, '..', '..', input_dir)
-    output_dir = os.path.join(base_dir, '..', '..', output_dir)
+    input_dir = os.path.abspath(os.path.expanduser(input_dir))
+    output_dir = os.path.abspath(os.path.expanduser(output_dir))
+
+    os.makedirs(input_dir, exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
 
     tiers = run_read_tiers(input_dir)
     step_mapping = {
-        '1': 'abcd',
-        '3': 'efghi',
-        '5': 'jkl'
+        '1': 'abc',
+        '3': 'defgh',
+        '5': 'ijk'
     }
 
     steps_to_run = ''.join(step_mapping.get(s, s) for s in args.step)
 
     # Step 1.
-    if 'a' in steps_to_run:
+    if 'a' in steps_to_run or 'b' in steps_to_run:
         chats = run_read_cha_files(input_dir)
-    if 'b' in steps_to_run:
+    if 'a' in steps_to_run:
         run_select_transcription_reliability_samples(tiers, chats, frac, output_dir)
+    if 'b' in steps_to_run:
+        run_prepare_utterance_dfs(tiers, chats, output_dir)
     if 'c' in steps_to_run:
-        utterance_dir = run_prepare_utterance_dfs(tiers, chats, output_dir)
-    if 'd' in steps_to_run and os.path.exists(utterance_dir):
-        run_make_CU_coding_files(tiers, frac, coders, utterance_dir, output_dir)
+        run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir)
     
     # Step 3.
-    if 'e' in steps_to_run:
+    if 'd' in steps_to_run:
         run_analyze_transcription_reliability(tiers, input_dir, output_dir)
-    if 'f' in steps_to_run:
+    if 'e' in steps_to_run:
         run_analyze_CU_reliability(tiers, input_dir, output_dir)
-    if 'g' in steps_to_run:
+    if 'f' in steps_to_run:
         run_analyze_CU_coding(tiers, input_dir, output_dir)
-    if 'h' in steps_to_run:
+    if 'g' in steps_to_run:
         run_make_word_count_files(tiers, frac, coders, output_dir)
-    if 'i' in steps_to_run:
+    if 'h' in steps_to_run:
         run_make_timesheets(tiers, input_dir, output_dir)
     
     # Step 5.
-    if 'j' in steps_to_run:
+    if 'i' in steps_to_run:
         run_analyze_word_count_reliability(tiers, input_dir, output_dir)
-    if 'k' in steps_to_run:
+    if 'j' in steps_to_run:
         run_unblind_CUs(tiers, input_dir, output_dir)
-    if 'l' in steps_to_run:
-        run_run_corelex(output_dir)
+    if 'k' in steps_to_run:
+        run_run_corelex(input_dir, output_dir)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process the step argument for main script.")

@@ -27,7 +27,7 @@ RASCAL is a tool designed to facilitate the analysis of speech in clinical aphas
 
 ### Required Files
 
-1. **Tiers Specification (**``**)**
+1. **Tiers Specification**
 
    - Specifies tier labels and values for organizing .cha files.
    - Example content:
@@ -40,16 +40,29 @@ RASCAL is a tool designed to facilitate the analysis of speech in clinical aphas
    - `*` indicates the partition tier that groups samples.
    - Placeholder `##` in `participantID` enables pattern matching for participant codes.
 
-2. **Configuration File (**``**)**
+2. **Configuration File**
 
    - Specifies input/output directories, reliability fraction, and coder initials.
    - Example:
      ```yaml
-     input_dir: "input"
-     output_dir: "output"
+     input_dir: "data/input"
+     output_dir: "data/output"
      reliability_fraction: 0.2
      coders: XX,YY
      ```
+
+3. **Directory Structure**
+
+   - When running the pipeline, input/output folders are expected as relative paths (or expanded ~) from the project root.
+   - These can be overridden via config.yaml.
+
+   rascal/
+   ├── src/
+   │   └── rascal/
+   ├── data/
+   │   ├── input/       # Place your .cha files, tiers.txt, and pre-existing Excel inputs here
+   │   └── output/      # Outputs will be saved here
+   └── config.yaml
 
 ---
 
@@ -80,19 +93,24 @@ Each function is executed via:
 python src/rascal/main.py <command>
 ```
 
-| Command | Function                                     | Input                                                     | Output                                                                       |
-| ------- | -------------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `ab`    | `select_transcription_reliability_samples()` | `.cha` files                                              | `_TranscriptionReliabilitySamples.xlsx`, `_Reliability.cha` files            |
-| `ac`    | `prepare_utterance_dfs()`                    | `.cha` files                                              | `_Utterances.xlsx`                                                           |
-| `d`     | `make_CU_coding_files()`                     | c output                                                  | `_CU_Coding.xlsx`, `_CUReliabilityCoding.xlsx`                               |
-| `e`     | `analyze_transcription_reliability()`        | `.cha` file pairs                                         | `_TranscriptionReliabilityAnalysis.xlsx`, `.txt` alignment files             |
-| `f`     | `analyze_CU_reliability()`                   | Manually completed d output                               | `_CUReliabilityCoding_BySample.xlsx`, `_CUReliabilityCodingReport.txt`       |
-| `g`     | `analyze_CU_coding()`                        | Manually completed d output                               | `_CUCoding_BySample.xlsx`, `_CUCoding_ByUtterance.xlsx`                      |
-| `h`     | `make_word_count_files()`                    | g output                                                  | `_WordCounting.xlsx`, `_WordCountingReliability.xlsx`                        |
-| `i`     | `make_timesheets()`                          | c output                                                  | `_SpeakingTimes.xlsx`                                                        |
-| `j`     | `analyze_word_count_reliability()`           | h output                                                  | `_WordCountingReliabilityResults.xlsx`, `_WordCountingReliabilityReport.txt` |
-| `k`     | `unblind_CUs()`                              | c output, d output, h & i outputs, `ParticipantData.xlsx` | Blind/unblind sample data files                                              |
-| `l`     | `run_corelex()`                              | k output                                                  | `CoreLexDataYYMMDD.xlsx`                                                     |
+For example, to run the CU analysis step:
+
+```bash
+python src/rascal/main.py f
+```
+
+Command | Function | Input | Output
+a | select_transcription_reliability_samples() | .cha files | _TranscriptionReliabilitySamples.xlsx, _Reliability.cha files
+b | prepare_utterance_dfs() | .cha files | _Utterances.xlsx
+c | make_CU_coding_files() | b output | _CU_Coding.xlsx, _CUReliabilityCoding.xlsx
+d | analyze_transcription_reliability() | .cha file pairs | _TranscriptionReliabilityAnalysis.xlsx, .txt alignment files
+e | analyze_CU_reliability() | Manually completed c output | _CUReliabilityCoding_BySample.xlsx, _CUReliabilityCodingReport.txt
+f | analyze_CU_coding() | Manually completed c output | _CUCoding_BySample.xlsx, _CUCoding_ByUtterance.xlsx
+g | make_word_count_files() | f output | _WordCounting.xlsx, _WordCountingReliability.xlsx
+h | make_timesheets() | b output | _SpeakingTimes.xlsx
+i | analyze_word_count_reliability() | Manually completed g output | _WordCountingReliabilityResults.xlsx, _WordCountingReliabilityReport.txt
+j | unblind_CUs() | b output, manually completed c, h & i outputs,(optional) ParticipantData.xlsx | Blind/unblind sample data files
+k | run_corelex() | j output | CoreLexDataYYMMDD.xlsx
 
 ---
 

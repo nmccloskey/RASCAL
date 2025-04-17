@@ -208,109 +208,122 @@ def make_timestamp() -> str:
     """Returns a timestamp in YYMMDD format."""
     return datetime.now().strftime('%y%m%d')
 
+# Define scenes
+scenes = {
+    'BrokenWindow': 'Broken Window',
+    'RefusedUmbrella': 'Refused Umbrella',
+    'CatRescue': 'Cat Rescue'
+}
 
-def run_corelex(output_dir):
+# Define base columns
+base_columns = [
+    'sampleID', 'ncw', 'ncw_pwa_ptile', 'ncw_ctrl_ptile',
+    'cwpm', 'cwpm_pwa_ptile', 'cwpm_ctrl_ptile'
+]
+
+# Define tokens for each scene
+scene_tokens = {
+    'BrokenWindow': ["a", "and", "ball", "be", "boy", "break", "go", "he", "in", "it", 
+                        "kick", "lamp", "look", "of", "out", "over", "play", "sit", "soccer", 
+                        "the", "through", "to", "up", "window"],
+    'CatRescue': ["a", "and", "bark", "be", "call", "cat", "climb", "come", "dad",
+                    "department", "dog", "down", "father", "fire", "fireman", "get",
+                    "girl", "go", "have", "he", "in", "ladder", "little", "not", "out",
+                    "she", "so", "stick", "the", "their", "there", "to", "tree", "up", "with"],
+    'RefusedUmbrella': ["a", "and", "back", "be", "boy", "do", "get", "go", "have", "he", "home",
+                        "i", "in", "it", "little", "mom", "mother", "need", "not", "out", "rain",
+                        "say", "school", "she", "so", "start", "take", "that", "the", "then",
+                        "to", "umbrella", "walk", "wet", "with", "you"]
+}
+
+# Define alternative participles
+alternative_participles = [
+    'bein', 'breakin', 'goin', 'kickin', 'lookin', 'playin', 'barkin', 'callin', 'climbin', 'comin',
+    'gettin', 'havin', 'stickin', 'doin', 'needin', 'rainin', 'sayin', 'startin', 'takin', 'walkin'
+]
+
+def run_corelex(input_dir, output_dir):
     """
     Runs CoreLex analysis on utterance data and saves the results.
 
     Args:
+        input_dir (str): The directory where input files may be located.
         output_dir (str): The directory where output files will be saved.
     """
     logging.info("Starting CoreLex processing.")
-    
-    # Define scenes
-    scenes = {
-        'BrokenWindow': 'Broken Window',
-        'RefusedUmbrella': 'Refused Umbrella',
-        'CatRescue': 'Cat Rescue'
-    }
-    
-    # Define base columns
-    base_columns = [
-        'sampleID', 'ncw', 'ncw_pwa_ptile', 'ncw_ctrl_ptile',
-        'cwpm', 'cwpm_pwa_ptile', 'cwpm_ctrl_ptile'
-    ]
-    
-    # Define tokens for each scene
-    scene_tokens = {
-        'BrokenWindow': ["a", "and", "ball", "be", "boy", "break", "go", "he", "in", "it", 
-                         "kick", "lamp", "look", "of", "out", "over", "play", "sit", "soccer", 
-                         "the", "through", "to", "up", "window"],
-        'CatRescue': ["a", "and", "bark", "be", "call", "cat", "climb", "come", "dad",
-                      "department", "dog", "down", "father", "fire", "fireman", "get",
-                      "girl", "go", "have", "he", "in", "ladder", "little", "not", "out",
-                      "she", "so", "stick", "the", "their", "there", "to", "tree", "up", "with"],
-        'RefusedUmbrella': ["a", "and", "back", "be", "boy", "do", "get", "go", "have", "he", "home",
-                            "i", "in", "it", "little", "mom", "mother", "need", "not", "out", "rain",
-                            "say", "school", "she", "so", "start", "take", "that", "the", "then",
-                            "to", "umbrella", "walk", "wet", "with", "you"]
-    }
-    
-    # Define alternative participles
-    alternative_participles = [
-        'bein', 'breakin', 'goin', 'kickin', 'lookin', 'playin', 'barkin', 'callin', 'climbin', 'comin',
-        'gettin', 'havin', 'stickin', 'doin', 'needin', 'rainin', 'sayin', 'startin', 'takin', 'walkin'
-    ]
-    
-    # Generate token columns
+
     token_cols = [f"{scene[:3]}_{w}" for scene, words in scene_tokens.items() for w in words]
-    
     corelexdf = pd.DataFrame(columns=base_columns + token_cols)
     timestamp = make_timestamp()
-    
-    # Define downloads path
     downloads_path = os.path.join(Path.home(), "Downloads")
-    
-    # Create output directory
+
     corelex_dir = os.path.join(output_dir, 'CoreLex')
     os.makedirs(corelex_dir, exist_ok=True)
     logging.info(f"Output directory created: {corelex_dir}")
-    
-    # Load utterance data
+
     utt_data_path = os.path.join(output_dir, 'Summaries', 'unblindUtteranceData.xlsx')
     if not os.path.exists(utt_data_path):
-        logging.error(f"File not found: {utt_data_path}")
-        return
+        utt_data_path = os.path.join(input_dir, 'Summaries', 'unblindUtteranceData.xlsx')
+        if not os.path.exists(utt_data_path):
+            logging.error(f"File not found: {utt_data_path}")
+            return
+
     utt_df = pd.read_excel(utt_data_path)
     utt_df = utt_df[utt_df['narrative'].isin(scenes.keys())]
     utt_df = utt_df[~np.isnan(utt_df['c2CU'])]
-    
-    # Process each sample
+
     for sample in tqdm(set(utt_df['sampleID'])):
         subdf = utt_df[utt_df['sampleID'] == sample]
         scene_name = scenes[subdf['narrative'].iloc[0]]
         rel_cols = [col for col in corelexdf.columns if col.startswith(scene_name[:3])]
-        
+
         pID = subdf['participantID'].iloc[0]
         time = str(subdf['client_time'].iloc[0])
         text = ' '.join(subdf['utterance'])
         text = reformat(text, pID, alternative_participles)
-        
+
         be_forms = re.findall(r'\b(be|is|are|were|been|being|was|am)\b', text)
         text = re.sub(r'\b(be|is|are|were|been|being|was)\b', 'am', text)
-        
-        num_data, token_data = webapp(pID, scene_name, time, text, downloads_path)
-        nums = get_nums(num_data)
-        tokens = [t if t != '-' else np.nan for t in token_data['Token Produced']]
+
+        num_data, token_data = None, None
+
+        for attempt in range(5):
+            try:
+                num_data, token_data = webapp(pID, scene_name, time, text, downloads_path)
+                if num_data is not None and token_data is not None:
+                    break
+                logging.warning(f"Attempt {attempt+1} failed for sample {sample}.")
+            except Exception as e:
+                logging.error(f"Exception during webapp call on attempt {attempt+1} for sample {sample}: {e}")
+
+        if num_data is None or token_data is None:
+            logging.error(f"All attempts failed for sample {sample}. Filling with NaNs.")
+            nums = [np.nan] * len(base_columns[1:])
+            tokens = [np.nan] * len(rel_cols)
+        else:
+            nums = get_nums(num_data)
+            tokens = [t if t != '-' else np.nan for t in token_data['Token Produced']]
+
         row_data = [sample] + nums + tokens
-        
         row_idx = len(corelexdf)
         for c, d in zip(base_columns + rel_cols, row_data):
             corelexdf.loc[row_idx, c] = d
-        
+
         if be_forms:
             corelexdf.loc[row_idx, f"{scene_name[:3]}_be"] = ', '.join(set(be_forms))
-    
-    # Merge with sample data and save
+
     for blind_type in ['unblind', 'blind']:
         sample_data_path = os.path.join(output_dir, 'Summaries', f'{blind_type}SampleData.xlsx')
         if not os.path.exists(sample_data_path):
-            logging.warning(f"Missing sample data file: {sample_data_path}")
-            continue
+            sample_data_path = os.path.join(input_dir, 'Summaries', f'{blind_type}SampleData.xlsx')
+            if not os.path.exists(sample_data_path):
+                logging.warning(f"Missing sample data file: {sample_data_path}")
+                continue
+
         sample_df = pd.read_excel(sample_data_path)
         merged = pd.merge(sample_df, corelexdf, on='sampleID', how='inner')
         output_file = os.path.join(corelex_dir, f'{blind_type}CoreLexData{timestamp}.xlsx')
         merged.to_excel(output_file)
         logging.info(f"Saved: {output_file}")
-    
+
     logging.info("CoreLex processing complete.")

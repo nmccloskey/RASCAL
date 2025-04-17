@@ -57,7 +57,7 @@ def assign_CU_coders(coders):
     random.shuffle(assignments)
     return assignments
 
-def make_CU_coding_files(tiers, frac, coders, utterance_dir, output_dir, test=False):
+def make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, test=False):
     """
     Generate CU coding and CU reliability coding files from utterance DataFrames.
 
@@ -65,7 +65,7 @@ def make_CU_coding_files(tiers, frac, coders, utterance_dir, output_dir, test=Fa
     - tiers (dict): Dictionary of tier objects used for partitioning.
     - frac (float): Fraction of samples to be selected for reliability.
     - coders (list): List of coder names.
-    - utterance_dir (str): Directory containing the utterance Excel files.
+    - input_dir (str): Directory possibly containing the utterance Excel files.
     - output_dir (str): Directory where the CU coding files should be saved.
     - test (bool): If True, return results for testing purposes.
 
@@ -76,7 +76,7 @@ def make_CU_coding_files(tiers, frac, coders, utterance_dir, output_dir, test=Fa
     CUcols = ['c1ID', 'c1SV', 'c1REL', 'c1com', 'c2ID', 'c2SV', 'c2REL', 'c2com']
     CU_coding_dir = os.path.join(output_dir, 'CUCoding')
     logging.info(f"Writing CU coding files to {CU_coding_dir}")
-    utterance_files = list(Path(utterance_dir).rglob("*_Utterances.xlsx"))
+    utterance_files = list(Path(input_dir).rglob("*_Utterances.xlsx")) + list(Path(output_dir).rglob("*_Utterances.xlsx"))
     results = []
 
     for file in tqdm(utterance_files, desc="Generating CU coding files"):
