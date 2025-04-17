@@ -173,7 +173,7 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, test=False):
                 
                 # Generate reliability report.
                 num_samples_AG = np.nansum(CUrelsum['sampleAGCU'])
-                perc_samples_AG = round(num_samples_AG/len(CUrelsum),1)
+                perc_samples_AG = round(num_samples_AG/len(CUrelsum)*100, 2)
                 report_path = os.path.join(output_path, f"{'_'.join(partition_labels)}_CUReliabilityCodingReport.txt")
                 with open(report_path, 'w') as report:
                     report.write(f"CU Reliability Coding Report for {' '.join(partition_labels)}\n\n")

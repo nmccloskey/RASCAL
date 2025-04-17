@@ -5,5 +5,9 @@ dist/
 build/
 *.egg-info/
 test_data/
-output/
+data/output/
+data/input/
 .DS_Store
+*.xlsx
+*.cha
+*.txt

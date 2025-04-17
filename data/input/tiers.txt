@@ -1,4 +1,4 @@
 *site:AC,BU,TU
-test:PreTx,PostTx,Maintenance
+test:PreTx,PostTx,Maint
 participantID:site##
 narrative:CATGrandpa,BrokenWindow,RefusedUmbrella,CatRescue,BirthdayScene
