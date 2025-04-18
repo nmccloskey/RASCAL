@@ -96,7 +96,10 @@ def unblind_CUs(tiers, input_dir, output_dir, test=False):
         WCs = WCs.groupby(['sampleID']).agg(wordCount=('wordCount', 'sum'))
         logging.info("Word count data aggregated successfully.")
 
-        merged_samples = pd.merge(pdata, utts, on='participantID', how='inner')
+        if pdata:
+            merged_samples = pd.merge(pdata, utts, on='participantID', how='inner')
+        else:
+            merged_samples = utts.copy()
         merged_samples = pd.merge(merged_samples, CUbySample, on='sampleID', how='inner')
         merged_samples = pd.merge(merged_samples, WCs, on='sampleID', how='inner')
         merged_samples = pd.merge(merged_samples, times, on='sampleID', how='inner')
