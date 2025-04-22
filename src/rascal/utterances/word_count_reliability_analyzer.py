@@ -18,10 +18,10 @@ def percent_difference(value1, value2):
         float: The percentage difference, or infinity if either value is zero.
     """
     if value1 == 0 or value2 == 0:
-        logging.warning("One of the values is zero, returning NA.")
-        return np.nan
-    elif value1 == value2 == 0:
+        logging.warning("One of the values is zero, returning 100%.")
         return 100
+    elif value1 == value2 == 0:
+        return 0
 
     diff = abs(value1 - value2)
     avg = (value1 + value2) / 2
