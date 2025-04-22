@@ -48,10 +48,10 @@ class Tier:
         """
         match = self.pattern.search(text)
         if match:
-            logging.info(f"Match found for '{self.name}' in text: {text}")
+            # logging.info(f"Match found for '{self.name}' in text: {text}")
             return match.group(0)
         elif return_None:
-            logging.info(f"No match found for '{self.name}' in text: {text}, returning None.")
+            logging.warning(f"No match found for '{self.name}' in text: {text}, returning None.")
             return None
         else:
             logging.error(f"No match found for '{self.name}' in text: {text}. Returning tier name.")

@@ -99,7 +99,7 @@ def analyze_transcription_reliability(tiers, input_dir, output_dir, test=False):
 
         for org_cha in org_chats:
             org_labels = [t.match(org_cha.name) for t in tiers.values()]
-            logging.debug(f"Original file labels: {org_labels}")
+            # logging.info(f"Original file labels: {org_labels}")
 
             if rel_labels == org_labels:
                 try:
@@ -110,67 +110,71 @@ def analyze_transcription_reliability(tiers, input_dir, output_dir, test=False):
                     logging.error(f"Failed to read CHAT files {org_cha} or {rel_cha}: {e}")
                     continue
 
-                # Extract text from both samples.
-                org_text = extract_cha_text(org_chat_data)
-                rel_text = extract_cha_text(rel_chat_data)
-
-                # Simple analysis.
-                org_num_tokens = len(org_text.split(' '))
-                rel_num_tokens = len(rel_text.split(' '))
-                pdiff_num_tokens = percent_difference(org_num_tokens, rel_num_tokens)
-                org_num_chars = len(org_text)
-                rel_num_chars = len(rel_text)
-                pdiff_num_chars = percent_difference(org_num_chars, rel_num_chars)
-                
-                # Levenshtein algorithm.
-                Ldist = Levenshtein.distance(org_text, rel_text)
-                Lscore = Levenshtein.ratio(org_text, rel_text)
-
-                # Initialize the Needleman-Wunsch algorithm aligner
-                aligner = PairwiseAligner()
-                aligner.mode = 'global'
-                alignments = aligner.align(org_text, rel_text)
-                best_alignment = alignments[0]
-                best_score = best_alignment.score
-                longer_length = max(len(org_text), len(rel_text))
-                normalized_score = best_score / longer_length
-
-                row = rel_labels + [org_cha.name, rel_cha.name,
-                                    org_num_tokens, rel_num_tokens, pdiff_num_tokens,
-                                    org_num_chars, rel_num_chars, pdiff_num_chars,
-                                    Ldist, Lscore, best_score, normalized_score]
-                transc_rel_df.loc[len(transc_rel_df)] = row
-                logging.debug(f"Appended row to DataFrame: {row}")
-
-                # Prepare the alignment output as formatted text
-                alignment_str = f"Global alignment score: {best_score}\n"
-                alignment_str += f"Normalized score (by length): {normalized_score}\n\n"
-
-                # Prepare the alignment text with match indicators
-                seq1 = best_alignment[0]
-                seq2 = best_alignment[1]
-
-                # Wrap each line to 80 characters
-                seq1_lines = wrap_text(seq1)
-                seq2_lines = wrap_text(seq2)
-
-                for s1, s2 in zip(seq1_lines, seq2_lines):
-                    alignment_str += f"Sequence 1: {s1}\n"
-                    alignment_line = ''.join(['|' if a == b else ' ' for a, b in zip(s1, s2)])
-                    alignment_str += f"Alignment : {alignment_line}\n"
-                    alignment_str += f"Sequence 2: {s2}\n\n"
-
-                # Extract partition tier info from file name.
-                partition_labels = [t.match(rel_cha.name) for t in tiers.values() if t.partition]
-                text_filename = f"{''.join(rel_labels)}_TranscriptionReliabilityAlignment.txt"
-                text_file_path = os.path.join(transc_rel_dir, *partition_labels, text_filename)
                 try:
-                    os.makedirs(os.path.dirname(text_file_path), exist_ok=True)
-                    with open(text_file_path, 'w') as file:
-                        file.write(alignment_str)
-                    logging.info(f"Saved alignment text to: {text_file_path}")
+                    # Extract text from both samples.
+                    org_text = extract_cha_text(org_chat_data)
+                    rel_text = extract_cha_text(rel_chat_data)
+
+                    # Simple analysis.
+                    org_num_tokens = len(org_text.split(' '))
+                    rel_num_tokens = len(rel_text.split(' '))
+                    pdiff_num_tokens = percent_difference(org_num_tokens, rel_num_tokens)
+                    org_num_chars = len(org_text)
+                    rel_num_chars = len(rel_text)
+                    pdiff_num_chars = percent_difference(org_num_chars, rel_num_chars)
+                    
+                    # Levenshtein algorithm.
+                    Ldist = Levenshtein.distance(org_text, rel_text)
+                    Lscore = Levenshtein.ratio(org_text, rel_text)
+
+                    # Initialize the Needleman-Wunsch algorithm aligner
+                    aligner = PairwiseAligner()
+                    aligner.mode = 'global'
+                    alignments = aligner.align(org_text, rel_text)
+                    best_alignment = alignments[0]
+                    best_score = best_alignment.score
+                    longer_length = max(len(org_text), len(rel_text))
+                    normalized_score = best_score / longer_length
+
+                    row = rel_labels + [org_cha.name, rel_cha.name,
+                                        org_num_tokens, rel_num_tokens, pdiff_num_tokens,
+                                        org_num_chars, rel_num_chars, pdiff_num_chars,
+                                        Ldist, Lscore, best_score, normalized_score]
+                    transc_rel_df.loc[len(transc_rel_df)] = row
+                    logging.debug(f"Appended row to DataFrame: {row}")
+
+                    # Prepare the alignment output as formatted text
+                    alignment_str = f"Global alignment score: {best_score}\n"
+                    alignment_str += f"Normalized score (by length): {normalized_score}\n\n"
+
+                    # Prepare the alignment text with match indicators
+                    seq1 = best_alignment[0]
+                    seq2 = best_alignment[1]
+
+                    # Wrap each line to 80 characters
+                    seq1_lines = wrap_text(seq1)
+                    seq2_lines = wrap_text(seq2)
+
+                    for s1, s2 in zip(seq1_lines, seq2_lines):
+                        alignment_str += f"Sequence 1: {s1}\n"
+                        alignment_line = ''.join(['|' if a == b else ' ' for a, b in zip(s1, s2)])
+                        alignment_str += f"Alignment : {alignment_line}\n"
+                        alignment_str += f"Sequence 2: {s2}\n\n"
+
+                    # Extract partition tier info from file name.
+                    partition_labels = [t.match(rel_cha.name) for t in tiers.values() if t.partition]
+                    text_filename = f"{''.join(rel_labels)}_TranscriptionReliabilityAlignment.txt"
+                    text_file_path = os.path.join(transc_rel_dir, *partition_labels, text_filename)
+                    try:
+                        os.makedirs(os.path.dirname(text_file_path), exist_ok=True)
+                        with open(text_file_path, 'w') as file:
+                            file.write(alignment_str)
+                        # logging.info(f"Saved alignment text to: {text_file_path}")
+                    except Exception as e:
+                        logging.error(f"Failed to write alignment file {text_file_path}: {e}")
+                
                 except Exception as e:
-                    logging.error(f"Failed to write alignment file {text_file_path}: {e}")
+                    logging.error(f"Failed to analyze transcription reliability for {org_cha} and {rel_cha}: {e}.")
     
     # Store results for testing.
     results = []

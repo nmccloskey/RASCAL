@@ -69,7 +69,7 @@ def unblind_CUs(tiers, input_dir, output_dir, test=False):
         logging.info(f"Unblinded utterances saved to {unblinded_utts}.")
 
         # Prepare blind codes and blinded utterances
-        blind_utts = merged_utts.copy()
+        blind_utts = merged_utts.drop(columns=["file", "participantID"])
         blind_codes_output = {}
         for tier_name in ['site', 'test']:
             tier = tiers[tier_name]

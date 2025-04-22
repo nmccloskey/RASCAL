@@ -118,7 +118,7 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, test=False):
                 # Calculate agreement columns: 1 if same value or both NA, else 0.
                 CUrelcod['AGSV'] = CUrelcod.apply(lambda row: int((row['c2SV'] == row['c3SV']) or (np.isnan(row['c2SV']) and np.isnan(row['c3SV']))), axis=1)
                 CUrelcod['AGREL'] = CUrelcod.apply(lambda row: int((row['c2REL'] == row['c3REL']) or (np.isnan(row['c2REL']) and np.isnan(row['c3REL']))), axis=1)
-                CUrelcod['AGCU'] = CUrelcod.apply(lambda row: int((row['c2CU'] == row['c3CU']) or (np.isnan(row['AGSV']) and np.isnan(row['AGREL']))), axis=1)
+                CUrelcod['AGCU'] = CUrelcod.apply(lambda row: int((row['c2CU'] == row['c3CU']) or (np.isnan(row['c2CU']) and np.isnan(row['c3CU']))), axis=1)
 
                 # Save utterance-level reliability file.
                 partition_labels = [t.match(rel.name) for t in tiers.values() if t.partition]
