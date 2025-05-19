@@ -7,10 +7,16 @@ def read_requirements():
     return req_file.read_text().splitlines() if req_file.exists() else []
 
 setup(
-    name="RASCAL",
+    name="rascal",
     version="0.1",
-    packages=find_packages(where="src"),  # Ensures it finds src/rascal
-    package_dir={"": "src"},  # Specifies src as the package root
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     install_requires=read_requirements(),
     include_package_data=True,
+
+    entry_points={
+        "console_scripts": [
+            "rascal=rascal.cli:main"
+        ]
+    },
 )

@@ -15,3 +15,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args)
+
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(description="RASCAL CLI")
+    parser.add_argument('step', type=str, help="Which step(s) to run (e.g., 'abc', '3', or '1gk')")
+    args = parser.parse_args()
+
+    from .main import main as main_core
+    main_core(args)
