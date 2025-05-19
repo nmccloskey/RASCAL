@@ -4,70 +4,6 @@ RASCAL is a tool designed to facilitate the analysis of speech in clinical aphas
 
 ---
 
-## Installation
-
-### Recommended: Anaconda Navigator Command Line
-
-1. Create a virtual environment:
-   ```bash
-   conda create --name rascal_env python=3.9
-   ```
-2. Activate the environment:
-   ```bash
-   conda activate rascal_env
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
----
-
-## Setup
-
-### Required Files
-
-1. **Tiers Specification**
-
-   - Specifies tier labels and values for organizing .cha files.
-   - Example content:
-     ```
-     *site:AC,BU,TU
-     test:PreTx,PostTx,Maint
-     participantID:site##
-     narrative:CATGrandpa,BrokenWindow,RefusedUmbrella,CatRescue,BirthdayScene
-     ```
-   - `*` indicates the partition tier that groups samples.
-   - Placeholder `##` in `participantID` enables pattern matching for participant codes.
-
-2. **Configuration File**
-
-   - Specifies input/output directories, reliability fraction, and coder initials.
-   - Example:
-     ```yaml
-     input_dir: "data/input"
-     output_dir: "data/output"
-     reliability_fraction: 0.2
-     coders: XX,YY
-     ```
-
-3. **Directory Structure**
-
-   - When running the pipeline, input/output folders are expected as relative paths (or expanded ~) from the project root.
-   - These can be overridden via config.yaml.
-
-   ```plaintext
-   rascal/
-   ├── src/
-   │   └── rascal/
-   ├── data/
-   │   ├── input/         # Place your .cha files, tiers.txt, and Excel inputs here
-   │   └── output/        # Outputs will be saved here
-   └── config.yaml
-   ```
-
----
-
 ## Analysis Pipeline
 
 ### **BU-TU Conversation Treatment Monologic Narrative Analysis Protocol**
@@ -87,18 +23,88 @@ RASCAL is a tool designed to facilitate the analysis of speech in clinical aphas
 
 ---
 
-## Individual Functionalities
+## Installation
 
-Each function is executed via:
+We recommend installing RASCAL into a dedicated virtual environment using Anaconda:
+
+### 1. Create and activate your environment:
 
 ```bash
-python src/rascal/main.py <command>
+conda create --name rascal_env python=3.9
+conda activate rascal_env
+```
+
+### 2. Install RASCAL from GitHub:
+```bash
+pip install git+https://github.com/nmccloskey/rascal.git@refinements
+```
+
+---
+
+## Setup
+
+To prepare for running RASCAL, complete the following steps:
+
+### 1. Create your working directory:
+
+We recommend creating a fresh project directory where you'll run your analysis.
+
+Example structure:
+
+```plaintext
+your_project/
+├── config.yaml           # Configuration file (see below)
+└── data/
+    └── input/            # Place your CHAT (.cha) files and/or Excel data here
+                          # (RASCAL will make an output directory)
+```
+
+### 2. Provide a `config.yaml` file
+
+This file specifies the directories, coders, reliability settings, and tier structure.
+
+You can download the example config file from the repo or create your own like this:
+
+```yaml
+input_dir: "data/input"
+output_dir: "data/output"
+reliability_fraction: 0.2
+coders: [XX, YY]
+
+tiers:
+  "*site": [AC, BU, TU]
+  test: [Pre, Post, Maint]
+  participantID: "site##"
+  narrative:
+    - CATGrandpa
+    - BrokenWindow
+    - RefusedUmbrella
+    - CatRescue
+    - BirthdayScene
+```
+
+Explanation:
+
+- Keys prefixed with `*` (e.g., `"*site"`) define partition tiers — these group files for separate coding and output.
+
+- In this example, separate CU coding files will be generated for each `site` (AC, BU, TU), but not for each `narrative` or `test` value.
+
+- `"participantID": "site##"` enables pattern matching where the participant ID is derived from the site name followed by digits (e.g., AC01, BU23).
+
+---
+
+## Running the Program
+
+Once installed, RASCAL can be run from any directory using the command-line interface:
+
+```bash
+rascal <step>
 ```
 
 For example, to run the CU analysis step:
 
 ```bash
-python src/rascal/main.py f
+rascal f
 ```
 
 | Command | Function                                     | Input                                                                                      | Output                                                                                   |
