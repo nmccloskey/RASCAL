@@ -1,6 +1,6 @@
 import logging
 import re
-from utils.tier import Tier
+from .tier import Tier
 
 def read_tiers(config_tiers: dict):
     """

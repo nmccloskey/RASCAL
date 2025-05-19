@@ -13,7 +13,7 @@ def load_config(config_file):
         return yaml.safe_load(file)
 
 def run_read_tiers(config_tiers):
-    from utils.read_tiers import read_tiers
+    from .utils.read_tiers import read_tiers
     tiers = read_tiers(config_tiers)
     if tiers:
         logging.info("Successfully parsed tiers from config.")
@@ -22,51 +22,51 @@ def run_read_tiers(config_tiers):
     return tiers
 
 def run_read_cha_files(input_dir):
-    from utils.read_cha_files import read_cha_files
+    from .utils.read_cha_files import read_cha_files
     return read_cha_files(input_dir=input_dir, shuffle=True)
 
 def run_select_transcription_reliability_samples(tiers, chats, frac, output_dir):
-    from transcription.transcription_reliability_selector import select_transcription_reliability_samples
+    from .transcription.transcription_reliability_selector import select_transcription_reliability_samples
     select_transcription_reliability_samples(tiers=tiers, chats=chats, frac=frac, output_dir=output_dir)
 
 def run_prepare_utterance_dfs(tiers, chats, output_dir):
-    from utterances.make_utterance_tables import prepare_utterance_dfs
+    from .utterances.make_utterance_tables import prepare_utterance_dfs
     return prepare_utterance_dfs(tiers=tiers, chats=chats, output_dir=output_dir, test=False)
 
 def run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir):
-    from utterances.make_CU_coding_files import make_CU_coding_files
+    from .utterances.make_CU_coding_files import make_CU_coding_files
     make_CU_coding_files(tiers=tiers, frac=frac, coders=coders, input_dir=input_dir, output_dir=output_dir)
 
 def run_analyze_transcription_reliability(tiers, input_dir, output_dir):
-    from transcription.transcription_reliability_analysis import analyze_transcription_reliability
+    from .transcription.transcription_reliability_analysis import analyze_transcription_reliability
     analyze_transcription_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
 
 def run_analyze_CU_reliability(tiers, input_dir, output_dir):
-    from utterances.CU_reliability_analyzer import analyze_CU_reliability
+    from .utterances.CU_reliability_analyzer import analyze_CU_reliability
     analyze_CU_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
 
 def run_analyze_CU_coding(tiers, input_dir, output_dir):
-    from utterances.CU_reliability_analyzer import analyze_CU_coding
+    from .utterances.CU_reliability_analyzer import analyze_CU_coding
     analyze_CU_coding(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
 
 def run_make_word_count_files(tiers, frac, coders, output_dir):
-    from utterances.make_CU_coding_files import make_word_count_files
+    from .utterances.make_CU_coding_files import make_word_count_files
     make_word_count_files(tiers=tiers, frac=frac, coders=coders, output_dir=output_dir, test=False)
 
 def run_make_timesheets(tiers, input_dir, output_dir):
-    from utils.make_timesheets import make_timesheets
+    from .utils.make_timesheets import make_timesheets
     make_timesheets(tiers=tiers, input_dir=input_dir, output_dir=output_dir)
 
 def run_analyze_word_count_reliability(tiers, input_dir, output_dir):
-    from utterances.word_count_reliability_analyzer import analyze_word_count_reliability
+    from .utterances.word_count_reliability_analyzer import analyze_word_count_reliability
     analyze_word_count_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
 
 def run_unblind_CUs(tiers, input_dir, output_dir):
-    from samples.unblind_CUs import unblind_CUs
+    from .samples.unblind_CUs import unblind_CUs
     unblind_CUs(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
 
 def run_run_corelex(input_dir, output_dir):
-    from samples.corelex import run_corelex
+    from .samples.corelex import run_corelex
     run_corelex(input_dir=input_dir, output_dir=output_dir)
 
 def main(args):

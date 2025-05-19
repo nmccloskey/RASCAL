@@ -4,7 +4,7 @@ reliability_fraction: 0.2
 coders: [XX, YY]
 
 tiers:
-  "site": [AC, BU, TU]
+  "*site": [AC, BU, TU]
   test: [Pre, Post, Maint]
   participantID: "site##"
   narrative:
