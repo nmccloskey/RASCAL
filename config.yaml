@@ -1,4 +1,15 @@
 input_dir: "data/input"
 output_dir: "data/output"
 reliability_fraction: 0.2
-coders: XX, YY
+coders: [XX, YY]
+
+tiers:
+  "site": [AC, BU, TU]
+  test: [Pre, Post, Maint]
+  participantID: "site##"
+  narrative:
+    - CATGrandpa
+    - BrokenWindow
+    - RefusedUmbrella
+    - CatRescue
+    - BirthdayScene

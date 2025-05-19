@@ -68,20 +68,31 @@ def prepare_utterance_dfs(tiers, chats, output_dir, test=False):
 
     # Write utterance tables to output directory.
     logging.info(f"Writing Utterance tables to {utterance_dir}")
-    for tup, subdf in tqdm(utterance_df.groupby(partition_tiers), desc="Writing utterance files"):
-        # Create utteranceID.
-        subdf.insert(0, column='UtteranceID', value=''.join(tup) + 'U' + subdf.reset_index().index.astype(str))
-        output_path = [utterance_dir] + list(tup) if len(partition_tiers) > 1 else [utterance_dir]
-        filename = os.path.join(*output_path, '_'.join(tup) + '_Utterances.xlsx')
+    if not partition_tiers:
+        # No partitioning — just write all rows to a single file
+        utterance_df.insert(0, column='UtteranceID', value='U' + utterance_df.reset_index().index.astype(str))
+        filename = os.path.join(utterance_dir, 'Utterances.xlsx')
         logging.info(f"Writing file: {filename}")
         try:
             os.makedirs(os.path.dirname(filename), exist_ok=True)
-            subdf.to_excel(filename, index=False)
+            utterance_df.to_excel(filename, index=False)
         except Exception as e:
             logging.error(f"Failed to write file {filename}: {e}")
-        
         if test:
-            results.append(subdf)
-        
+            results.append(utterance_df)
+    else:
+        for tup, subdf in tqdm(utterance_df.groupby(partition_tiers), desc="Writing utterance files"):
+            subdf.insert(0, column='UtteranceID', value=''.join(tup) + 'U' + subdf.reset_index().index.astype(str))
+            output_path = [utterance_dir] + list(tup) if len(partition_tiers) > 1 else [utterance_dir]
+            filename = os.path.join(*output_path, '_'.join(tup) + '_Utterances.xlsx')
+            logging.info(f"Writing file: {filename}")
+            try:
+                os.makedirs(os.path.dirname(filename), exist_ok=True)
+                subdf.to_excel(filename, index=False)
+            except Exception as e:
+                logging.error(f"Failed to write file {filename}: {e}")
+            if test:
+                results.append(subdf)
+            
     if test:
         return results

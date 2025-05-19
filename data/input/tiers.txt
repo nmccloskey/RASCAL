@@ -1,4 +1,0 @@
-*site:AC,BU,TU
-test:Pre,Post,Maint
-participantID:site##
-narrative:CATGrandpa,BrokenWindow,RefusedUmbrella,CatRescue,BirthdayScene

@@ -1,61 +1,53 @@
-import os
-import re
 import logging
+import re
 from utils.tier import Tier
 
-def read_tiers(input_dir):
+def read_tiers(config_tiers: dict):
     """
-    Reads tier information from the tiers.txt file in the specified directory.
+    Parses tier definitions from a config dictionary and returns a dict of Tier objects.
 
     Parameters:
-    - input_dir (str): The directory containing the tiers.txt file.
+    - config_tiers (dict): Dictionary with tier definitions from config.yaml.
 
     Returns:
-    - dict: A dictionary of Tier objects with tier names as keys.
+    - dict: Dictionary of Tier objects.
     """
-    
-    tiers_path = os.path.join(input_dir, 'tiers.txt')
-    logging.info(f"Reading tiers from: {tiers_path}")
-    
-    try:
-        with open(tiers_path) as file:
-            tier_lines = file.readlines()
-    except FileNotFoundError as e:
-        logging.error(f"tiers.txt file not found in directory {input_dir}: {e}")
+    if not isinstance(config_tiers, dict):
+        logging.error("Invalid tier structure in config. Expected a dictionary.")
         return {}
-    
+
     tiers = {}
-    for line in tier_lines:
-        # Parse the tier name and values.
-        tier_name_match = re.match(r'.+(?=\:)', line)
-        values_match = re.search(r'(?<=\:).+', line)
-        
-        if not tier_name_match or not values_match:
-            logging.warning(f"Invalid tier format in line: {line.strip()}")
-            continue
-        
-        tier_name = tier_name_match.group(0)
-        values = values_match.group(0).split(',')
-        logging.info(f"Parsed tier - Name: {tier_name}, Values: {values}")
+    for tier_name, values in config_tiers.items():
+        try:
+            # Convert string values to list
+            if isinstance(values, str):
+                values = [values]
 
-        # Handle numerical placeholder in values.
-        if '##' in values[0]:
-            tier_chars = re.sub(r'#', '', values[0])
-            try:
-                search_str = tiers[tier_chars]._make_search_string(tiers[tier_chars].values) + '\\d+'
-                logging.info(f"Generated search string for numerical placeholder: {search_str}")
-            except KeyError:
-                search_str = tier_chars + '\\d+'
-                logging.warning(f"Referenced tier '{tier_chars}' not found. Using default search string: {search_str}")
-            tier_obj = Tier(tier_name, [search_str], partition=False)
-        else:
-            if tier_name.startswith('*'):
-                tier_obj = Tier(tier_name[1:], values, partition=True)
-                logging.info(f"Tier '{tier_obj.name}' set as partition level.")
+            # Handle numerical placeholders (e.g., site##)
+            if isinstance(values, list) and any('##' in v for v in values):
+                # Strip '##' to get referenced tier
+                ref = re.sub(r'#', '', values[0])
+                try:
+                    # Use existing tier values to generate search string
+                    ref_tier = tiers[ref]
+                    search_str = ref_tier._make_search_string(ref_tier.values) + r'\d+'
+                    logging.info(f"Resolved placeholder in tier '{tier_name}': using search string '{search_str}'")
+                except KeyError:
+                    search_str = ref + r'\d+'
+                    logging.warning(f"Referenced tier '{ref}' not found for placeholder in '{tier_name}'. Using fallback: {search_str}")
+                tier_obj = Tier(tier_name, [search_str], partition=False)
+
             else:
-                tier_obj = Tier(tier_name, values, partition=False)
+                is_partition = tier_name.startswith('*')
+                clean_name = tier_name.lstrip('*')
+                tier_obj = Tier(clean_name, values, partition=is_partition)
+                if is_partition:
+                    logging.info(f"Tier '{clean_name}' marked as partition level.")
 
-        tiers[tier_obj.name] = tier_obj
+            tiers[tier_obj.name] = tier_obj
 
-    logging.info(f"Finished reading tiers. Total tiers: {len(tiers)}")
+        except Exception as e:
+            logging.error(f"Failed to parse tier '{tier_name}': {e}")
+
+    logging.info(f"Finished parsing tiers from config. Total tiers: {len(tiers)}")
     return tiers

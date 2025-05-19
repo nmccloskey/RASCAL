@@ -12,13 +12,13 @@ def load_config(config_file):
     with open(config_file, 'r') as file:
         return yaml.safe_load(file)
 
-def run_read_tiers(input_dir):
+def run_read_tiers(config_tiers):
     from utils.read_tiers import read_tiers
-    tiers = read_tiers(input_dir=input_dir)
+    tiers = read_tiers(config_tiers)
     if tiers:
-        logging.info("Successfully read tiers.")
+        logging.info("Successfully parsed tiers from config.")
     else:
-        logging.warning("Tiers are empty.")
+        logging.warning("Tiers are empty or malformed.")
     return tiers
 
 def run_read_cha_files(input_dir):
@@ -75,7 +75,7 @@ def main(args):
     input_dir = config.get('input_dir', 'data/input')
     output_dir = config.get('output_dir', 'data/output')
     frac = config.get('reliability_fraction', 0.2)
-    coders = config.get('coders', '').split(',')
+    coders = config.get('coders', [])
 
     input_dir = os.path.abspath(os.path.expanduser(input_dir))
     output_dir = os.path.abspath(os.path.expanduser(output_dir))
@@ -83,7 +83,8 @@ def main(args):
     os.makedirs(input_dir, exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
 
-    tiers = run_read_tiers(input_dir)
+    tiers = run_read_tiers(config.get('tiers', {}))
+    
     step_mapping = {
         '1': 'abc',
         '3': 'defgh',
