@@ -17,7 +17,7 @@ setup(
     entry_points={
         "console_scripts": [
             "rascal=rascal.cli:main",
-            "streamlit_rascal=streamlit_app:main"
+            "streamlit_rascal=webapp.streamlit_app:main"
         ]
     },
 )

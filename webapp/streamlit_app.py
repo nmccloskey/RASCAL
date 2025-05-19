@@ -1,10 +1,17 @@
 import streamlit as st
 import yaml
 import os
+import sys
 import tempfile
 import zipfile
 from io import BytesIO
-from src.rascal.main import (
+
+def add_src_to_sys_path():
+    import sys, os
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+add_src_to_sys_path()
+
+from rascal.main import (
     run_read_tiers, run_read_cha_files,
     run_select_transcription_reliability_samples, run_prepare_utterance_dfs,
     run_make_CU_coding_files, run_analyze_transcription_reliability,
@@ -13,6 +20,8 @@ from src.rascal.main import (
     run_analyze_word_count_reliability, run_unblind_CUs,
     run_run_corelex
 )
+
+
 
 st.title("RASCAL Web App")
 

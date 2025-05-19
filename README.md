@@ -22,6 +22,13 @@ RASCAL is a tool designed to facilitate the analysis of speech in clinical aphas
    - **Output:** Blind/unblind CU coding summaries, word count reliability, core lexicon analysis
 
 ---
+## Try the Web App
+
+You can use RASCAL in your browser — no installation required:
+
+👉 [Launch the RASCAL Web App](https://rascal.streamlit.app/)
+
+---
 
 ## Installation
 
