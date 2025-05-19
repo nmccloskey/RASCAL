@@ -2,7 +2,7 @@ import streamlit as st
 import yaml
 import os
 import tempfile
-from rascal.main import (
+from src.rascal.main import (
     run_read_tiers, run_read_cha_files,
     run_select_transcription_reliability_samples, run_prepare_utterance_dfs,
     run_make_CU_coding_files, run_analyze_transcription_reliability,
