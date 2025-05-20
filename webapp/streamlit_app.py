@@ -5,6 +5,7 @@ import sys
 import tempfile
 import zipfile
 from io import BytesIO
+from webapp.config_builder import build_config_ui
 
 def add_src_to_sys_path():
     import sys, os
@@ -21,8 +22,6 @@ from rascal.main import (
     run_run_corelex
 )
 
-
-
 st.title("RASCAL Web App")
 
 def zip_folder(folder_path):
@@ -36,8 +35,17 @@ def zip_folder(folder_path):
     zip_buffer.seek(0)
     return zip_buffer
 
-# Upload config
+st.header("Step 1: Provide config and input files")
+
+# Upload config or build it
 config_file = st.file_uploader("Upload your config.yaml", type=["yaml", "yml"])
+config = None
+
+if config_file:
+    config = yaml.safe_load(config_file)
+else:
+    with st.expander("No config uploaded? Build one here"):
+        config = build_config_ui()
 
 # Upload .cha files
 cha_files = st.file_uploader("Upload .cha files", type=["cha"], accept_multiple_files=True)
