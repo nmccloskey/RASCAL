@@ -56,7 +56,7 @@ else:
             st.success("Built config confirmed.")
 
 # Upload .cha files
-cha_files = st.file_uploader("Upload .cha files", type=["cha"], accept_multiple_files=True)
+cha_files = st.file_uploader("Upload input files", type=["cha", ".xlsx"], accept_multiple_files=True)
 
 if (config_file or st.session_state.confirmed_config) and cha_files:
     with tempfile.TemporaryDirectory() as tmpdir:
