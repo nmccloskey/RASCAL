@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 .venv_rascal/
+venv_rascal
 dist/
 build/
 *.egg-info/
