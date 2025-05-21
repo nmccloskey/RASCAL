@@ -1,13 +1,25 @@
+# Python internals
 __pycache__/
 *.pyc
-.venv_rascal/
-venv_rascal/
+
+# Virtual environments
+.venv*/
+venv*/
+env*/
+
+# Build artifacts
 dist/
 build/
 *.egg-info/
+
+# RASCAL-specific
 test_data/
 data/output/
 data/input/
+
+# System files
 .DS_Store
+
+# Temporary files
 *.xlsx
 *.cha
