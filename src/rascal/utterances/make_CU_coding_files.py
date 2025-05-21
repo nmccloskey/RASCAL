@@ -72,6 +72,9 @@ def make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, test=False)
     Returns:
     - None. Saves CU coding and reliability coding files to output directory.
     """
+
+    if len(coders) > 3:
+        logging.error(f"Coders entered: {coders} do not meet minimum of 3. Cannot creat CU coding files.")
     
     CUcols = ['c1ID', 'c1SV', 'c1REL', 'c1com', 'c2ID', 'c2SV', 'c2REL', 'c2com']
     CU_coding_dir = os.path.join(output_dir, 'CUCoding')

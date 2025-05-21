@@ -1,7 +1,7 @@
 input_dir: "data/input"
 output_dir: "data/output"
 reliability_fraction: 0.2
-coders: [XX, YY]
+coders: [XX, YY, ZZ]
 
 tiers:
   "*site": [AC, BU, TU]

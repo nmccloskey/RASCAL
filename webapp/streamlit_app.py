@@ -24,6 +24,9 @@ from rascal.main import (
 
 st.title("RASCAL Web App")
 
+if "confirmed_config" not in st.session_state:
+    st.session_state.confirmed_config = False
+
 def zip_folder(folder_path):
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -42,22 +45,26 @@ config_file = st.file_uploader("Upload your config.yaml", type=["yaml", "yml"])
 config = None
 
 if config_file:
+    st.session_state.confirmed_config = False  # reset if new file uploaded
     config = yaml.safe_load(config_file)
+    st.success("✅ Config file uploaded")
 else:
     with st.expander("No config uploaded? Build one here"):
         config = build_config_ui()
+        if st.button("✅ Use this built config"):
+            st.session_state.confirmed_config = True
+            st.success("Built config confirmed.")
 
 # Upload .cha files
 cha_files = st.file_uploader("Upload .cha files", type=["cha"], accept_multiple_files=True)
 
-if config_file and cha_files:
+if (config_file or st.session_state.confirmed_config) and cha_files:
     with tempfile.TemporaryDirectory() as tmpdir:
         input_dir = os.path.join(tmpdir, "input")
         output_dir = os.path.join(tmpdir, "output")
         os.makedirs(input_dir, exist_ok=True)
         os.makedirs(output_dir, exist_ok=True)
 
-        config = yaml.safe_load(config_file)
         config["input_dir"] = input_dir
         config["output_dir"] = output_dir
 
