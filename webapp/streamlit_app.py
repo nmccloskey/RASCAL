@@ -5,7 +5,7 @@ import sys
 import tempfile
 import zipfile
 from io import BytesIO
-from webapp.config_builder import build_config_ui
+from config_builder import build_config_ui
 
 def add_src_to_sys_path():
     import sys, os
