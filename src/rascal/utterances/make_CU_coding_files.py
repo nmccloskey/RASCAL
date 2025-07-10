@@ -9,7 +9,16 @@ import pandas as pd
 from tqdm import tqdm
 import num2words as n2w
 from pathlib import Path
+import nltk
+# Download only if missing
+try:
+    nltk.data.find('corpora/words')
+except LookupError:
+    nltk.download('words')
+
 from nltk.corpus import words
+valid_words = set(words.words())
+d = lambda word: word in valid_words
 
 
 def segment(x, n):
@@ -186,8 +195,8 @@ def count_words(text, d):
     text = re.sub(r'\s{2,}', ' ', text).strip()
     
     # Tokenize and validate words
-    words = [word for word in text.split() if d(word)]
-    return len(words)
+    tokens = [word for word in text.split() if d(word)]
+    return len(tokens)
 
 def make_word_count_files(tiers, frac, coders, output_dir, test=False):
     """
@@ -206,10 +215,6 @@ def make_word_count_files(tiers, frac, coders, output_dir, test=False):
     # Make word count coding file path.
     word_count_dir = os.path.join(output_dir, 'WordCounts')
     logging.info(f"Writing word count files to {word_count_dir}")
-
-    # Initialize dictionary of English words.
-    valid_words = set(words.words())
-    d = lambda word: word in valid_words
 
     # Store results for test.
     results = []
