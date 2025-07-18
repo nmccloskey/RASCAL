@@ -1,8 +1,7 @@
 import os
 import re
 import pylangacq
-import Levenshtein
-import numpy as np
+from Levenshtein import distance
 import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
@@ -124,8 +123,9 @@ def analyze_transcription_reliability(tiers, input_dir, output_dir, test=False):
                     pdiff_num_chars = percent_difference(org_num_chars, rel_num_chars)
                     
                     # Levenshtein algorithm.
-                    Ldist = Levenshtein.distance(org_text, rel_text)
-                    Lscore = Levenshtein.ratio(org_text, rel_text)
+                    Ldist = distance(org_text, rel_text)
+                    max_len = max(len(org_text), len(rel_text))
+                    Lscore = 1 - (Ldist / max_len)
 
                     # Initialize the Needleman-Wunsch algorithm aligner
                     aligner = PairwiseAligner()
