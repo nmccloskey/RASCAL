@@ -107,8 +107,8 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
         ]
 
         # --- Dropdowns ---
-        step = st.selectbox("Or choose a predefined step", ["(None)"] + list(step_mapping.keys()))
-        funcs = st.multiselect("Or manually select functions to run", all_functions)
+        step = st.selectbox("Choose a predefined step", ["(None)"] + list(step_mapping.keys()))
+        funcs = st.multiselect("Or individually select functions to run", all_functions)
 
         # --- Resolve full list of selected functions ---
         selected_funcs = funcs or (step_mapping[step] if step != "(None)" else [])

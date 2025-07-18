@@ -22,11 +22,15 @@ RASCAL is a tool designed to facilitate the analysis of speech in clinical aphas
    - **Output:** Blind/unblind CU coding summaries, word count reliability, core lexicon analysis
 
 ---
+
 ## Try the Web App
 
-You can use RASCAL in your browser — no installation required:
-
-👉 [Launch the RASCAL Web App](https://rascal.streamlit.app/)
+st.markdown("## Try the Web App")
+st.markdown("You can use RASCAL in your browser — no installation required:")
+st.markdown(
+    '<a href="https://rascal.streamlit.app/" target="_blank">👉 Launch the RASCAL Web App</a>',
+    unsafe_allow_html=True
+)
 
 ---
 
@@ -43,7 +47,7 @@ conda activate rascal_env
 
 ### 2. Install RASCAL from GitHub:
 ```bash
-pip install git+https://github.com/nmccloskey/rascal.git@refinements
+pip install git+https://github.com/nmccloskey/rascal.git@main
 ```
 
 ---
@@ -61,7 +65,7 @@ Example structure:
 ```plaintext
 your_project/
 ├── config.yaml           # Configuration file (see below)
-└── data/
+└── rascal_data/
     └── input/            # Place your CHAT (.cha) files and/or Excel data here
                           # (RASCAL will make an output directory)
 ```
@@ -73,26 +77,34 @@ This file specifies the directories, coders, reliability settings, and tier stru
 You can download the example config file from the repo or create your own like this:
 
 ```yaml
-input_dir: "data/input"
-output_dir: "data/output"
+input_dir: rascal_data/input
+output_dir: rascal_data/output
 reliability_fraction: 0.2
-coders: [XX, YY]
-
+coders:
+- '1'
+- '2'
+- '3'
 tiers:
-  "*site": [AC, BU, TU]
-  test: [Pre, Post, Maint]
-  participantID: "site##"
+  '*site':
+  - AC
+  - BU
+  - TU
+  test:
+  - Pre
+  - Post
+  - Maint
+  participantID: site##
   narrative:
-    - CATGrandpa
-    - BrokenWindow
-    - RefusedUmbrella
-    - CatRescue
-    - BirthdayScene
+  - CATGrandpa
+  - BrokenWindow
+  - RefusedUmbrella
+  - CatRescue
+  - BirthdayScene
 ```
 
 Explanation:
 
-- Keys prefixed with `*` (e.g., `"*site"`) define partition tiers — these group files for separate coding and output.
+- Keys prefixed with `*` and surrounded by `""` (e.g., `"*site"`) define partition tiers — these group files for separate coding and output.
 
 - In this example, separate CU coding files will be generated for each `site` (AC, BU, TU), but not for each `narrative` or `test` value.
 
@@ -133,13 +145,10 @@ rascal f
 ## Notes
 
 - `.cha` files must be formatted correctly according to CHAT conventions.
-- Ensure filenames match tier values as specified in `tiers.txt`.
+- Ensure filenames match tier values as specified in `config.yaml`.
 - RASCAL searches values using exact spelling and capitalization.
-- No spaces allowed in `tiers.txt` (use ` ` for new lines only).
 
 ## Status and Contact
-
-This tool is released as a public **beta** version and is still under active development. While the core functionality is stable and has been used in research contexts, there are aspects of robustness, error handling, and user-friendliness which still want refinement.
 
 I warmly welcome feedback, feature suggestions, or bug reports. Feel free to reach out by:
 
