@@ -38,7 +38,7 @@ def zip_folder(folder_path):
     zip_buffer.seek(0)
     return zip_buffer
 
-st.header("Step 1: Provide config and input files")
+st.header("Part 1: Create or upload config file")
 
 # Upload config or build it
 config_file = st.file_uploader("Upload your config.yaml", type=["yaml", "yml"])
@@ -54,6 +54,8 @@ else:
         if st.button("✅ Use this built config"):
             st.session_state.confirmed_config = True
             st.success("Built config confirmed.")
+
+st.header("Part 2: Upload input files")
 
 # Upload .cha files
 cha_files = st.file_uploader("Upload input files", type=["cha", ".xlsx"], accept_multiple_files=True)
@@ -105,6 +107,8 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
             "j. Unblind CU samples",
             "k. Run CoreLex"
         ]
+
+        st.header("Part 3: Select steps or functions")
 
         # --- Dropdowns ---
         step = st.selectbox("Choose a predefined step", ["(None)"] + list(step_mapping.keys()))
