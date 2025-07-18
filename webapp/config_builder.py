@@ -26,7 +26,7 @@ def build_config_ui():
         cols = st.columns([2, 4, 1])
         tier["label"] = cols[0].text_input(f"Tier name {i+1}", value=tier["label"], key=f"tier_label_{i}")
         tier["values"] = cols[1].text_input(f"Values (comma-separated) - {tier['label']}", value=tier["values"], key=f"tier_values_{i}")
-        tier["is_partition"] = cols[2].checkbox("Partition?", value=tier["is_partition"], key=f"tier_partition_{i}")
+        tier["is_partition"] = cols[2].checkbox("Partition", value=tier["is_partition"], key=f"tier_partition_{i}")
 
     col1, col2 = st.columns([1, 1])
     if col1.button("➕ Add Tier"):
