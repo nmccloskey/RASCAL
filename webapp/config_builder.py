@@ -8,7 +8,7 @@ def build_config_ui():
     input_dir = st.text_input("Input directory", value="data/input")
     output_dir = st.text_input("Output directory", value="data/output")
     reliability_fraction = st.number_input("Reliability fraction", min_value=0.0, max_value=1.0, value=0.2)
-    coders = st.text_area("Coders (comma-separated)", value="XX, YY, ZZ")
+    coders = st.text_area("Coders (comma-separated)", value="1, 2, 3")
     coder_list = [c.strip() for c in coders.split(",") if c.strip()]
 
     # --- Tier Builder ---

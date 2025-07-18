@@ -1,11 +1,11 @@
 import streamlit as st
 import yaml
 import os
-import sys
 import tempfile
 import zipfile
 from io import BytesIO
 from config_builder import build_config_ui
+from datetime import datetime
 
 def add_src_to_sys_path():
     import sys, os
@@ -78,7 +78,21 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
         frac = config.get("reliability_fraction", 0.2)
         coders = config.get("coders", [])
 
-        steps = st.multiselect("Select RASCAL steps to run", [
+        step_mapping = {
+            "Step 1 (abc)": ['a. Select transcription reliability samples',
+                            'b. Prepare utterance tables',
+                            'c. Make CU coding files'],
+            "Step 3 (defgh)": ['d. Analyze transcription reliability',
+                            'e. Analyze CU reliability',
+                            'f. Analyze CU coding',
+                            'g. Make word count files',
+                            'h. Make timesheets'],
+            "Step 5 (ijk)": ['i. Analyze word count reliability',
+                            'j. Unblind CU samples',
+                            'k. Run CoreLex']
+        }
+
+        all_functions = [
             "a. Select transcription reliability samples",
             "b. Prepare utterance tables",
             "c. Make CU coding files",
@@ -90,45 +104,53 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
             "i. Analyze word count reliability",
             "j. Unblind CU samples",
             "k. Run CoreLex"
-        ])
+        ]
 
-        if st.button("Run selected steps"):
-            if "a. Select transcription reliability samples" in steps or \
-               "b. Prepare utterance tables" in steps:
+        # --- Dropdowns ---
+        step = st.selectbox("Or choose a predefined step", ["(None)"] + list(step_mapping.keys()))
+        funcs = st.multiselect("Or manually select functions to run", all_functions)
+
+        # --- Resolve full list of selected functions ---
+        selected_funcs = funcs or (step_mapping[step] if step != "(None)" else [])
+
+        if st.button("Run selected functions"):
+            if "a. Select transcription reliability samples" in selected_funcs or \
+            "b. Prepare utterance tables" in selected_funcs:
                 chats = run_read_cha_files(input_dir)
             else:
                 chats = None
 
-            if "a. Select transcription reliability samples" in steps:
+            if "a. Select transcription reliability samples" in selected_funcs:
                 run_select_transcription_reliability_samples(tiers, chats, frac, output_dir)
-            if "b. Prepare utterance tables" in steps:
+            if "b. Prepare utterance tables" in selected_funcs:
                 run_prepare_utterance_dfs(tiers, chats, output_dir)
-            if "c. Make CU coding files" in steps:
+            if "c. Make CU coding files" in selected_funcs:
                 run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir)
-            if "d. Analyze transcription reliability" in steps:
+            if "d. Analyze transcription reliability" in selected_funcs:
                 run_analyze_transcription_reliability(tiers, input_dir, output_dir)
-            if "e. Analyze CU reliability" in steps:
+            if "e. Analyze CU reliability" in selected_funcs:
                 run_analyze_CU_reliability(tiers, input_dir, output_dir)
-            if "f. Analyze CU coding" in steps:
+            if "f. Analyze CU coding" in selected_funcs:
                 run_analyze_CU_coding(tiers, input_dir, output_dir)
-            if "g. Make word count files" in steps:
+            if "g. Make word count files" in selected_funcs:
                 run_make_word_count_files(tiers, frac, coders, output_dir)
-            if "h. Make timesheets" in steps:
+            if "h. Make timesheets" in selected_funcs:
                 run_make_timesheets(tiers, input_dir, output_dir)
-            if "i. Analyze word count reliability" in steps:
+            if "i. Analyze word count reliability" in selected_funcs:
                 run_analyze_word_count_reliability(tiers, input_dir, output_dir)
-            if "j. Unblind CU samples" in steps:
+            if "j. Unblind CU samples" in selected_funcs:
                 run_unblind_CUs(tiers, input_dir, output_dir)
-            if "k. Run CoreLex" in steps:
+            if "k. Run CoreLex" in selected_funcs:
                 run_run_corelex(input_dir, output_dir)
 
-            st.success("Steps completed!")
+            st.success("Functions completed!")
 
-            # Create download link
+            # --- Timestamped ZIP filename ---
+            timestamp = datetime.now().strftime("%y%m%d_%H%M")
             zip_buffer = zip_folder(output_dir)
             st.download_button(
                 label="Download Results ZIP",
                 data=zip_buffer,
-                file_name="rascal_output.zip",
+                file_name=f"rascal_output_{timestamp}.zip",
                 mime="application/zip"
             )
