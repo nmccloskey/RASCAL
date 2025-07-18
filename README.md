@@ -25,12 +25,9 @@ RASCAL is a tool designed to facilitate the analysis of speech in clinical aphas
 
 ## Try the Web App
 
-st.markdown("## Try the Web App")
-st.markdown("You can use RASCAL in your browser — no installation required:")
-st.markdown(
-    '<a href="https://rascal.streamlit.app/" target="_blank">👉 Launch the RASCAL Web App</a>',
-    unsafe_allow_html=True
-)
+You can use RASCAL in your browser — no installation required:
+
+👉 [Launch the RASCAL Web App](https://rascal.streamlit.app/)
 
 ---
 
