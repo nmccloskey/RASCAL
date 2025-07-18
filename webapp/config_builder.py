@@ -8,7 +8,7 @@ def build_config_ui():
     input_dir = st.text_input("Input directory", value="data/input")
     output_dir = st.text_input("Output directory", value="data/output")
     reliability_fraction = st.number_input("Reliability fraction", min_value=0.0, max_value=1.0, value=0.2)
-    coders = st.text_area("Coders (comma-separated)", value="1, 2, 3")
+    coders = st.text_input("Coders (comma-separated)", value="1, 2, 3")
     coder_list = [c.strip() for c in coders.split(",") if c.strip()]
 
     # --- Tier Builder ---
@@ -24,8 +24,8 @@ def build_config_ui():
 
     for i, tier in enumerate(st.session_state.tiers):
         cols = st.columns([2, 4, 1])
-        tier["label"] = cols[0].text_input(f"Tier name {i+1}", value=tier["label"], key=f"tier_label_{i}")
-        tier["values"] = cols[1].text_input(f"Values (comma-separated) - {tier['label']}", value=tier["values"], key=f"tier_values_{i}")
+        tier["label"] = cols[0].text_input(f"Name of Tier {i+1}", value=tier["label"], key=f"tier_label_{i}")
+        tier["values"] = cols[1].text_area(f"Values (comma-separated) - {tier['label']}", value=tier["values"], key=f"tier_values_{i}")
         tier["is_partition"] = cols[2].checkbox("Partition", value=tier["is_partition"], key=f"tier_partition_{i}")
 
     col1, col2 = st.columns([1, 1])
