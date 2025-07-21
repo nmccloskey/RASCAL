@@ -105,6 +105,7 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, test=False):
                     # Check consistency for coder 3.
                     if (np.isnan(c3SV) and not np.isnan(c3REL)) or (np.isnan(c3REL) and not np.isnan(c3SV)):
                         logging.error(f"Neutrality inconsistency in coder 3 for utterance {CUrelcod.at[i, 'UtteranceID']}")
+                        c3CU.append(np.nan)
                     # Code CU for coder 3.
                     elif np.isnan(c3REL) and np.isnan(c3SV):
                         c3CU.append(np.nan)
