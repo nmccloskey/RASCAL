@@ -320,13 +320,16 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
     """
     random.seed(88)
 
+    # Make input directory a path object
+    input_path = Path(input_dir)
+
     # Gather all CU coding files and their matching reliability files
-    CU_files = list(input_dir.glob("*_CUCoding.xlsx"))
+    CU_files = list(input_path.glob("*_CUCoding.xlsx"))
 
     for cu_file in CU_files:
         # Try to find corresponding reliability file
         base_name = cu_file.stem.replace('_CUCoding', '')
-        rel_file = input_dir / f"{base_name}_CUReliabilityCoding.xlsx"
+        rel_file = input_path / f"{base_name}_CUReliabilityCoding.xlsx"
         
         if not rel_file.exists():
             print(f"⚠️ No reliability file found for {cu_file.name}. Skipping.")
