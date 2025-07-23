@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
+import random
+
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -197,6 +199,7 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, test=False):
     if test:
         return results
 
+
 def analyze_CU_coding(tiers, input_dir, output_dir, test=False):
     """
     Analyzes CU coding by summarizing coder results and generating summary statistics.
@@ -308,3 +311,68 @@ def analyze_CU_coding(tiers, input_dir, output_dir, test=False):
     
     if test:
         return results
+
+
+def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=False):
+    """
+    Reselect new CU reliability coding samples from the pool of samples not used previously.
+    Creates a new file with suffix _reselected_CUReliabilityCoding.xlsx
+    """
+    random.seed(88)
+
+    # Gather all CU coding files and their matching reliability files
+    CU_files = list(input_dir.glob("*_CUCoding.xlsx"))
+
+    for cu_file in CU_files:
+        # Try to find corresponding reliability file
+        base_name = cu_file.stem.replace('_CUCoding', '')
+        rel_file = input_dir / f"{base_name}_CUReliabilityCoding.xlsx"
+        
+        if not rel_file.exists():
+            print(f"⚠️ No reliability file found for {cu_file.name}. Skipping.")
+            continue
+
+        # Load CU coding and reliability data
+        df_cu = pd.read_excel(cu_file)
+        df_rel = pd.read_excel(rel_file)
+
+        # Get previously used reliability samples
+        used_sample_ids = set(df_rel['sampleID'].unique())
+
+        # Pool of samples not previously selected
+        all_sample_ids = set(df_cu['sampleID'].unique())
+        available_ids = list(all_sample_ids - used_sample_ids)
+
+        if len(available_ids) == 0:
+            print(f"⚠️ No available samples to reselect for {cu_file.name}. Skipping.")
+            continue
+
+        # Determine how many to reselect
+        num_to_select = max(1, round(len(all_sample_ids) * frac))
+
+        if len(available_ids) < num_to_select:
+            print(f"⚠️ Not enough unused samples in {cu_file.name} to meet f{frac*100}% threshold. Selecting {len(available_ids)} instead of {num_to_select}.")
+            num_to_select = len(available_ids)
+
+        reselected_ids = random.sample(available_ids, k=num_to_select)
+
+        # Construct new reliability DataFrame
+        rel_columns = ['c2ID', 'c2SV', 'c2REL', 'c2com']
+        rename_map = {'c2ID': 'c3ID', 'c2SV': 'c3SV', 'c2REL': 'c3REL', 'c2com': 'c3com'}
+        shared_cols = ['UtteranceID', 'site', 'narrative', 'sampleID', 'speaker', 'utterance', 'comment']
+
+        df_new_rel = df_cu[df_cu['sampleID'].isin(reselected_ids)].copy()
+        df_new_rel = df_new_rel[shared_cols + rel_columns]
+        df_new_rel.rename(columns=rename_map, inplace=True)
+        # Replace coder
+        df_new_rel['c3ID'] = coder3
+        # Remove previous coder comments
+        df_new_rel['c3com'] = np.nan
+
+        # Save the new reliability file
+        output_filename = f"{base_name}_reselected_CUReliabilityCoding.xlsx"
+        output_path = output_dir / output_filename
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        df_new_rel.to_excel(output_path, index=False)
+
+        print(f"✅ Reselected reliability file written: {output_filename}")

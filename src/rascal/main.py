@@ -42,11 +42,11 @@ def run_analyze_transcription_reliability(tiers, input_dir, output_dir):
     analyze_transcription_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
 
 def run_analyze_CU_reliability(tiers, input_dir, output_dir):
-    from .utterances.CU_reliability_analyzer import analyze_CU_reliability
+    from .utterances.CU_analyzer import analyze_CU_reliability
     analyze_CU_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
 
 def run_analyze_CU_coding(tiers, input_dir, output_dir):
-    from .utterances.CU_reliability_analyzer import analyze_CU_coding
+    from .utterances.CU_analyzer import analyze_CU_coding
     analyze_CU_coding(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
 
 def run_make_word_count_files(tiers, frac, coders, output_dir):
@@ -68,6 +68,11 @@ def run_unblind_CUs(tiers, input_dir, output_dir):
 def run_run_corelex(input_dir, output_dir):
     from .samples.corelex import run_corelex
     run_corelex(input_dir=input_dir, output_dir=output_dir)
+
+def run_reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
+    from .utterances.CU_analyzer import reselect_CU_reliability
+    reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=False)
+
 
 def main(args):
     """Main function to process input arguments and execute appropriate steps."""
@@ -122,6 +127,11 @@ def main(args):
         run_unblind_CUs(tiers, input_dir, output_dir)
     if 'k' in steps_to_run:
         run_run_corelex(input_dir, output_dir)
+
+    # Other functions.
+    if 'l' in steps_to_run:
+        coder3 = coders[2] or '3'
+        run_reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process the step argument for main script.")
