@@ -341,13 +341,12 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
         return
 
     # Gather CU coding files using Path.glob
-    coding_files = list(Path(input_dir).rglob("*_CUCoding.xlsx"))
+    coding_files = [f for f in Path(input_dir).rglob('*_CUCoding.xlsx')]
     results = []
 
     for cu_file in tqdm(coding_files, desc="Reselecting CU reliability samples"):
         try:
-            base_name = cu_file.stem.replace('_CUCoding', '')
-            rel_file = Path(input_dir) / f"{base_name}_CUReliabilityCoding.xlsx"
+            rel_file = cu_file.replace('_CUCoding', '_CUReliabilityCoding')
 
             if not rel_file.exists():
                 logging.warning(f"No reliability file found for {cu_file.name}. Skipping.")
@@ -384,11 +383,12 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
 
             try:
                 os.makedirs(CUcoding_dir, exist_ok=True)
-                logging.info(f"Created partition directory: {CUcoding_dir}")
+                logging.info(f"Created directory: {CUcoding_dir}")
             except Exception as e:
-                logging.error(f"Failed to create partition directory {CUcoding_dir}: {e}")
+                logging.error(f"Failed to create directory {CUcoding_dir}: {e}")
                 continue
 
+            base_name = cu_file.replace('_CUCoding', '')
             out_file = os.path.join(CUcoding_dir, f"{base_name}_reselected_CUReliabilityCoding.xlsx")
             df_new_rel.to_excel(out_file, index=False)
             logging.info(f"Saved reselected CU reliability file: {out_file}")
