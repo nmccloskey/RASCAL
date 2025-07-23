@@ -313,17 +313,14 @@ def analyze_CU_coding(tiers, input_dir, output_dir, test=False):
         return results
 
 
-def ensure_path(p):
-    return p if isinstance(p, Path) else Path(p)
-
 def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=False):
     """
     Reselects new CU reliability samples from previously unused samples,
     avoiding overlap with the original reliability set.
 
     Parameters:
-    - input_dir (str or Path): Directory containing *_CUCoding and *_CUReliabilityCoding files.
-    - output_dir (str or Path): Directory to save new reliability files.
+    - input_dir (str): Directory containing *_CUCoding and *_CUReliabilityCoding files.
+    - output_dir (str): Directory to save new reliability files.
     - coder3 (str): Name or ID of third coder for reliability coding.
     - frac (float): Fraction of samples to reselect for reliability (e.g., 0.2 for 20%).
     - test (bool): If True, returns output DataFrames for testing.
@@ -333,26 +330,24 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
     """
 
     random.seed(88)
-    input_path = ensure_path(input_dir)
-    output_path = ensure_path(output_dir)
 
     # Create output CU coding directory
-    CUcoding_dir = output_path / 'CUCoding'
+    CUcoding_dir = os.path.join(output_dir, 'CUCoding')
     try:
-        CUcoding_dir.mkdir(parents=True, exist_ok=True)
+        os.makedirs(CUcoding_dir, exist_ok=True)
         logging.info(f"Created directory: {CUcoding_dir}")
     except Exception as e:
         logging.error(f"Failed to create directory {CUcoding_dir}: {e}")
         return
 
-    # Gather coding files
-    CU_files = list(input_path.rglob("*_CUCoding.xlsx"))
+    # Gather CU coding files using Path.glob
+    coding_files = list(Path(input_dir).rglob("*_CUCoding.xlsx"))
     results = []
 
-    for cu_file in tqdm(CU_files, desc="Reselecting CU reliability samples"):
+    for cu_file in tqdm(coding_files, desc="Reselecting CU reliability samples"):
         try:
             base_name = cu_file.stem.replace('_CUCoding', '')
-            rel_file = input_path / f"{base_name}_CUReliabilityCoding.xlsx"
+            rel_file = Path(input_dir) / f"{base_name}_CUReliabilityCoding.xlsx"
 
             if not rel_file.exists():
                 logging.warning(f"No reliability file found for {cu_file.name}. Skipping.")
@@ -376,7 +371,7 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
 
             reselected_ids = random.sample(available_ids, k=num_to_select)
 
-            # Build new reliability DataFrame
+            # Construct new reliability DataFrame
             rel_columns = ['c2ID', 'c2SV', 'c2REL', 'c2com']
             rename_map = {'c2ID': 'c3ID', 'c2SV': 'c3SV', 'c2REL': 'c3REL', 'c2com': 'c3com'}
             shared_cols = ['UtteranceID', 'site', 'narrative', 'sampleID', 'speaker', 'utterance', 'comment']
@@ -385,21 +380,18 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
             df_new_rel = df_new_rel[shared_cols + rel_columns]
             df_new_rel.rename(columns=rename_map, inplace=True)
             df_new_rel['c3ID'] = coder3
-            df_new_rel['c3com'] = np.nan  # Remove previous coder comments
+            df_new_rel['c3com'] = np.nan  # Remove original coder comments
 
-            # Determine subfolder based on file name
-            labels = base_name.split('_')
-            partition_dir = CUcoding_dir.joinpath(*labels[:-1])  # Drop file stem like "Session1_CUCoding"
             try:
-                partition_dir.mkdir(parents=True, exist_ok=True)
-                logging.info(f"Created partition directory: {partition_dir}")
+                os.makedirs(CUcoding_dir, exist_ok=True)
+                logging.info(f"Created partition directory: {CUcoding_dir}")
             except Exception as e:
-                logging.error(f"Failed to create directory {partition_dir}: {e}")
+                logging.error(f"Failed to create partition directory {CUcoding_dir}: {e}")
                 continue
 
-            out_path = partition_dir / f"{base_name}_reselected_CUReliabilityCoding.xlsx"
-            df_new_rel.to_excel(out_path, index=False)
-            logging.info(f"Saved reselected CU reliability file: {out_path.name}")
+            out_file = os.path.join(CUcoding_dir, f"{base_name}_reselected_CUReliabilityCoding.xlsx")
+            df_new_rel.to_excel(out_file, index=False)
+            logging.info(f"Saved reselected CU reliability file: {out_file}")
 
             if test:
                 results.append(df_new_rel)
