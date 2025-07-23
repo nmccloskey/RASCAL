@@ -318,68 +318,94 @@ def ensure_path(p):
 
 def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=False):
     """
-    Reselect new CU reliability coding samples from the pool of samples not used previously.
-    Creates a new file with suffix _reselected_CUReliabilityCoding.xlsx
-    """
-    random.seed(88)
+    Reselects new CU reliability samples from previously unused samples,
+    avoiding overlap with the original reliability set.
 
-    # Make input directory a path object
+    Parameters:
+    - input_dir (str or Path): Directory containing *_CUCoding and *_CUReliabilityCoding files.
+    - output_dir (str or Path): Directory to save new reliability files.
+    - coder3 (str): Name or ID of third coder for reliability coding.
+    - frac (float): Fraction of samples to reselect for reliability (e.g., 0.2 for 20%).
+    - test (bool): If True, returns output DataFrames for testing.
+
+    Returns:
+    - None or list of DataFrames if test=True.
+    """
+
+    random.seed(88)
     input_path = ensure_path(input_dir)
     output_path = ensure_path(output_dir)
 
-    # Gather all CU coding files and their matching reliability files
-    CU_files = list(input_path.glob("*_CUCoding.xlsx"))
+    # Create output CU coding directory
+    CUcoding_dir = output_path / 'CUCoding'
+    try:
+        CUcoding_dir.mkdir(parents=True, exist_ok=True)
+        logging.info(f"Created directory: {CUcoding_dir}")
+    except Exception as e:
+        logging.error(f"Failed to create directory {CUcoding_dir}: {e}")
+        return
 
-    for cu_file in CU_files:
-        # Try to find corresponding reliability file
-        base_name = cu_file.stem.replace('_CUCoding', '')
-        rel_file = input_path / f"{base_name}_CUReliabilityCoding.xlsx"
-        
-        if not rel_file.exists():
-            print(f"⚠️ No reliability file found for {cu_file.name}. Skipping.")
-            continue
+    # Gather coding files
+    CU_files = list(input_path.rglob("*_CUCoding.xlsx"))
+    results = []
 
-        # Load CU coding and reliability data
-        df_cu = pd.read_excel(cu_file)
-        df_rel = pd.read_excel(rel_file)
-
-        # Get previously used reliability samples
-        used_sample_ids = set(df_rel['sampleID'].unique())
-
-        # Pool of samples not previously selected
-        all_sample_ids = set(df_cu['sampleID'].unique())
-        available_ids = list(all_sample_ids - used_sample_ids)
-
-        if len(available_ids) == 0:
-            print(f"⚠️ No available samples to reselect for {cu_file.name}. Skipping.")
-            continue
-
-        # Determine how many to reselect
-        num_to_select = max(1, round(len(all_sample_ids) * frac))
-
-        if len(available_ids) < num_to_select:
-            print(f"⚠️ Not enough unused samples in {cu_file.name} to meet f{frac*100}% threshold. Selecting {len(available_ids)} instead of {num_to_select}.")
-            num_to_select = len(available_ids)
-
-        reselected_ids = random.sample(available_ids, k=num_to_select)
-
-        # Construct new reliability DataFrame
-        rel_columns = ['c2ID', 'c2SV', 'c2REL', 'c2com']
-        rename_map = {'c2ID': 'c3ID', 'c2SV': 'c3SV', 'c2REL': 'c3REL', 'c2com': 'c3com'}
-        shared_cols = ['UtteranceID', 'site', 'narrative', 'sampleID', 'speaker', 'utterance', 'comment']
-
-        df_new_rel = df_cu[df_cu['sampleID'].isin(reselected_ids)].copy()
-        df_new_rel = df_new_rel[shared_cols + rel_columns]
-        df_new_rel.rename(columns=rename_map, inplace=True)
-        # Replace coder
-        df_new_rel['c3ID'] = coder3
-        # Remove previous coder comments
-        df_new_rel['c3com'] = np.nan
-
-        # Save the new reliability file
-        reselection_file_path = os.path.join(output_path, f"{base_name}_reselected_CUReliabilityCoding.xlsx")
+    for cu_file in tqdm(CU_files, desc="Reselecting CU reliability samples"):
         try:
-            df_new_rel.to_excel(reselection_file_path, index=False)
-            logging.info(f"Saved CU coding summary to: {reselection_file_path}")
+            base_name = cu_file.stem.replace('_CUCoding', '')
+            rel_file = input_path / f"{base_name}_CUReliabilityCoding.xlsx"
+
+            if not rel_file.exists():
+                logging.warning(f"No reliability file found for {cu_file.name}. Skipping.")
+                continue
+
+            df_cu = pd.read_excel(cu_file)
+            df_rel = pd.read_excel(rel_file)
+
+            used_sample_ids = set(df_rel['sampleID'].unique())
+            all_sample_ids = set(df_cu['sampleID'].unique())
+            available_ids = list(all_sample_ids - used_sample_ids)
+
+            if len(available_ids) == 0:
+                logging.warning(f"No available samples to reselect for {cu_file.name}. Skipping.")
+                continue
+
+            num_to_select = max(1, round(len(all_sample_ids) * frac))
+            if len(available_ids) < num_to_select:
+                logging.warning(f"Not enough unused samples in {cu_file.name} to meet {frac*100:.0f}% threshold. Selecting {len(available_ids)} instead of {num_to_select}.")
+                num_to_select = len(available_ids)
+
+            reselected_ids = random.sample(available_ids, k=num_to_select)
+
+            # Build new reliability DataFrame
+            rel_columns = ['c2ID', 'c2SV', 'c2REL', 'c2com']
+            rename_map = {'c2ID': 'c3ID', 'c2SV': 'c3SV', 'c2REL': 'c3REL', 'c2com': 'c3com'}
+            shared_cols = ['UtteranceID', 'site', 'narrative', 'sampleID', 'speaker', 'utterance', 'comment']
+
+            df_new_rel = df_cu[df_cu['sampleID'].isin(reselected_ids)].copy()
+            df_new_rel = df_new_rel[shared_cols + rel_columns]
+            df_new_rel.rename(columns=rename_map, inplace=True)
+            df_new_rel['c3ID'] = coder3
+            df_new_rel['c3com'] = np.nan  # Remove previous coder comments
+
+            # Determine subfolder based on file name
+            labels = base_name.split('_')
+            partition_dir = CUcoding_dir.joinpath(*labels[:-1])  # Drop file stem like "Session1_CUCoding"
+            try:
+                partition_dir.mkdir(parents=True, exist_ok=True)
+                logging.info(f"Created partition directory: {partition_dir}")
+            except Exception as e:
+                logging.error(f"Failed to create directory {partition_dir}: {e}")
+                continue
+
+            out_path = partition_dir / f"{base_name}_reselected_CUReliabilityCoding.xlsx"
+            df_new_rel.to_excel(out_path, index=False)
+            logging.info(f"Saved reselected CU reliability file: {out_path.name}")
+
+            if test:
+                results.append(df_new_rel)
+
         except Exception as e:
-            logging.error(f"Failed to write CU reliability summary file {reselection_file_path}: {e}")
+            logging.error(f"Unexpected error with file {cu_file.name}: {e}")
+
+    if test:
+        return results

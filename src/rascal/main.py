@@ -71,7 +71,7 @@ def run_run_corelex(input_dir, output_dir):
 
 def run_reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
     from .utterances.CU_analyzer import reselect_CU_reliability
-    reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=False)
+    reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac, test=False)
 
 
 def main(args):
