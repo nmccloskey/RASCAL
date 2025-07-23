@@ -332,12 +332,12 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
     random.seed(88)
 
     # Create output CU coding directory
-    CUcoding_dir = os.path.join(output_dir, 'CUCoding')
+    reselected_CU_reliability_dir = os.path.join(output_dir, 'reselected_CU_reliability')
     try:
-        os.makedirs(CUcoding_dir, exist_ok=True)
-        logging.info(f"Created directory: {CUcoding_dir}")
+        os.makedirs(reselected_CU_reliability_dir, exist_ok=True)
+        logging.info(f"Created directory: {reselected_CU_reliability_dir}")
     except Exception as e:
-        logging.error(f"Failed to create directory {CUcoding_dir}: {e}")
+        logging.error(f"Failed to create directory {reselected_CU_reliability_dir}: {e}")
         return
 
     # Gather CU coding files using Path.glob
@@ -383,14 +383,14 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
             df_new_rel['c3com'] = np.nan  # Remove original coder comments
 
             try:
-                os.makedirs(CUcoding_dir, exist_ok=True)
-                logging.info(f"Created directory: {CUcoding_dir}")
+                os.makedirs(reselected_CU_reliability_dir, exist_ok=True)
+                logging.info(f"Created directory: {reselected_CU_reliability_dir}")
             except Exception as e:
-                logging.error(f"Failed to create directory {CUcoding_dir}: {e}")
+                logging.error(f"Failed to create directory {reselected_CU_reliability_dir}: {e}")
                 continue
 
             base_name = cu_file.stem.replace('_CUCoding', '')
-            out_file = os.path.join(CUcoding_dir, f"{base_name}_reselected_CUReliabilityCoding.xlsx")
+            out_file = os.path.join(reselected_CU_reliability_dir, f"{base_name}_reselected_CUReliabilityCoding.xlsx")
             df_new_rel.to_excel(out_file, index=False)
             logging.info(f"Saved reselected CU reliability file: {out_file}")
 
