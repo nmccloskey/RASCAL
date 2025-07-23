@@ -342,6 +342,7 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
 
     # Gather CU coding files using Path.glob
     coding_files = [f for f in Path(input_dir).rglob('*_CUCoding.xlsx')]
+    logging.info(f"Found {coding_files} in {input_dir}.")
     results = []
 
     for cu_file in tqdm(coding_files, desc="Reselecting CU reliability samples"):
