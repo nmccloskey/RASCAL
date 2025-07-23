@@ -313,6 +313,9 @@ def analyze_CU_coding(tiers, input_dir, output_dir, test=False):
         return results
 
 
+def ensure_path(p):
+    return p if isinstance(p, Path) else Path(p)
+
 def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=False):
     """
     Reselect new CU reliability coding samples from the pool of samples not used previously.
@@ -321,7 +324,8 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
     random.seed(88)
 
     # Make input directory a path object
-    input_path = Path(input_dir)
+    input_path = ensure_path(input_dir)
+    output_path = ensure_path(output_dir)
 
     # Gather all CU coding files and their matching reliability files
     CU_files = list(input_path.glob("*_CUCoding.xlsx"))
