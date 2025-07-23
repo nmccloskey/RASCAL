@@ -347,7 +347,7 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
 
     for cu_file in tqdm(coding_files, desc="Reselecting CU reliability samples"):
         try:
-            rel_file = cu_file.replace('_CUCoding', '_CUReliabilityCoding')
+            rel_file = cu_file.with_name(cu_file.name.replace('_CUCoding', '_CUReliabilityCoding'))
 
             if not rel_file.exists():
                 logging.warning(f"No reliability file found for {cu_file.name}. Skipping.")
@@ -389,7 +389,7 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
                 logging.error(f"Failed to create directory {CUcoding_dir}: {e}")
                 continue
 
-            base_name = cu_file.replace('_CUCoding', '')
+            base_name = cu_file.stem.replace('_CUCoding', '')
             out_file = os.path.join(CUcoding_dir, f"{base_name}_reselected_CUReliabilityCoding.xlsx")
             df_new_rel.to_excel(out_file, index=False)
             logging.info(f"Saved reselected CU reliability file: {out_file}")
