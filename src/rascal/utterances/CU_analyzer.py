@@ -377,9 +377,9 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
         df_new_rel['c3com'] = np.nan
 
         # Save the new reliability file
-        output_filename = f"{base_name}_reselected_CUReliabilityCoding.xlsx"
-        output_path = output_dir / output_filename
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        df_new_rel.to_excel(output_path, index=False)
-
-        print(f"✅ Reselected reliability file written: {output_filename}")
+        reselection_file_path = os.path.join(output_path, f"{base_name}_reselected_CUReliabilityCoding.xlsx")
+        try:
+            df_new_rel.to_excel(reselection_file_path, index=False)
+            logging.info(f"Saved CU coding summary to: {reselection_file_path}")
+        except Exception as e:
+            logging.error(f"Failed to write CU reliability summary file {reselection_file_path}: {e}")
