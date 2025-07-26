@@ -28,7 +28,107 @@ def ag_check(x):
     else:
         return np.nan
 
-def analyze_CU_reliability(tiers, input_dir, output_dir, test=False):
+def compute_CU_column(row):
+    """
+    Compute CU value for a single coder based on SV and REL columns.
+
+    Returns:
+    - 1 if SV==REL==1
+    - 0 if SV!=1 or REL!=1 but both are 0 or 0-like
+    - np.nan if both are NaN
+    - Logs error and returns np.nan if only one is NaN
+    """
+    sv, rel = row.iloc[0], row.iloc[1]
+
+    if (pd.isna(sv) and not pd.isna(rel)) or (pd.isna(rel) and not pd.isna(sv)):
+        logging.error(f"Neutrality inconsistency in CU computation: SV={sv}, REL={rel}")
+        return np.nan
+    elif pd.isna(sv) and pd.isna(rel):
+        return np.nan
+    elif sv == rel == 1:
+        return 1
+    else:
+        return 0
+
+def summarize_CU_reliability(CUrelcod, sv2, rel2, sv3, rel3):
+    """
+    Summarize CU reliability metrics at the sample level.
+
+    Parameters:
+    - CUrelcod (DataFrame): Merged CU coding and reliability dataframe with c2CU and c3CU added.
+    - sv2, rel2: Column names for coder 2's SV and REL fields.
+    - sv3, rel3: Column names for coder 3's SV and REL fields.
+
+    Returns:
+    - CUrelsum (DataFrame): Aggregated reliability stats grouped by sampleID.
+    """
+    CUrelsum = CUrelcod.copy()
+    CUrelsum.drop(columns=['UtteranceID'], inplace=True, errors='ignore')
+
+    try:
+        CUrelsum = CUrelsum.groupby(['sampleID']).agg(
+            no_utt2=('c2CU', utt_ct),
+            pSV2=(sv2, ptotal),
+            mSV2=(sv2, lambda x: utt_ct(x) - ptotal(x) if utt_ct(x) > 0 else np.nan),
+            pREL2=(rel2, ptotal),
+            mREL2=(rel2, lambda x: utt_ct(x) - ptotal(x) if utt_ct(x) > 0 else np.nan),
+            CU2=('c2CU', ptotal),
+            percCU2=('c2CU', lambda x: round((ptotal(x) / utt_ct(x)) * 100, 3) if utt_ct(x) > 0 else np.nan),
+
+            no_utt3=('c3CU', utt_ct),
+            pSV3=(sv3, ptotal),
+            mSV3=(sv3, lambda x: utt_ct(x) - ptotal(x) if utt_ct(x) > 0 else np.nan),
+            pREL3=(rel3, ptotal),
+            mREL3=(rel3, lambda x: utt_ct(x) - ptotal(x) if utt_ct(x) > 0 else np.nan),
+            CU3=('c3CU', ptotal),
+            percCU3=('c3CU', lambda x: round((ptotal(x) / utt_ct(x)) * 100, 3) if utt_ct(x) > 0 else np.nan),
+
+            totAGSV=('AGSV', ptotal),
+            percAGSV=('AGSV', lambda x: (ptotal(x) / utt_ct(x)) * 100 if utt_ct(x) > 0 else np.nan),
+            totAGREL=('AGREL', ptotal),
+            percAGREL=('AGREL', lambda x: (ptotal(x) / utt_ct(x)) * 100 if utt_ct(x) > 0 else np.nan),
+            totAGCU=('AGCU', ptotal),
+            percAGCU=('AGCU', lambda x: (ptotal(x) / utt_ct(x)) * 100 if utt_ct(x) > 0 else np.nan),
+
+            sampleAGSV=('AGSV', ag_check),
+            sampleAGREL=('AGREL', ag_check),
+            sampleAGCU=('AGCU', ag_check)
+        ).reset_index()
+        logging.info("Successfully aggregated CU reliability data.")
+        return CUrelsum
+    except Exception as e:
+        logging.error(f"Failed during CU reliability aggregation: {e}")
+        return pd.DataFrame()  # Fail-safe return
+
+def write_reliability_report(CUrelsum, report_path, partition_labels=None):
+    """
+    Writes a plain text summary report of CU reliability to the given file path.
+
+    Parameters:
+    - CUrelsum (DataFrame): Summary stats by sample, including agreement columns.
+    - report_path (str): Full path to the output .txt file.
+    - partition_labels (list or None): Optional list of tier labels to include in the header.
+    """
+    try:
+        num_samples_AG = np.nansum(CUrelsum['sampleAGCU'])
+        perc_samples_AG = round(num_samples_AG / len(CUrelsum) * 100, 2)
+
+        with open(report_path, 'w') as report:
+            if partition_labels:
+                report.write(f"CU Reliability Coding Report for {' '.join(partition_labels)}\n\n")
+            else:
+                report.write("CU Reliability Coding Report\n\n")
+
+            report.write(f"Coders agree on at least 80% of CUs in {num_samples_AG} out of {len(CUrelsum)} total samples: {perc_samples_AG}%\n\n")
+            report.write(f"Average agreement on SV: {round(np.nanmean(CUrelsum['percAGSV']), 3)}\n")
+            report.write(f"Average agreement on REL: {round(np.nanmean(CUrelsum['percAGREL']), 3)}\n")
+            report.write(f"Average agreement on CU: {round(np.nanmean(CUrelsum['percAGCU']), 3)}\n")
+
+        logging.info(f"Successfully wrote CU reliability report to {report_path}")
+    except Exception as e:
+        logging.error(f"Failed to write reliability report to {report_path}: {e}")
+
+def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms, test=False):
     """
     Analyzes CU reliability coding by comparing coder results and generating summary statistics.
 
@@ -73,128 +173,67 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, test=False):
                     logging.error(f"Failed to read files {cod} or {rel}: {e}")
                     continue
 
-                # Shed coder 1 and comment columns.
-                CUcod = CUcod.loc[:, ['UtteranceID', 'sampleID', 'c2SV', 'c2REL']]
-                CUrel = CUrel.loc[:, ['UtteranceID', 'c3SV', 'c3REL']]
+                # Determine paradigms to iterate
+                if len(CU_paradigms) >= 2:
+                    paradigms_to_run = CU_paradigms
+                else:
+                    paradigms_to_run = [None]  # Original columns
 
-                # Merge on UtteranceID.
-                try:
-                    CUrelcod = pd.merge(CUcod, CUrel, on="UtteranceID", how="inner")
-                    logging.info(f"Merged reliability file with coding file for {rel.name}")
-                except Exception as e:
-                    logging.error(f"Failed to merge {cod.name} with {rel.name}: {e}")
-                    continue
-                
-                if len(CUrel) != len(CUrelcod):
-                    logging.error(f"Length mismatch between reliability and joined files for {rel.name}.")
-
-                c2CU, c3CU = [], []
-                # Check agreement and that coders are consistent with neutrality.
-                for i in range(len(CUrelcod)):
-                    # Extract coder scores.
-                    c2SV, c2REL, c3SV, c3REL = [CUrelcod.at[i, col] for col in ['c2SV', 'c2REL', 'c3SV', 'c3REL']]
-                    # Check consistency for coder 2.
-                    if (np.isnan(c2SV) and not np.isnan(c2REL)) or (np.isnan(c2REL) and not np.isnan(c2SV)):
-                        logging.error(f"Neutrality inconsistency in coder 2 for utterance {CUrelcod.at[i, 'UtteranceID']}")
-                        c2CU.append(np.nan)
-                    # Code CU for coder 2.
-                    elif np.isnan(c2REL) and np.isnan(c2SV):
-                        c2CU.append(np.nan)
-                    elif c2SV == c2REL == 1:
-                        c2CU.append(1)
+                for paradigm in paradigms_to_run:
+                    # --- Column selection ---
+                    if paradigm:
+                        sv2, rel2, sv3, rel3 = f'c2SV_{paradigm}', f'c2REL_{paradigm}', f'c3SV_{paradigm}', f'c3REL_{paradigm}'
+                        out_subdir = os.path.join(CUReliability_dir, paradigm)
                     else:
-                        c2CU.append(0)
-                    # Check consistency for coder 3.
-                    if (np.isnan(c3SV) and not np.isnan(c3REL)) or (np.isnan(c3REL) and not np.isnan(c3SV)):
-                        logging.error(f"Neutrality inconsistency in coder 3 for utterance {CUrelcod.at[i, 'UtteranceID']}")
-                        c3CU.append(np.nan)
-                    # Code CU for coder 3.
-                    elif np.isnan(c3REL) and np.isnan(c3SV):
-                        c3CU.append(np.nan)
-                    elif c3SV == c3REL == 1:
-                        c3CU.append(1)
-                    else:
-                        c3CU.append(0)
-                CUrelcod['c2CU'] = c2CU
-                CUrelcod['c3CU'] = c3CU
+                        sv2, rel2, sv3, rel3 = 'c2SV', 'c2REL', 'c3SV', 'c3REL'
+                        out_subdir = CUReliability_dir
 
-                # Calculate agreement columns: 1 if same value or both NA, else 0.
-                CUrelcod['AGSV'] = CUrelcod.apply(lambda row: int((row['c2SV'] == row['c3SV']) or (np.isnan(row['c2SV']) and np.isnan(row['c3SV']))), axis=1)
-                CUrelcod['AGREL'] = CUrelcod.apply(lambda row: int((row['c2REL'] == row['c3REL']) or (np.isnan(row['c2REL']) and np.isnan(row['c3REL']))), axis=1)
-                CUrelcod['AGCU'] = CUrelcod.apply(lambda row: int((row['c2CU'] == row['c3CU']) or (np.isnan(row['c2CU']) and np.isnan(row['c3CU']))), axis=1)
+                    CUcod_sub = CUcod.loc[:, ['UtteranceID', 'sampleID', sv2, rel2]].copy()
+                    CUrel_sub = CUrel.loc[:, ['UtteranceID', sv3, rel3]].copy()
 
-                # Save utterance-level reliability file.
-                partition_labels = [t.match(rel.name) for t in tiers.values() if t.partition]
-                output_path = os.path.join(CUReliability_dir, *partition_labels)
-                try:
-                    os.makedirs(output_path, exist_ok=True)
-                    logging.info(f"Created partition directory: {output_path}")
-                except Exception as e:
-                    logging.error(f"Failed to create partition directory {output_path}: {e}")
-                    continue
+                    try:
+                        CUrelcod = pd.merge(CUcod_sub, CUrel_sub, on="UtteranceID", how="inner")
+                    except Exception as e:
+                        logging.error(f"Merge failed for paradigm {paradigm} on {rel.name}: {e}")
+                        continue
 
-                file_path = os.path.join(output_path, f"{'_'.join(partition_labels)}_CUReliabilityCoding_ByUtterance.xlsx")
-                try:
-                    CUrelcod.to_excel(file_path, index=False)
-                    logging.info(f"Saved CU reliability coding by utterance to: {file_path}")
-                except Exception as e:
-                    logging.error(f"Failed to write CU reliability file {file_path}: {e}")
+                    # Validate length
+                    if len(CUrel_sub) != len(CUrelcod):
+                        logging.error(f"Length mismatch for {paradigm or 'default'}: {rel.name}")
 
-                # Summarize reliability coding by sample.
-                CUrelsum = CUrelcod.copy()
-                CUrelsum.drop(columns=['UtteranceID'], inplace=True)
-                try:
-                    CUrelsum = CUrelsum.groupby(['sampleID']).agg(
-                        no_utt2=('c2CU', utt_ct),
-                        pSV2=('c2SV', ptotal),
-                        mSV2=('c2SV', lambda x: utt_ct(x) - ptotal(x) if utt_ct(x) > 0 else np.nan),
-                        pREL2=('c2REL', ptotal),
-                        mREL2=('c2REL', lambda x: utt_ct(x) - ptotal(x) if utt_ct(x) > 0 else np.nan),
-                        CU2=('c2CU', ptotal),
-                        percCU2=('c2CU', lambda x: round((ptotal(x) / utt_ct(x)) * 100, 3) if utt_ct(x) > 0 else np.nan),
-                        no_utt3=('c3CU', utt_ct),
-                        pSV3=('c3SV', ptotal),
-                        mSV3=('c3SV', lambda x: utt_ct(x) - ptotal(x) if utt_ct(x) > 0 else np.nan),
-                        pREL3=('c3REL', ptotal),
-                        mREL3=('c3REL', lambda x: utt_ct(x) - ptotal(x) if utt_ct(x) > 0 else np.nan),
-                        CU3=('c3CU', ptotal),
-                        percCU3=('c3CU', lambda x: round((ptotal(x) / utt_ct(x)) * 100, 3) if utt_ct(x) > 0 else np.nan),
-                        totAGSV=('AGSV', ptotal),
-                        percAGSV=('AGSV', lambda x: (ptotal(x) / utt_ct(x)) * 100 if utt_ct(x) > 0 else np.nan),
-                        totAGREL=('AGREL', ptotal),
-                        percAGREL=('AGREL', lambda x: (ptotal(x) / utt_ct(x)) * 100 if utt_ct(x) > 0 else np.nan),
-                        totAGCU=('AGCU', ptotal),
-                        percAGCU=('AGCU', lambda x: (ptotal(x) / utt_ct(x)) * 100 if utt_ct(x) > 0 else np.nan),
-                        sampleAGSV=('AGSV', ag_check),
-                        sampleAGREL=('AGREL', ag_check),
-                        sampleAGCU=('AGCU', ag_check)
-                    ).reset_index()  # Keep 'sampleID' in the output by resetting the index.
-                    logging.info(f"Successfully aggregated reliability data for {rel.name}")
-                except Exception as e:
-                    logging.error(f"Failed during aggregation: {e}")
-                    continue
-                
-                # Generate reliability report.
-                num_samples_AG = np.nansum(CUrelsum['sampleAGCU'])
-                perc_samples_AG = round(num_samples_AG/len(CUrelsum)*100, 2)
-                report_path = os.path.join(output_path, f"{'_'.join(partition_labels)}_CUReliabilityCodingReport.txt")
-                with open(report_path, 'w') as report:
-                    report.write(f"CU Reliability Coding Report for {' '.join(partition_labels)}\n\n")
-                    report.write(f"Coders agree on at least 80% of CUs in {num_samples_AG} out of {len(CUrelsum)} total samples: {perc_samples_AG}%\n\n")
-                    report.write(f"Average agreement on SV: {round(np.nanmean(CUrelsum['percAGSV']), 3)}\n")
-                    report.write(f"Average agreement on REL: {round(np.nanmean(CUrelsum['percAGREL']), 3)}\n")
-                    report.write(f"Average agreement on CU: {round(np.nanmean(CUrelsum['percAGCU']), 3)}\n")
+                    # --- CU computation ---
+                    CUrelcod['c2CU'] = CUrelcod[[sv2, rel2]].apply(compute_CU_column, axis=1)
+                    CUrelcod['c3CU'] = CUrelcod[[sv3, rel3]].apply(compute_CU_column, axis=1)
 
-                # Save summary reliability file.
-                summary_file_path = os.path.join(output_path, f"{'_'.join(partition_labels)}_CUReliabilityCoding_BySample.xlsx")
-                try:
-                    CUrelsum.to_excel(summary_file_path, index=False)
-                    logging.info(f"Saved CU reliability summary to: {summary_file_path}")
-                except Exception as e:
-                    logging.error(f"Failed to write CU reliability summary file {summary_file_path}: {e}")
-                
-                if test:
-                    results.append(CUrelsum)
+                    # Calculate agreement columns: 1 if same value or both NA, else 0.
+                    CUrelcod['AGSV'] = CUrelcod.apply(lambda row: int((row[sv2] == row[sv3]) or (pd.isna(row[sv2]) and pd.isna(row[sv3]))), axis=1)
+                    CUrelcod['AGREL'] = CUrelcod.apply(lambda row: int((row[rel2] == row[rel3]) or (pd.isna(row[rel2]) and pd.isna(row[rel3]))), axis=1)
+                    CUrelcod['AGCU'] = CUrelcod.apply(lambda row: int((row['c2CU'] == row['c3CU']) or (pd.isna(row['c2CU']) and pd.isna(row['c3CU']))), axis=1)
+
+                    # Partition subfolder path
+                    partition_labels = [t.match(rel.name) for t in tiers.values() if t.partition]
+                    output_path = os.path.join(out_subdir, *partition_labels)
+
+                    try:
+                        os.makedirs(output_path, exist_ok=True)
+                    except Exception as e:
+                        logging.error(f"Failed to make output folder {output_path}: {e}")
+                        continue
+
+                    # Save utterance-level results
+                    utterance_path = os.path.join(output_path, f"{'_'.join(partition_labels)}_CUReliabilityCoding_ByUtterance.xlsx")
+                    CUrelcod.to_excel(utterance_path, index=False)
+
+                    # Summary + report + save (unchanged)
+                    # Just use CUrelcod and column names as they are
+                    CUrelsum = summarize_CU_reliability(CUrelcod, sv2, rel2, sv3, rel3)
+                    report_path = os.path.join(output_path, f"{'_'.join(partition_labels)}_CUReliabilityCodingReport.txt")
+                    write_reliability_report(CUrelsum, report_path)
+                    summary_path = os.path.join(output_path, f"{'_'.join(partition_labels)}_CUReliabilityCoding_BySample.xlsx")
+                    CUrelsum.to_excel(summary_path, index=False)
+                    
+                    if test:
+                        results.append(CUrelsum)
     
     if test:
         return results
