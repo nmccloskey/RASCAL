@@ -33,21 +33,21 @@ def run_prepare_utterance_dfs(tiers, chats, output_dir):
     from .utterances.make_utterance_tables import prepare_utterance_dfs
     return prepare_utterance_dfs(tiers=tiers, chats=chats, output_dir=output_dir, test=False)
 
-def run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir):
+def run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigms):
     from .utterances.make_CU_coding_files import make_CU_coding_files
-    make_CU_coding_files(tiers=tiers, frac=frac, coders=coders, input_dir=input_dir, output_dir=output_dir)
+    make_CU_coding_files(tiers=tiers, frac=frac, coders=coders, input_dir=input_dir, output_dir=output_dir, CU_paradigms=CU_paradigms)
 
 def run_analyze_transcription_reliability(tiers, input_dir, output_dir):
     from .transcription.transcription_reliability_analysis import analyze_transcription_reliability
     analyze_transcription_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
 
-def run_analyze_CU_reliability(tiers, input_dir, output_dir):
+def run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms):
     from .utterances.CU_analyzer import analyze_CU_reliability
-    analyze_CU_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
+    analyze_CU_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, CU_paradigms=CU_paradigms, test=False)
 
-def run_analyze_CU_coding(tiers, input_dir, output_dir):
+def run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms):
     from .utterances.CU_analyzer import analyze_CU_coding
-    analyze_CU_coding(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
+    analyze_CU_coding(tiers=tiers, input_dir=input_dir, output_dir=output_dir, CU_paradigms=CU_paradigms, test=False)
 
 def run_make_word_count_files(tiers, frac, coders, output_dir):
     from .utterances.make_CU_coding_files import make_word_count_files
@@ -61,17 +61,17 @@ def run_analyze_word_count_reliability(tiers, input_dir, output_dir):
     from .utterances.word_count_reliability_analyzer import analyze_word_count_reliability
     analyze_word_count_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
 
-def run_unblind_CUs(tiers, input_dir, output_dir):
+def run_unblind_CUs(tiers, input_dir, output_dir, CU_paradigms):
     from .samples.unblind_CUs import unblind_CUs
-    unblind_CUs(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
+    unblind_CUs(tiers=tiers, input_dir=input_dir, output_dir=output_dir, CU_paradigms=CU_paradigms, test=False)
 
 def run_run_corelex(input_dir, output_dir):
     from .samples.corelex import run_corelex
     run_corelex(input_dir=input_dir, output_dir=output_dir)
 
-def run_reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
+def run_reselect_CU_reliability(input_dir, output_dir, CU_paradigms, coder3='3', frac=0.2):
     from .utterances.CU_analyzer import reselect_CU_reliability
-    reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac, test=False)
+    reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac, CU_paradigms=CU_paradigms, test=False)
 
 def run_digital_convo_turns_analyzer(input_dir, output_dir):
     from .utils.digital_convo_turns_analyzer import analyze_digital_convo_turns
@@ -85,6 +85,7 @@ def main(args):
     output_dir = config.get('output_dir', 'data/output')
     frac = config.get('reliability_fraction', 0.2)
     coders = config.get('coders', [])
+    CU_paradigms = config.get('CU_paradigms', [])
 
     input_dir = os.path.abspath(os.path.expanduser(input_dir))
     output_dir = os.path.abspath(os.path.expanduser(output_dir))
@@ -110,15 +111,15 @@ def main(args):
     if 'b' in steps_to_run:
         run_prepare_utterance_dfs(tiers, chats, output_dir)
     if 'c' in steps_to_run:
-        run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir)
+        run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigms)
     
     # Step 3.
     if 'd' in steps_to_run:
         run_analyze_transcription_reliability(tiers, input_dir, output_dir)
     if 'e' in steps_to_run:
-        run_analyze_CU_reliability(tiers, input_dir, output_dir)
+        run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms)
     if 'f' in steps_to_run:
-        run_analyze_CU_coding(tiers, input_dir, output_dir)
+        run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms)
     if 'g' in steps_to_run:
         run_make_word_count_files(tiers, frac, coders, output_dir)
     if 'h' in steps_to_run:
@@ -128,14 +129,14 @@ def main(args):
     if 'i' in steps_to_run:
         run_analyze_word_count_reliability(tiers, input_dir, output_dir)
     if 'j' in steps_to_run:
-        run_unblind_CUs(tiers, input_dir, output_dir)
+        run_unblind_CUs(tiers, input_dir, output_dir, CU_paradigms)
     if 'k' in steps_to_run:
         run_run_corelex(input_dir, output_dir)
 
     # Other functions.
     if 'l' in steps_to_run:
         coder3 = coders[2] or '3'
-        run_reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac)
+        run_reselect_CU_reliability(input_dir, output_dir, CU_paradigms, coder3=coder3, frac=frac)
     if 'm' in steps_to_run:
         run_digital_convo_turns_analyzer(input_dir, output_dir)
 

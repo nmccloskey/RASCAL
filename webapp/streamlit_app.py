@@ -80,6 +80,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
         tiers = run_read_tiers(config.get("tiers", {}))
         frac = config.get("reliability_fraction", 0.2)
         coders = config.get("coders", [])
+        CU_paradigms = config.get("CU_paradigms", [])
 
         step_mapping = {
             "Step 1 (abc)": ['a. Select transcription reliability samples',
@@ -132,13 +133,13 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
             if "b. Prepare utterance tables" in selected_funcs:
                 run_prepare_utterance_dfs(tiers, chats, output_dir)
             if "c. Make CU coding files" in selected_funcs:
-                run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir)
+                run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigms)
             if "d. Analyze transcription reliability" in selected_funcs:
                 run_analyze_transcription_reliability(tiers, input_dir, output_dir)
             if "e. Analyze CU reliability" in selected_funcs:
-                run_analyze_CU_reliability(tiers, input_dir, output_dir)
+                run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms)
             if "f. Analyze CU coding" in selected_funcs:
-                run_analyze_CU_coding(tiers, input_dir, output_dir)
+                run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms)
             if "g. Make word count files" in selected_funcs:
                 run_make_word_count_files(tiers, frac, coders, output_dir)
             if "h. Make timesheets" in selected_funcs:
@@ -146,12 +147,12 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
             if "i. Analyze word count reliability" in selected_funcs:
                 run_analyze_word_count_reliability(tiers, input_dir, output_dir)
             if "j. Unblind CU samples" in selected_funcs:
-                run_unblind_CUs(tiers, input_dir, output_dir)
+                run_unblind_CUs(tiers, input_dir, output_dir, CU_paradigms)
             if "k. Run CoreLex" in selected_funcs:
                 run_run_corelex(input_dir, output_dir)
             if "l. Reselect CU reliability samples" in selected_funcs:
                 coder3 = coders[2] or '3'
-                run_reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac)
+                run_reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac, CU_paradigms=CU_paradigms)
             if "m. Analyze digital conversation turns" in selected_funcs:
                 run_digital_convo_turns_analyzer(input_dir, output_dir)
 

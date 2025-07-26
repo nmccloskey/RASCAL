@@ -1,7 +1,8 @@
 input_dir: "data/input"
 output_dir: "data/output"
 reliability_fraction: 0.2
-coders: [XX, YY, ZZ]
+coders: [1, 2, 3]
+CU_paradigms: [SAE, AAE]
 
 tiers:
   "*site": [AC, BU, TU]

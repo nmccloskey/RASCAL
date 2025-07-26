@@ -8,8 +8,11 @@ def build_config_ui():
     input_dir = st.text_input("Input directory", value="data/input")
     output_dir = st.text_input("Output directory", value="data/output")
     reliability_fraction = st.number_input("Reliability fraction", min_value=0.0, max_value=1.0, value=0.2)
+    
     coders = st.text_input("Coders (comma-separated)", value="1, 2, 3")
     coder_list = [c.strip() for c in coders.split(",") if c.strip()]
+    CU_paradigms = st.text_input("CU coding versions (comma-separated)", value="SAE, AAE")
+    CU_paradigm_list = [p.strip() for p in CU_paradigms.split(",") if p.strip()]
 
     # --- Tier Builder ---
     st.subheader("📐 Tier Definitions")
@@ -48,6 +51,7 @@ def build_config_ui():
         "output_dir": output_dir,
         "reliability_fraction": reliability_fraction,
         "coders": coder_list,
+        "CU_paradigms": CU_paradigm_list,
         "tiers": tiers_dict
     }
 
