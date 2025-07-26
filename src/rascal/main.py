@@ -34,7 +34,7 @@ def run_prepare_utterance_dfs(tiers, chats, output_dir):
     return prepare_utterance_dfs(tiers=tiers, chats=chats, output_dir=output_dir, test=False)
 
 def run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigms):
-    from .utterances.make_CU_coding_files import make_CU_coding_files
+    from .utterances.make_coding_files import make_CU_coding_files
     make_CU_coding_files(tiers=tiers, frac=frac, coders=coders, input_dir=input_dir, output_dir=output_dir, CU_paradigms=CU_paradigms)
 
 def run_analyze_transcription_reliability(tiers, input_dir, output_dir):
@@ -50,7 +50,7 @@ def run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms):
     analyze_CU_coding(tiers=tiers, input_dir=input_dir, output_dir=output_dir, CU_paradigms=CU_paradigms, test=False)
 
 def run_make_word_count_files(tiers, frac, coders, output_dir):
-    from .utterances.make_CU_coding_files import make_word_count_files
+    from .utterances.make_coding_files import make_word_count_files
     make_word_count_files(tiers=tiers, frac=frac, coders=coders, output_dir=output_dir, test=False)
 
 def run_make_timesheets(tiers, input_dir, output_dir):
@@ -80,7 +80,7 @@ def run_digital_convo_turns_analyzer(input_dir, output_dir):
 
 def main(args):
     """Main function to process input arguments and execute appropriate steps."""
-    config = load_config('config.yaml')
+    config = load_config(args.config)
     input_dir = config.get('input_dir', 'data/input')
     output_dir = config.get('output_dir', 'data/output')
     frac = config.get('reliability_fraction', 0.2)
@@ -144,5 +144,6 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process the step argument for main script.")
     parser.add_argument('step', type=str, help="Specify the step (e.g., '1' or 'abc').")
+    parser.add_argument('--config', type=str, default='config.yaml', help="Path to the config file")
     args = parser.parse_args()
     main(args)
