@@ -61,9 +61,9 @@ def run_analyze_word_count_reliability(tiers, input_dir, output_dir):
     from .utterances.word_count_reliability_analyzer import analyze_word_count_reliability
     analyze_word_count_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
 
-def run_unblind_CUs(tiers, input_dir, output_dir, CU_paradigms):
+def run_unblind_CUs(tiers, input_dir, output_dir, blind_columns):
     from .samples.unblind_CUs import unblind_CUs
-    unblind_CUs(tiers=tiers, input_dir=input_dir, output_dir=output_dir, CU_paradigms=CU_paradigms, test=False)
+    unblind_CUs(tiers=tiers, input_dir=input_dir, output_dir=output_dir, blind_columns=blind_columns, test=False)
 
 def run_run_corelex(input_dir, output_dir):
     from .samples.corelex import run_corelex
