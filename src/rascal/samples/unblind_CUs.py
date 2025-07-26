@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 
 
-def unblind_CUs(tiers, input_dir, output_dir, test=False):
+def unblind_CUs(tiers, input_dir, output_dir, blind_columns, test=False):
     """
     Unblinds participant utterances and prepares both an unblinded and blinded summary.
 
@@ -24,17 +24,6 @@ def unblind_CUs(tiers, input_dir, output_dir, test=False):
         # Specify subfolder and create directory
         output_dir = os.path.join(output_dir, 'Summaries')
         os.makedirs(output_dir, exist_ok=True)
-        
-        # Read participant data
-        try:
-            pdata = pd.read_excel(os.path.join(input_dir, 'ParticipantData.xlsx'))
-            logging.info("Participant data loaded successfully.")
-        except FileNotFoundError:
-            pdata = None
-            logging.warning("No participant data available.")
-        except Exception as e:
-            logging.error(f"No participant data provided: {e}")
-            pdata = None
 
         # Read utterance data
         utts = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*_Utterances.xlsx')])
@@ -54,10 +43,7 @@ def unblind_CUs(tiers, input_dir, output_dir, test=False):
         logging.info("Speaking time data loaded successfully.")
 
         # Merge datasets
-        if pdata is not None:
-            merged_utts = pd.merge(pdata, utts, on='participantID', how='inner')
-        else:
-            merged_utts = utts.copy()
+        merged_utts = utts.copy()
         merged_utts = pd.merge(merged_utts, CUbyUtts, on='UtteranceID', how='inner')
         merged_utts = pd.merge(merged_utts, WCs, on=['UtteranceID', 'sampleID'], how='inner')
         merged_utts = pd.merge(merged_utts, times, on='sampleID', how='inner')
@@ -71,7 +57,7 @@ def unblind_CUs(tiers, input_dir, output_dir, test=False):
         # Prepare blind codes and blinded utterances
         blind_utts = merged_utts.drop(columns=["file", "participantID"])
         blind_codes_output = {}
-        for tier_name in ['site', 'test']:
+        for tier_name in blind_columns:
             tier = tiers[tier_name]
             blind_codes = tier.make_blind_codes()
             column_name = tier.name
@@ -96,10 +82,7 @@ def unblind_CUs(tiers, input_dir, output_dir, test=False):
         WCs = WCs.groupby(['sampleID']).agg(wordCount=('wordCount', 'sum'))
         logging.info("Word count data aggregated successfully.")
 
-        if pdata is not None:
-            merged_samples = pd.merge(pdata, utts, on='participantID', how='inner')
-        else:
-            merged_samples = utts.copy()
+        merged_samples = utts.copy()
         merged_samples = pd.merge(merged_samples, CUbySample, on='sampleID', how='inner')
         merged_samples = pd.merge(merged_samples, WCs, on='sampleID', how='inner')
         merged_samples = pd.merge(merged_samples, times, on='sampleID', how='inner')
@@ -116,7 +99,7 @@ def unblind_CUs(tiers, input_dir, output_dir, test=False):
 
         # Prepare blinded samples
         blind_samples = merged_samples.copy()
-        for tier_name in ['site', 'test']:
+        for tier_name in blind_columns:
             tier = tiers[tier_name]
             column_name = tier.name
             if column_name in blind_samples.columns:

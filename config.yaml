@@ -1,8 +1,10 @@
 input_dir: "data/input"
 output_dir: "data/output"
+
 reliability_fraction: 0.2
 coders: [1, 2, 3]
 CU_paradigms: [SAE, AAE]
+blind_columns: [site, test]
 
 tiers:
   "*site": [AC, BU, TU]

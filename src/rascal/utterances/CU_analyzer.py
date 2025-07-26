@@ -221,15 +221,16 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms, test=Fals
                         continue
 
                     # Save utterance-level results
-                    utterance_path = os.path.join(output_path, f"{'_'.join(partition_labels)}_CUReliabilityCoding_ByUtterance.xlsx")
+                    paradigm_str = f"_{paradigm}" if paradigm else ""
+                    utterance_path = os.path.join(output_path, f"{'_'.join(partition_labels)}{paradigm_str}_CUReliabilityCoding_ByUtterance.xlsx")
                     CUrelcod.to_excel(utterance_path, index=False)
 
                     # Summary + report + save (unchanged)
                     # Just use CUrelcod and column names as they are
                     CUrelsum = summarize_CU_reliability(CUrelcod, sv2, rel2, sv3, rel3)
-                    report_path = os.path.join(output_path, f"{'_'.join(partition_labels)}_CUReliabilityCodingReport.txt")
+                    report_path = os.path.join(output_path, f"{'_'.join(partition_labels)}{paradigm_str}_CUReliabilityCodingReport.txt")
                     write_reliability_report(CUrelsum, report_path)
-                    summary_path = os.path.join(output_path, f"{'_'.join(partition_labels)}_CUReliabilityCoding_BySample.xlsx")
+                    summary_path = os.path.join(output_path, f"{'_'.join(partition_labels)}{paradigm_str}_CUReliabilityCoding_BySample.xlsx")
                     CUrelsum.to_excel(summary_path, index=False)
                     
                     if test:
@@ -316,7 +317,8 @@ def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=None, test=Fals
                 continue
 
             # Save utterance-level CU codes
-            utterance_path = os.path.join(out_dir, f"{'_'.join(partition_labels)}_CUCoding_ByUtterance.xlsx")
+            paradigm_str = f"_{paradigm}" if paradigm else ""
+            utterance_path = os.path.join(out_dir, f"{'_'.join(partition_labels)}{paradigm_str}_CUCoding_ByUtterance.xlsx")
             try:
                 CUcod.to_excel(utterance_path, index=False)
                 logging.info(f"Saved CU utterance-level analysis to: {utterance_path}")
@@ -342,7 +344,7 @@ def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=None, test=Fals
                 logging.error(f"Aggregation failed for {cod.name}: {e}")
                 continue
 
-            summary_path = os.path.join(out_dir, f"{'_'.join(partition_labels)}_CUCoding_BySample.xlsx")
+            summary_path = os.path.join(out_dir, f"{'_'.join(partition_labels)}{paradigm_str}_CUCoding_BySample.xlsx")
             try:
                 CUcodsum.to_excel(summary_path, index=False)
                 logging.info(f"Saved CU coding summary to: {summary_path}")

@@ -83,9 +83,11 @@ def main(args):
     config = load_config(args.config)
     input_dir = config.get('input_dir', 'data/input')
     output_dir = config.get('output_dir', 'data/output')
+    
     frac = config.get('reliability_fraction', 0.2)
     coders = config.get('coders', [])
     CU_paradigms = config.get('CU_paradigms', [])
+    blind_columns =  config.get('blind_columns', [])
 
     input_dir = os.path.abspath(os.path.expanduser(input_dir))
     output_dir = os.path.abspath(os.path.expanduser(output_dir))
@@ -129,7 +131,7 @@ def main(args):
     if 'i' in steps_to_run:
         run_analyze_word_count_reliability(tiers, input_dir, output_dir)
     if 'j' in steps_to_run:
-        run_unblind_CUs(tiers, input_dir, output_dir, CU_paradigms)
+        run_unblind_CUs(tiers, input_dir, output_dir, blind_columns)
     if 'k' in steps_to_run:
         run_run_corelex(input_dir, output_dir)
 
