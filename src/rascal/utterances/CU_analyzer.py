@@ -239,115 +239,119 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms, test=Fals
         return results
 
 
-def analyze_CU_coding(tiers, input_dir, output_dir, test=False):
+def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=None, test=False):
     """
     Analyzes CU coding by summarizing coder results and generating summary statistics.
 
     Parameters:
-    - tiers (dict): Dictionary of tier information used for matching file names.
-    - input_dir (str): Directory containing the input CU coding and reliability files.
-    - output_dir (str): Directory where the output reliability summaries will be saved.
-
-    Returns:
-    - None. Saves CU coding summaries and analyzed DataFrames to output directory.
+    - tiers (dict): Tier definitions used to match file names.
+    - input_dir (str): Path to directory containing *_CUCoding.xlsx files.
+    - output_dir (str): Path to save analyzed results.
+    - CU_paradigms (list): List of dialect codes (e.g., ['SAE', 'AAE']). If None or 1, use default columns.
+    - test (bool): If True, returns results for testing.
     """
-    
-    # Make CU analysis folder.
     CUanalysis_dir = os.path.join(output_dir, 'CUCodingAnalysis')
     try:
         os.makedirs(CUanalysis_dir, exist_ok=True)
         logging.info(f"Created directory: {CUanalysis_dir}")
     except Exception as e:
-        logging.error(f"Failed to create directory {CUanalysis_dir}: {e}")
+        logging.error(f"Failed to create CU analysis directory {CUanalysis_dir}: {e}")
         return
 
-    coding_files = [f for f in Path(input_dir).rglob('*_CUCoding.xlsx')]
-
-    # Store results for testing.
+    coding_files = list(Path(input_dir).rglob('*_CUCoding.xlsx'))
     results = []
 
-    # Match CU coding and reliability files.
     for cod in tqdm(coding_files, desc="Analyzing CU coding..."):
         try:
-            CUcod = pd.read_excel(cod)
-            logging.info(f"Processing coding file: {cod}")
+            CUcod_orig = pd.read_excel(cod)
+            logging.info(f"Processing CU coding file: {cod}")
         except Exception as e:
-            logging.error(f"Failed to read file {cod}: {e}")
+            logging.error(f"Failed to read CU coding file {cod}: {e}")
             continue
 
-        # Shed coder 1 and ID columns.
-        CUcod.drop(columns=['c1ID','c1SV','c1REL','c1com','c2ID'], inplace=True)
+        # Determine which paradigms to process
+        if CU_paradigms is None or len(CU_paradigms) <= 1:
+            paradigms_to_run = [None]
+        else:
+            paradigms_to_run = CU_paradigms
 
-        # Code CUs based on SV and REL.
-        c2CU = []
-        # Check and that coder2 is consistent with neutrality.
-        for i in range(len(CUcod)):
-            # Convert values to numeric in case they are stored as strings
-            c2SV = pd.to_numeric(CUcod.at[i, 'c2SV'], errors='coerce')
-            c2REL = pd.to_numeric(CUcod.at[i, 'c2REL'], errors='coerce')
-            # Check consistency for coder 2.
-            if (np.isnan(c2SV) and not np.isnan(c2REL)) or (np.isnan(c2REL) and not np.isnan(c2SV)):
-                logging.error(f"Neutrality inconsistency in coder 2 for utterance {CUcod.at[i, 'UtteranceID']}")
-                c2CU.append(np.nan)
-            # Code CU for coder 2.
-            elif np.isnan(c2REL) and np.isnan(c2SV):
-                c2CU.append(np.nan)
-            elif c2SV == c2REL == 1:
-                c2CU.append(1)
+        for paradigm in paradigms_to_run:
+            CUcod = CUcod_orig.copy()
+
+            drop_cols = ['c1ID', 'c1com', 'c2ID']
+
+            # Remove all SV/REL/Compare columns that belong to *other* paradigms
+            if paradigm:
+                # Explicitly preserve only current paradigm columns
+                all_cols = CUcod.columns
+                for col in all_cols:
+                    if any(
+                        col.endswith(f"_{other}")
+                        for other in CU_paradigms
+                        if other != paradigm
+                    ):
+                        drop_cols.append(col)
             else:
-                c2CU.append(0)
-        CUcod['c2CU'] = c2CU
+                # If using default mode, drop any suffixed columns (multi-paradigm leftovers)
+                drop_cols += [col for col in CUcod.columns if '_' in col and col.endswith(tuple(CU_paradigms or []))]
 
-        # Save utterance-level analysis file.
-        partition_labels = [t.match(cod.name) for t in tiers.values() if t.partition]
-        output_path = os.path.join(CUanalysis_dir, *partition_labels)
-        try:
-            os.makedirs(output_path, exist_ok=True)
-            logging.info(f"Created partition directory: {output_path}")
-        except Exception as e:
-            logging.error(f"Failed to create partition directory {output_path}: {e}")
-            continue
+            CUcod.drop(columns=[col for col in drop_cols if col in CUcod.columns], inplace=True, errors='ignore')
 
-        file_path = os.path.join(output_path, f"{'_'.join(partition_labels)}_CUCoding_ByUtterance.xlsx")
-        try:
-            CUcod.to_excel(file_path, index=False)
-            logging.info(f"Saved CU final coding by utterance file to: {file_path}")
-        except Exception as e:
-            logging.error(f"Failed to write CU reliability file {file_path}: {e}")
+            # Define target SV and REL columns
+            sv_col = f'c2SV_{paradigm}' if paradigm else 'c2SV'
+            rel_col = f'c2REL_{paradigm}' if paradigm else 'c2REL'
 
-        # Shed non-aggregating columns.
-        CUcod = CUcod.loc[:, ['sampleID', 'c2SV', 'c2REL','c2CU']]
-        # Ensure numeric types before aggregation
-        CUcod[['c2SV', 'c2REL', 'c2CU']] = CUcod[['c2SV', 'c2REL', 'c2CU']].apply(pd.to_numeric, errors='coerce')
-       
-        # Summarize reliability coding by sample.
-        CUcodsum = CUcod.copy()
-        try:
-            CUcodsum = CUcodsum.groupby(['sampleID']).agg(
-                no_utt2=('c2CU', utt_ct),
-                pSV2=('c2SV', ptotal),
-                mSV2=('c2SV', lambda x: utt_ct(x) - ptotal(x) if utt_ct(x) > 0 else np.nan),
-                pREL2=('c2REL', ptotal),
-                mREL2=('c2REL', lambda x: utt_ct(x) - ptotal(x) if utt_ct(x) > 0 else np.nan),
-                CU2=('c2CU', ptotal),
-                percCU2=('c2CU', lambda x: round((ptotal(x) / utt_ct(x)) * 100, 3) if utt_ct(x) > 0 else np.nan),
-            ).reset_index()  # Keep 'sampleID' in the output by resetting the index.
-            logging.info(f"Successfully aggregated reliability data for {cod.name}")
-        except Exception as e:
-            logging.error(f"Failed during aggregation: {e}")
-            continue
+            # Compute CU
+            CUcod['c2CU'] = CUcod[[sv_col, rel_col]].apply(compute_CU_column, axis=1)
 
-        # Save summary coding file.
-        summary_file_path = os.path.join(output_path, f"{'_'.join(partition_labels)}_CUCoding_BySample.xlsx")
-        try:
-            CUcodsum.to_excel(summary_file_path, index=False)
-            logging.info(f"Saved CU coding summary to: {summary_file_path}")
-        except Exception as e:
-            logging.error(f"Failed to write CU reliability summary file {summary_file_path}: {e}")
-        
-        if test:
-            results.append(CUcodsum)
-    
+            # Output directory
+            partition_labels = [t.match(cod.name) for t in tiers.values() if t.partition]
+            out_dir = os.path.join(CUanalysis_dir, *(partition_labels + ([paradigm] if paradigm else [])))
+
+            try:
+                os.makedirs(out_dir, exist_ok=True)
+                logging.info(f"Created output directory: {out_dir}")
+            except Exception as e:
+                logging.error(f"Failed to create output subdirectory {out_dir}: {e}")
+                continue
+
+            # Save utterance-level CU codes
+            utterance_path = os.path.join(out_dir, f"{'_'.join(partition_labels)}_CUCoding_ByUtterance.xlsx")
+            try:
+                CUcod.to_excel(utterance_path, index=False)
+                logging.info(f"Saved CU utterance-level analysis to: {utterance_path}")
+            except Exception as e:
+                logging.error(f"Failed to save utterance-level CU analysis: {e}")
+
+            # Select relevant columns for aggregation
+            agg_df = CUcod[['sampleID', sv_col, rel_col, 'c2CU']].copy()
+            agg_df[[sv_col, rel_col, 'c2CU']] = agg_df[[sv_col, rel_col, 'c2CU']].apply(pd.to_numeric, errors='coerce')
+
+            try:
+                CUcodsum = agg_df.groupby('sampleID').agg(
+                    no_utt2=('c2CU', utt_ct),
+                    pSV2=(sv_col, ptotal),
+                    mSV2=(sv_col, lambda x: utt_ct(x) - ptotal(x) if utt_ct(x) > 0 else np.nan),
+                    pREL2=(rel_col, ptotal),
+                    mREL2=(rel_col, lambda x: utt_ct(x) - ptotal(x) if utt_ct(x) > 0 else np.nan),
+                    CU2=('c2CU', ptotal),
+                    percCU2=('c2CU', lambda x: round((ptotal(x) / utt_ct(x)) * 100, 3) if utt_ct(x) > 0 else np.nan),
+                ).reset_index()
+                logging.info(f"Aggregated CU coding stats for: {cod.name}")
+            except Exception as e:
+                logging.error(f"Aggregation failed for {cod.name}: {e}")
+                continue
+
+            summary_path = os.path.join(out_dir, f"{'_'.join(partition_labels)}_CUCoding_BySample.xlsx")
+            try:
+                CUcodsum.to_excel(summary_path, index=False)
+                logging.info(f"Saved CU coding summary to: {summary_path}")
+            except Exception as e:
+                logging.error(f"Failed to write CU summary file: {e}")
+
+            if test:
+                results.append(CUcodsum)
+
     if test:
         return results
 
