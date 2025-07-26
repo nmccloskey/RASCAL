@@ -360,21 +360,9 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
     """
     Reselects new CU reliability samples from previously unused samples,
     avoiding overlap with the original reliability set.
-
-    Parameters:
-    - input_dir (str): Directory containing *_CUCoding and *_CUReliabilityCoding files.
-    - output_dir (str): Directory to save new reliability files.
-    - coder3 (str): Name or ID of third coder for reliability coding.
-    - frac (float): Fraction of samples to reselect for reliability (e.g., 0.2 for 20%).
-    - test (bool): If True, returns output DataFrames for testing.
-
-    Returns:
-    - None or list of DataFrames if test=True.
     """
-
     random.seed(88)
 
-    # Create output CU coding directory
     reselected_CU_reliability_dir = os.path.join(output_dir, 'reselected_CU_reliability')
     try:
         os.makedirs(reselected_CU_reliability_dir, exist_ok=True)
@@ -383,15 +371,12 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
         logging.error(f"Failed to create directory {reselected_CU_reliability_dir}: {e}")
         return
 
-    # Gather CU coding files using Path.glob
     coding_files = [f for f in Path(input_dir).rglob('*_CUCoding.xlsx')]
-    logging.info(f"Found {coding_files} in {input_dir}.")
     results = []
 
     for cu_file in tqdm(coding_files, desc="Reselecting CU reliability samples"):
         try:
             rel_file = cu_file.with_name(cu_file.name.replace('_CUCoding', '_CUReliabilityCoding'))
-
             if not rel_file.exists():
                 logging.warning(f"No reliability file found for {cu_file.name}. Skipping.")
                 continue
@@ -409,28 +394,34 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
 
             num_to_select = max(1, round(len(all_sample_ids) * frac))
             if len(available_ids) < num_to_select:
-                logging.warning(f"Not enough unused samples in {cu_file.name} to meet {frac*100:.0f}% threshold. Selecting {len(available_ids)} instead of {num_to_select}.")
+                logging.warning(f"Not enough unused samples in {cu_file.name}. Selecting {len(available_ids)} instead of {num_to_select}.")
                 num_to_select = len(available_ids)
 
             reselected_ids = random.sample(available_ids, k=num_to_select)
 
-            # Construct new reliability DataFrame
-            rel_columns = ['c2ID', 'c2SV', 'c2REL', 'c2com']
-            rename_map = {'c2ID': 'c3ID', 'c2SV': 'c3SV', 'c2REL': 'c3REL', 'c2com': 'c3com'}
-            shared_cols = ['UtteranceID', 'site', 'narrative', 'sampleID', 'speaker', 'utterance', 'comment']
-
             df_new_rel = df_cu[df_cu['sampleID'].isin(reselected_ids)].copy()
+
+            # --- Build rel_columns and rename_map dynamically ---
+            shared_cols = ['UtteranceID', 'site', 'narrative', 'sampleID', 'speaker', 'utterance', 'comment']
+            rel_columns = ['c2ID', 'c2com']
+            rename_map = {'c2ID': 'c3ID', 'c2com': 'c3com'}
+
+            for col in df_cu.columns:
+                if col.startswith('c2SV_') or col.startswith('c2REL_'):
+                    rel_columns.append(col)
+                    rename_map[col] = col.replace('c2', 'c3')
+                elif col in ['c2SV', 'c2REL']:
+                    rel_columns.append(col)
+                    rename_map[col] = col.replace('c2', 'c3')
+
             df_new_rel = df_new_rel[shared_cols + rel_columns]
             df_new_rel.rename(columns=rename_map, inplace=True)
             df_new_rel['c3ID'] = coder3
-            df_new_rel['c3com'] = np.nan  # Remove original coder comments
-
-            try:
-                os.makedirs(reselected_CU_reliability_dir, exist_ok=True)
-                logging.info(f"Created directory: {reselected_CU_reliability_dir}")
-            except Exception as e:
-                logging.error(f"Failed to create directory {reselected_CU_reliability_dir}: {e}")
-                continue
+            df_new_rel['c3com'] = np.nan  # Wipe comments
+            # Wipe coding
+            for col in df_new_rel.columns:
+                if col.startswith('c3SV_') or col.startswith('c3REL_'):
+                    df_new_rel[col] = np.nan
 
             base_name = cu_file.stem.replace('_CUCoding', '')
             out_file = os.path.join(reselected_CU_reliability_dir, f"{base_name}_reselected_CUReliabilityCoding.xlsx")
