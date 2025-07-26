@@ -81,6 +81,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
         frac = config.get("reliability_fraction", 0.2)
         coders = config.get("coders", [])
         CU_paradigms = config.get("CU_paradigms", [])
+        blind_columns = config.get("blind_columns", [])
 
         step_mapping = {
             "Step 1 (abc)": ['a. Select transcription reliability samples',
@@ -147,12 +148,12 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
             if "i. Analyze word count reliability" in selected_funcs:
                 run_analyze_word_count_reliability(tiers, input_dir, output_dir)
             if "j. Unblind CU samples" in selected_funcs:
-                run_unblind_CUs(tiers, input_dir, output_dir, CU_paradigms)
+                run_unblind_CUs(tiers, input_dir, output_dir, blind_columns)
             if "k. Run CoreLex" in selected_funcs:
                 run_run_corelex(input_dir, output_dir)
             if "l. Reselect CU reliability samples" in selected_funcs:
                 coder3 = coders[2] or '3'
-                run_reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac, CU_paradigms=CU_paradigms)
+                run_reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac)
             if "m. Analyze digital conversation turns" in selected_funcs:
                 run_digital_convo_turns_analyzer(input_dir, output_dir)
 
