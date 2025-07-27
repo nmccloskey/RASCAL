@@ -1,6 +1,5 @@
 import os
 import re
-import time
 import logging
 import numpy as np
 import contractions
@@ -9,238 +8,305 @@ from tqdm import tqdm
 import num2words as n2w
 from pathlib import Path
 from datetime import datetime
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from scipy.stats import percentileofscore
 
 
-def reformat(text: str, identifier: str, alternative_participles: list) -> str:
+urls = {
+    "BrokenWindow": {
+        "accuracy": "https://docs.google.com/spreadsheets/d/12SAkAG8VCAkhCFv4ceJiqgRZ7U9-P9bEcet--hDeW2s/export?format=csv&gid=1059193656",
+        "efficiency": "https://docs.google.com/spreadsheets/d/12SAkAG8VCAkhCFv4ceJiqgRZ7U9-P9bEcet--hDeW2s/export?format=csv&gid=1542250565"
+    },
+    "RefusedUmbrella": {
+        "accuracy": "https://docs.google.com/spreadsheets/d/1oYiwnUdO0dOsFVTmdZBCxkAQc5Ui-71GhUSchK_YY44/export?format=csv&gid=1670315041",
+        "efficiency": "https://docs.google.com/spreadsheets/d/1oYiwnUdO0dOsFVTmdZBCxkAQc5Ui-71GhUSchK_YY44/export?format=csv&gid=1362214973"
+    },
+    "CatRescue": {
+        "accuracy": "https://docs.google.com/spreadsheets/d/1sTvSX0Ws0kPTw-5HHyY8JO2CubqWVgEzDvE5BuGSefc/export?format=csv&gid=1916867784",
+        "efficiency": "https://docs.google.com/spreadsheets/d/1sTvSX0Ws0kPTw-5HHyY8JO2CubqWVgEzDvE5BuGSefc/export?format=csv&gid=1346760459"
+    },
+    "Cinderella": {
+        "accuracy": "https://docs.google.com/spreadsheets/d/1fpDq7aTrKVkfjdv8ka7BS5_iHEJ8HHI-q9nJI6wDAEA/export?format=csv&gid=280451139",
+        "efficiency": "https://docs.google.com/spreadsheets/d/1fpDq7aTrKVkfjdv8ka7BS5_iHEJ8HHI-q9nJI6wDAEA/export?format=csv&gid=285651009"
+    },
+    "Sandwich": {
+        "accuracy": "https://docs.google.com/spreadsheets/d/1o29bBQbyNlmtL05kkTuLV6z5auz1msDeLSxIO1p_3EA/export?format=csv&gid=342443913",
+        "efficiency": "https://docs.google.com/spreadsheets/d/1o29bBQbyNlmtL05kkTuLV6z5auz1msDeLSxIO1p_3EA/export?format=csv&gid=2140143611"
+    }
+}
+
+# Define tokens for each scene
+scene_tokens = {
+    'BrokenWindow': [
+        "a", "and", "ball", "be", "boy", "break", "go", "he", "in", "it", 
+        "kick", "lamp", "look", "of", "out", "over", "play", "sit", "soccer", 
+        "the", "through", "to", "up", "window"
+    ],
+    'CatRescue': [
+        "a", "and", "bark", "be", "call", "cat", "climb", "come",
+        "department", "dog", "down", "father", "fire", "fireman", "get",
+        "girl", "go", "have", "he", "in", "ladder", "little", "not", "out",
+        "she", "so", "stick", "the", "their", "there", "to", "tree", "up", "with"
+    ],
+    'RefusedUmbrella': [
+        "a", "and", "back", "be", "boy", "do", "get", "go", "have", "he", "home",
+        "i", "in", "it", "little", "mother", "need", "not", "out", "rain",
+        "say", "school", "she", "so", "start", "take", "that", "the", "then",
+        "to", "umbrella", "walk", "wet", "with", "you"
+    ],
+    'Cinderella': [
+        "a", "after", "all", "and", "as", "at", "away", "back", "ball", "be",
+        "beautiful", "because", "but", "by", "cinderella", "clock", "come", "could",
+        "dance", "daughter", "do", "dress", "ever", "fairy", "father", "find", "fit",
+        "foot", "for", "get", "girl", "glass", "go", "godmother", "happy", "have",
+        "he", "home", "horse", "house", "i", "in", "into", "it", "know", "leave",
+        "like", "little", "live", "look", "lose", "make", "marry", "midnight",
+        "mother", "mouse", "not", "of", "off", "on", "one", "out", "prince",
+        "pumpkin", "run", "say", "'s", "she", "shoe", "sister", "slipper", "so", "strike",
+        "take", "tell", "that", "the", "then", "there", "they", "this", "time",
+        "to", "try", "turn", "two", "up", "very", "want", "well", "when", "who",
+        "will", "with"
+    ],
+    'Sandwich': [
+        "a", "and", "bread", "butter", "get", "it", "jelly", "knife", "of", "on",
+        "one", "other", "out", "peanut", "piece", "put", "slice", "spread", "take",
+        "the", "then", "to", "together", "two", "you"
+    ]
+}
+
+lemma_dict = {
+    # Pronouns and reflexives
+    "its": "it", "itself": "it",
+    "your": "you", "yours": "you", "yourself": "you",
+    "him": "he", "himself": "he", "his": "he",
+    "her": "she", "herself": "she",
+    "them": "they", "themselves": "they", "their": "they", "theirs": "they",
+    "me": "i", "my": "i", "mine": "i", "myself": "i",
+
+    # Forms of "be"
+    "is": "be", "are": "be", "was": "be", "were": "be", "am": "be",
+    "being": "be", "been": "be", "bein": "be",
+
+    # Parental variations
+    "daddy": "father", "dad": "father", "papa": "father", "pa": "father",
+    "mommy": "mother", "mom": "mother", "mama": "mother", "ma": "mother",
+
+    # "-in" participles (casual speech)
+    "breakin": "break", "goin": "go", "kickin": "kick", "lookin": "look",
+    "playin": "play", "barkin": "bark", "callin": "call", "climbin": "climb",
+    "comin": "come", "gettin": "get", "havin": "have", "stickin": "stick",
+    "doin": "do", "needin": "need", "rainin": "rain", "sayin": "say",
+    "startin": "start", "takin": "take", "walkin": "walk",
+
+    # Additional verb forms and common variants
+    "goes": "go", "gone": "go", "went": "go", "going": "go",
+    "gets": "get", "got": "get", "getting": "get",
+    "says": "say", "said": "say", "saying": "say",
+    "takes": "take", "took": "take", "taking": "take",
+    "looks": "look", "looked": "look", "looking": "look",
+    "starts": "start", "started": "start", "starting": "start",
+    "plays": "play", "played": "play", "playing": "play",
+
+    # Noun variants
+    "boys": "boy", "girls": "girl", "shoes": "shoe", "sisters": "sister",
+    "trees": "tree", "windows": "window", "cats": "cat", "dogs": "dog",
+    "pieces": "piece", "slices": "slice", "sandwiches": "sandwich",
+    "fires": "fire", "ladders": "ladder", "balls": "ball",
+
+    # Misc fix-ups
+    "wanna": "want", "gonna": "go", "gotta": "get",
+    "yall": "you", "aint": "not", "cannot": "could"
+}
+
+base_columns = [
+    "sampleID", "participantID", "narrative", "speakingTime", "numTokens",
+    "numCoreWords", "numCoreWordTokens", "lexiconCoverage", "coreWordsPerMinute",
+    "core_words_pwa_percentile", "core_words_control_percentile",
+    "cwpm_pwa_percentile", "cwpm_control_percentile"
+]
+
+def reformat(text: str) -> str:
     """
-    Prepares a transcription text string for comparison metrics.
+    Prepares a transcription text string for CoreLex analysis.
 
+    - Expands most contractions (e.g., "it's" → "it is", but keeps possessive 's).
+    - Converts numeric digits to words.
+    - Removes most CHAT annotations except accepted corrections like [: dogs] [*].
+    - Removes disfluencies, fragments, gestures, etc.
+    
     Args:
         text (str): The transcription text to be formatted.
-        identifier (str): An identifier for tracking errors.
-        alternative_participles (list): List of alternative participles to standardize.
-
+        
     Returns:
-        str: The cleaned and formatted transcription text.
+        str: Cleaned and normalized text.
     """
-    logging.info("Starting transcription reformatting.")
-    
     try:
-        text = text.lower().strip('\n').strip(' ')
-        text = re.sub(r"(?<=(he|it))'s got", ' has got', text)
-        text = ' '.join([contractions.fix(w) for w in text.split(' ')])
-        
-        for alt in alternative_participles:
-            text = re.sub(r'\b{}\b'.format(alt), alt + 'g', text)
-        
-        text = text.replace('\xa0', '')
-        text = re.sub(r'(^|\b)(u|e)+?(h|m|r)+?(\b|$)', '', text)
-        text = re.sub(r'(^|\b)h*m+h*m*\b', '', text)
-        text = re.sub(r'(^|\b|\b.)x+(\b|$)', '', text)
-        
-        open_par_count = text.count('(')
-        closed_par_count = text.count(')')
-        
-        if open_par_count == closed_par_count:
-            for _ in range(open_par_count):
-                text = re.sub(r'\([^\(]*?\)', '', text)
-        else:
-            logging.warning(f"{identifier} has mismatched number of parentheses.")
-        
-        text = re.sub(r'\[.+?\]', '', text)
-        text = re.sub(r'\*.+?\*', '', text)
-        text = re.sub(r'\d+', lambda x: n2w.num2words(int(x.group(0))), text)
-        text = re.sub(r'[^\w\s]', ' ', text)
-        text = re.sub(r'\bd\b', '', text)
-        text = re.sub(r'(\bcl\b)', '', text)
-        text = re.sub(r'\s*=+\s*', '=', text)
-        text = re.sub(r'\s{2,}', ' ', text)
-        text = re.sub(r'\t', '', text)
-        
-        logging.info("Transcription reformatted successfully.")
-        return text.strip(' ')
-    
+        text = text.lower().strip()
+
+        # Handle "he's got" and "it's got" → "he has got", etc.
+        text = re.sub(r"\b(he|it)'s got\b", r"\1 has got", text)
+
+        # Expand contractions while preserving possessive 's (approximate strategy)
+        tokens = text.split()
+        expanded = []
+        for token in tokens:
+            # Skip possessive 's (approximated by looking for preceding nouns)
+            if re.match(r"\w+'s\b", token) and not contractions.fix(token).startswith("it is"):
+                expanded.append(token)
+            else:
+                expanded.append(contractions.fix(token))
+        text = ' '.join(expanded)
+
+        # Convert digits to words (e.g., 3 → three)
+        text = re.sub(r'\b\d+\b', lambda m: n2w.num2words(int(m.group())), text)
+
+        # Preserve accepted correction format: [: word] [*]
+        text = re.sub(r'\[: ([^\]]+)\] \[\*\]', r'\1', text)
+
+        # Remove all other square-bracketed content (e.g., [//], [?], [% ...], [&])
+        text = re.sub(r'\[[^\]]+\]', '', text)
+
+        # Remove all non-word characters except apostrophes (keep possessives)
+        text = re.sub(r"[^\w\s']", ' ', text)
+
+        # Collapse multiple spaces
+        text = re.sub(r'\s+', ' ', text)
+
+        return text.strip()
+
     except Exception as e:
         logging.error(f"An error occurred while reformatting: {e}")
         return ""
 
-
-def webapp(pID: str, scene_name: str, time_duration: str, transc: str, downloads_path: str):
+def id_core_words(scene_name: str, reformatted_text: str) -> dict:
     """
-    Automates interaction with the web application.
+    Identifies and quantifies core words in a narrative sample.
 
     Args:
-        pID (str): Participant ID.
-        scene_name (str): Name of the scene to select.
-        time_duration (str): Duration of the session.
-        transc (str): Transcript text.
-        downloads_path (str): Path to the downloads folder.
-    
+        scene_name (str): The narrative scene name.
+        reformatted_text (str): Preprocessed transcript text.
+
     Returns:
-        tuple: (num_data, token_data) extracted from the downloaded Excel file.
+        dict: {
+            "num_tokens": int,
+            "num_core_words": int,
+            "num_cw_tokens": int,
+            "lexicon_coverage": float,
+            "token_sets": dict[str, set[str]]
+        }
     """
-    logging.info("Starting web automation process.")
-    
+    tokens = reformatted_text.split()
+    token_sets = {}
+    num_cw_tokens = 0
+
+    for token in tokens:
+        lemma = lemma_dict.get(token, token)
+
+        if lemma in scene_tokens.get(scene_name, []):
+            num_cw_tokens += 1
+            if lemma in token_sets:
+                token_sets[lemma].add(token)
+            else:
+                token_sets[lemma] = {token}
+
+    if scene_name.lower() == "cinderella" and "'s" in tokens:
+        token_sets["'s"] = {"'s"}
+        num_cw_tokens += 1
+
+    num_tokens = len(tokens)
+    num_core_words = len(token_sets)
+    total_lexicon_size = len(scene_tokens.get(scene_name, []))
+    lexicon_coverage = num_core_words / total_lexicon_size if total_lexicon_size > 0 else 0.0
+
+    return {
+        "num_tokens": num_tokens,
+        "num_core_words": num_core_words,
+        "num_cw_tokens": num_cw_tokens,
+        "lexicon_coverage": lexicon_coverage,
+        "token_sets": token_sets
+    }
+
+def load_corelex_norms_online(stimulus_name: str, metric: str = "accuracy") -> pd.DataFrame:
     try:
-        driver = webdriver.Chrome()
-        driver.maximize_window()
-        driver.implicitly_wait(10)
-        logging.info("Chrome WebDriver initialized.")
-        
-        driver.get('https://rb-cavanaugh.shinyapps.io/coreLexicon/')
-        logging.info("Navigated to web application.")
-        
-        driver.find_element(By.ID, 'glide_next1').click()
-        driver.find_element(By.ID, 'name').send_keys(pID)
-        
-        if scene_name != 'Broken Window':
-            dropdown_element = driver.find_element(By.XPATH, '/html/body/div[1]/div/div[1]/div/div/div/div[2]/div/div[1]/div/div[2]/div/div/div[1]')
-            time.sleep(2)
-            dropdown_element.click()
-            time.sleep(5)
-            
-            dropdown = driver.find_element(By.XPATH, f"//*[contains(text(), '{scene_name}')]")
-            time.sleep(3)
-            dropdown.click()
-            time.sleep(5)
-            logging.info(f"Selected scene: {scene_name}")
-        
-        time_box = driver.find_element(By.ID, 'time')
-        time_box.clear()
-        time_box.send_keys(time_duration)
-        
-        driver.find_element(By.ID, 'glide_next2').click()
-        time.sleep(6)
-        
-        transc_box = driver.find_element(By.ID, 'transcr')
-        transc_box.click()
-        transc_box.send_keys(transc)
-        time.sleep(2)
-        
-        driver.find_element(By.ID, 'start').click()
-        time.sleep(2)
-        
-        driver.find_element(By.ID, 'go_to_results').click()
-        time.sleep(5)
-        logging.info("Navigated to results page.")
-        
-        data_box = WebDriverWait(driver, 13).until(
-            EC.visibility_of_element_located((By.ID, 'downloadData'))
-        )
-        data_box.click()
-        logging.info("Downloaded results data.")
-        time.sleep(8)
-        
-        file_path = os.path.join(downloads_path, '_MC_summary.xlsx')
-        
-        if not os.path.exists(file_path):
-            logging.error("Downloaded file not found.")
-            driver.quit()
-            return None, None
-        
-        data = pd.read_excel(file_path, sheet_name=None)
-        token_data = data.get('Sheet 2')
-        num_data = data.get('Sheet 3')
-        
-        os.remove(file_path)
-        logging.info("Extracted data and deleted downloaded file.")
-        
-        return num_data, token_data
-    
+        url = urls[stimulus_name][metric]
+        return pd.read_csv(url)
+    except KeyError:
+        raise ValueError(f"Unknown stimulus '{stimulus_name}' or metric '{metric}'")
     except Exception as e:
-        logging.error(f"An error occurred: {e}")
-        return None, None
-    
-    finally:
-        driver.quit()
-        logging.info("WebDriver closed.")
+        raise RuntimeError(f"Failed to load data from URL: {e}")
 
-
-def extract_digit(t: str):
+def preload_corelex_norms(present_narratives: set) -> dict:
     """
-    Extracts the first numerical value (integer or float) from a string.
+    Preloads accuracy and efficiency CoreLex norms for all narratives in current batch of samples.
 
     Args:
-        t (str): The text containing a numerical value.
+        present_narratives (set): Set of narratives present in the input batch.
 
     Returns:
-        float: The extracted numerical value or NaN if not found.
+        dict: Dictionary of dictionaries {scene_name: {accuracy: df, efficiency: df}}
     """
-    match = re.search(r'\d+\.?\d*', t)
-    return float(match.group(0)) if match else np.nan
+    norm_data = {}
 
+    for scene in present_narratives:
+        try:
+            norm_data[scene] = {
+                "accuracy": load_corelex_norms_online(scene, "accuracy"),
+                "efficiency": load_corelex_norms_online(scene, "efficiency")
+            }
+            logging.info(f"Loaded CoreLex norms for: {scene}")
+        except Exception as e:
+            logging.warning(f"Failed to load norms for {scene}: {e}")
+            norm_data[scene] = {"accuracy": None, "efficiency": None}
 
-def get_nums(num_data: pd.DataFrame) -> list:
+    return norm_data
+
+def get_percentiles(score: float, norm_df: pd.DataFrame, column: str) -> dict:
     """
-    Extracts numerical information from a given DataFrame.
+    Computes percentile rank of a score relative to both control and PWA distributions.
 
     Args:
-        num_data (pd.DataFrame): Data containing numerical scores and percentiles.
+        score (float): The participant's score.
+        norm_df (pd.DataFrame): DataFrame with 'Aphasia' and score column.
+        column (str): Name of the column containing scores (e.g., 'CoreLex Score', 'CoreLex/min').
 
     Returns:
-        list: Extracted numerical values in the order:
-              [ncw, ncw_pwa_ptile, ncw_ctrl_ptile, cwpm, cwpm_pwa_ptile, cwpm_ctrl_ptile]
+        dict: {
+            "control_percentile": float,
+            "pwa_percentile": float
+        }
     """
-    logging.info("Extracting numerical values from data.")
-    
-    try:
-        ncw = int(extract_digit(num_data.loc[0, 'Score']))
-        ncw_pwa_ptile = float(extract_digit(num_data.loc[0, 'Aphasia Percentile']))
-        ncw_ctrl_ptile = float(extract_digit(num_data.loc[0, 'Control Percentile']))
-        cwpm = float(extract_digit(num_data.loc[1, 'Score']))
-        cwpm_pwa_ptile = float(extract_digit(num_data.loc[1, 'Aphasia Percentile']))
-        cwpm_ctrl_ptile = float(extract_digit(num_data.loc[1, 'Control Percentile']))
-        
-        nums = [ncw, ncw_pwa_ptile, ncw_ctrl_ptile, cwpm, cwpm_pwa_ptile, cwpm_ctrl_ptile]
-        logging.info("Extraction successful: %s", nums)
-        return nums
-    
-    except Exception as e:
-        logging.error(f"Error extracting numerical values: {e}")
-        return []
+    control_scores = norm_df[norm_df['Aphasia'] == 0][column]
+    pwa_scores = norm_df[norm_df['Aphasia'] == 1][column]
 
+    return {
+        "control_percentile": percentileofscore(control_scores, score, kind="weak"),
+        "pwa_percentile": percentileofscore(pwa_scores, score, kind="weak")
+    }
 
-def make_timestamp() -> str:
-    """Returns a timestamp in YYMMDD format."""
-    return datetime.now().strftime('%y%m%d')
+def find_utterance_file(input_dir: str, output_dir: str) -> str:
+    """
+    Searches for the unblindUtteranceData.xlsx file in input/output subdirectories.
 
-# Define scenes
-scenes = {
-    'BrokenWindow': 'Broken Window',
-    'RefusedUmbrella': 'Refused Umbrella',
-    'CatRescue': 'Cat Rescue'
-}
+    Args:
+        input_dir (str): Path to the input directory.
+        output_dir (str): Path to the output directory.
 
-# Define base columns
-base_columns = [
-    'sampleID', 'ncw', 'ncw_pwa_ptile', 'ncw_ctrl_ptile',
-    'cwpm', 'cwpm_pwa_ptile', 'cwpm_ctrl_ptile'
-]
+    Returns:
+        str: Path to the found file, or None if not found.
+    """
+    for base_dir in [output_dir, input_dir]:
+        matches = list(Path(base_dir).rglob('unblindUtteranceData.xlsx'))
+        if matches:
+            logging.info(f"Found utterance file: {matches[0]}")
+            return str(matches[0])
 
-# Define tokens for each scene
-scene_tokens = {
-    'BrokenWindow': ["a", "and", "ball", "be", "boy", "break", "go", "he", "in", "it", 
-                        "kick", "lamp", "look", "of", "out", "over", "play", "sit", "soccer", 
-                        "the", "through", "to", "up", "window"],
-    'CatRescue': ["a", "and", "bark", "be", "call", "cat", "climb", "come", "dad",
-                    "department", "dog", "down", "father", "fire", "fireman", "get",
-                    "girl", "go", "have", "he", "in", "ladder", "little", "not", "out",
-                    "she", "so", "stick", "the", "their", "there", "to", "tree", "up", "with"],
-    'RefusedUmbrella': ["a", "and", "back", "be", "boy", "do", "get", "go", "have", "he", "home",
-                        "i", "in", "it", "little", "mom", "mother", "need", "not", "out", "rain",
-                        "say", "school", "she", "so", "start", "take", "that", "the", "then",
-                        "to", "umbrella", "walk", "wet", "with", "you"]
-}
+    logging.error("unblindUtteranceData.xlsx not found in input or output directories.")
+    return None
 
-# Define alternative participles
-alternative_participles = [
-    'bein', 'breakin', 'goin', 'kickin', 'lookin', 'playin', 'barkin', 'callin', 'climbin', 'comin',
-    'gettin', 'havin', 'stickin', 'doin', 'needin', 'rainin', 'sayin', 'startin', 'takin', 'walkin'
-]
+def generate_token_columns(present_narratives):
+    token_cols = [f"{scene[:3]}_{token}"
+                  for scene in present_narratives
+                  for token in scene_tokens.get(scene, [])]
+    return token_cols
 
 def run_corelex(input_dir, output_dir):
     """
@@ -251,79 +317,78 @@ def run_corelex(input_dir, output_dir):
         output_dir (str): The directory where output files will be saved.
     """
     logging.info("Starting CoreLex processing.")
+    timestamp = datetime.now().strftime('%y%m%d_%H%M')
 
-    token_cols = [f"{scene[:3]}_{w}" for scene, words in scene_tokens.items() for w in words]
-    corelexdf = pd.DataFrame(columns=base_columns + token_cols)
-    timestamp = make_timestamp()
-    downloads_path = os.path.join(Path.home(), "Downloads")
+    corelexdf = pd.DataFrame()
 
     corelex_dir = os.path.join(output_dir, 'CoreLex')
     os.makedirs(corelex_dir, exist_ok=True)
     logging.info(f"Output directory created: {corelex_dir}")
 
-    utt_data_path = os.path.join(output_dir, 'Summaries', 'unblindUtteranceData.xlsx')
-    if not os.path.exists(utt_data_path):
-        utt_data_path = os.path.join(input_dir, 'Summaries', 'unblindUtteranceData.xlsx')
-        if not os.path.exists(utt_data_path):
-            logging.error(f"File not found: {utt_data_path}")
-            return
+    # Read in utterance file
+    utt_data_path = find_utterance_file(input_dir, output_dir)
+    if utt_data_path is None:
+        return
 
     utt_df = pd.read_excel(utt_data_path)
-    utt_df = utt_df[utt_df['narrative'].isin(scenes.keys())]
-    utt_df = utt_df[~np.isnan(utt_df['c2CU'])]
+    utt_df = utt_df[utt_df['narrative'].isin(urls.keys())]
+    utt_df = utt_df[~np.isnan(utt_df['wordCount'])]
+    
+    # Preload all needed norms
+    present_narratives = set(utt_df['narrative'].unique())
+    norm_lookup = preload_corelex_norms(present_narratives)
+
+    # Prepare token set columns and initialize data frame
+    token_columns = generate_token_columns(present_narratives)
+    corelexdf = pd.DataFrame(columns=base_columns + token_columns)
 
     for sample in tqdm(set(utt_df['sampleID'])):
         subdf = utt_df[utt_df['sampleID'] == sample]
-        scene_name = scenes[subdf['narrative'].iloc[0]]
-        rel_cols = [col for col in corelexdf.columns if col.startswith(scene_name[:3])]
-
+        scene_name = subdf['narrative'].iloc[0]
         pID = subdf['participantID'].iloc[0]
-        time = str(subdf['client_time'].iloc[0])
+        speaking_time = subdf['client_time'].iloc[0]
         text = ' '.join(subdf['utterance'])
-        text = reformat(text, pID, alternative_participles)
 
-        be_forms = re.findall(r'\b(be|is|are|were|been|being|was|am)\b', text)
-        text = re.sub(r'\b(be|is|are|were|been|being|was)\b', 'am', text)
+        reformatted_text = reformat(text)
+        core_stats = id_core_words(scene_name, reformatted_text)
 
-        num_data, token_data = None, None
+        num_tokens = core_stats["num_tokens"]
+        num_core_words = core_stats["num_core_words"]
+        num_cw_tokens = core_stats["num_cw_tokens"]
+        lexicon_coverage = core_stats["lexicon_coverage"]
+        token_sets = core_stats["token_sets"]
 
-        for attempt in range(5):
-            try:
-                num_data, token_data = webapp(pID, scene_name, time, text, downloads_path)
-                if num_data is not None and token_data is not None:
-                    break
-                logging.warning(f"Attempt {attempt+1} failed for sample {sample}.")
-            except Exception as e:
-                logging.error(f"Exception during webapp call on attempt {attempt+1} for sample {sample}: {e}")
+        # Core words per minute
+        minutes = speaking_time / 60 if speaking_time and speaking_time > 0 else np.nan
+        cwpm = num_core_words / minutes if minutes else np.nan
 
-        if num_data is None or token_data is None:
-            logging.error(f"All attempts failed for sample {sample}. Filling with NaNs.")
-            nums = [np.nan] * len(base_columns[1:])
-            tokens = [np.nan] * len(rel_cols)
-        else:
-            nums = get_nums(num_data)
-            tokens = [t if t != '-' else np.nan for t in token_data['Token Produced']]
+        # Load and calculate percentiles
+        acc_df = norm_lookup[scene_name]["accuracy"]
+        eff_df = norm_lookup[scene_name]["efficiency"]
+        acc_percentiles = get_percentiles(num_core_words, acc_df, "CoreLex Score")
+        eff_percentiles = get_percentiles(cwpm, eff_df, "CoreLex/min")
 
-        row_data = [sample] + nums + tokens
-        row_idx = len(corelexdf)
-        for c, d in zip(base_columns + rel_cols, row_data):
-            corelexdf.loc[row_idx, c] = d
+        idx = len(corelexdf)
+        corelexdf.loc[idx, "sampleID"] = sample
+        corelexdf.loc[idx, "participantID"] = pID
+        corelexdf.loc[idx, "narrative"] = scene_name
+        corelexdf.loc[idx, "speakingTime"] = speaking_time
+        corelexdf.loc[idx, "numTokens"] = num_tokens
+        corelexdf.loc[idx, "numCoreWords"] = num_core_words
+        corelexdf.loc[idx, "numCoreWordTokens"] = num_cw_tokens
+        corelexdf.loc[idx, "lexiconCoverage"] = lexicon_coverage
+        corelexdf.loc[idx, "coreWordsPerMinute"] = cwpm
+        corelexdf.loc[idx, "core_words_pwa_percentile"] = acc_percentiles["pwa_percentile"]
+        corelexdf.loc[idx, "core_words_control_percentile"] = acc_percentiles["control_percentile"]
+        corelexdf.loc[idx, "cwpm_pwa_percentile"] = eff_percentiles["pwa_percentile"]
+        corelexdf.loc[idx, "cwpm_control_percentile"] = eff_percentiles["control_percentile"]
 
-        if be_forms:
-            corelexdf.loc[row_idx, f"{scene_name[:3]}_be"] = ', '.join(set(be_forms))
+        # Add individual lemma-based token sets as string columns
+        for lemma, surface_forms in token_sets.items():
+            col_name = f"{scene_name[:3]}_{lemma}"
+            corelexdf.loc[idx, col_name] = ', '.join(sorted(surface_forms))
 
-    for blind_type in ['unblind', 'blind']:
-        sample_data_path = os.path.join(output_dir, 'Summaries', f'{blind_type}SampleData.xlsx')
-        if not os.path.exists(sample_data_path):
-            sample_data_path = os.path.join(input_dir, 'Summaries', f'{blind_type}SampleData.xlsx')
-            if not os.path.exists(sample_data_path):
-                logging.warning(f"Missing sample data file: {sample_data_path}")
-                continue
-
-        sample_df = pd.read_excel(sample_data_path)
-        merged = pd.merge(sample_df, corelexdf, on='sampleID', how='inner')
-        output_file = os.path.join(corelex_dir, f'{blind_type}CoreLexData{timestamp}.xlsx')
-        merged.to_excel(output_file)
-        logging.info(f"Saved: {output_file}")
-
+    output_file = os.path.join(corelex_dir, f'CoreLexData_{timestamp}.xlsx')
+    corelexdf.to_excel(output_file, index=False)
+    logging.info(f"Saved: {output_file}")
     logging.info("CoreLex processing complete.")
