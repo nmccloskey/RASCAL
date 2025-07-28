@@ -42,11 +42,21 @@ def build_config_ui():
 
     # --- YAML Assembly ---
     tiers_dict = {}
+
     for tier in st.session_state.tiers:
-        key = f"*{tier['label']}" if tier["is_partition"] else tier["label"]
-        value_list = [v.strip() for v in tier["values"].split(",") if v.strip()]
-        if key:
-            tiers_dict[key] = value_list if len(value_list) > 1 else value_list[0]
+        name = tier["label"].strip()
+        values = [v.strip() for v in tier["values"].split(",") if v.strip()]
+        if not name:
+            continue
+
+        tier_entry = {"values": values if len(values) > 1 else values[0]}
+        
+        if tier.get("is_partition"):
+            tier_entry["partition"] = True
+        if tier.get("is_blind"):
+            tier_entry["blind"] = True
+
+        tiers_dict[name] = tier_entry
 
     config = {
         "input_dir": input_dir,
