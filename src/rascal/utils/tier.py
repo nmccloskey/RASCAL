@@ -3,7 +3,7 @@ import random
 import logging
 
 class Tier:
-    def __init__(self, name, values, partition):
+    def __init__(self, name, values, partition, blind):
         """
         Initializes a Tier object.
 
@@ -11,13 +11,15 @@ class Tier:
         - name (str): The name of the tier.
         - values (list): A list of values used for pattern matching.
         - partition (bool): Whether this tier is used for partitioning.
+        - blind (bool): Whether this tier is blinded in CU summaries.
         """
         self.name = name
         self.values = values
         self.search_str = self._make_search_string(values)
         self.pattern = re.compile(self.search_str)
         self.partition = partition
-        logging.info(f"Initialized Tier: {name} with values: {values} and partition: {partition}")
+        self.blind = blind
+        logging.info(f"Initialized Tier: {name} with values: {values}, partition: {partition}, and blind: {blind}")
 
     def _make_search_string(self, values):
         """
