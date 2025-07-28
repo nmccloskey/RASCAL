@@ -15,9 +15,6 @@ def build_config_ui():
     CU_paradigms = st.text_input("CU coding versions (comma-separated)", value="SAE, AAE")
     CU_paradigm_list = [p.strip() for p in CU_paradigms.split(",") if p.strip()]
 
-    blind_columns = st.text_input("Columns for blinding in CU summaries (comma-separated)", value="site, test")
-    blind_columns_list = [b.strip() for b in blind_columns.split(",") if b.strip()]
-
     # --- Tier Builder ---
     st.subheader("📐 Tier Definitions")
 
@@ -58,7 +55,6 @@ def build_config_ui():
         "coders": coder_list,
         "CU_paradigms": CU_paradigm_list,
         "tiers": tiers_dict,
-        "blind_columns": blind_columns_list
     }
 
     yaml_config = yaml.dump(config, sort_keys=False, allow_unicode=True)
