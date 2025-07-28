@@ -17,34 +17,37 @@ def read_tiers(config_tiers: dict):
         return {}
 
     tiers = {}
-    for tier_name, values in config_tiers.items():
+    for tier_name, tier_data in config_tiers.items():
         try:
-            # Convert string values to list
+            # If old format (non-nested), convert it
+            if isinstance(tier_data, list) or isinstance(tier_data, str):
+                values = [tier_data] if isinstance(tier_data, str) else tier_data
+                tier_data = {"values": values}
+
+            values = tier_data.get("values", [])
             if isinstance(values, str):
                 values = [values]
 
-            # Handle numerical placeholders (e.g., site##)
-            if isinstance(values, list) and any('##' in v for v in values):
-                # Strip '##' to get referenced tier
+            partition = tier_data.get("partition", False)
+            blind = tier_data.get("blind", False)
+
+            if any('##' in v for v in values):
                 ref = re.sub(r'#', '', values[0])
                 try:
-                    # Use existing tier values to generate search string
                     ref_tier = tiers[ref]
                     search_str = ref_tier._make_search_string(ref_tier.values) + r'\d+'
-                    logging.info(f"Resolved placeholder in tier '{tier_name}': using search string '{search_str}'")
                 except KeyError:
                     search_str = ref + r'\d+'
-                    logging.warning(f"Referenced tier '{ref}' not found for placeholder in '{tier_name}'. Using fallback: {search_str}")
-                tier_obj = Tier(tier_name, [search_str], partition=False)
-
+                    logging.warning(f"Referenced tier '{ref}' not found. Using fallback: {search_str}")
+                tier_obj = Tier(tier_name, [search_str], partition=partition, blind=blind)
             else:
-                is_partition = tier_name.startswith('*')
-                clean_name = tier_name.lstrip('*')
-                tier_obj = Tier(clean_name, values, partition=is_partition)
-                if is_partition:
-                    logging.info(f"Tier '{clean_name}' marked as partition level.")
+                tier_obj = Tier(tier_name, values, partition=partition, blind=blind)
 
-            tiers[tier_obj.name] = tier_obj
+            tiers[tier_name] = tier_obj
+            if partition:
+                logging.info(f"Tier '{tier_name}' marked as partition level.")
+            if blind:
+                logging.info(f"Tier '{tier_name}' marked as blind column.")
 
         except Exception as e:
             logging.error(f"Failed to parse tier '{tier_name}': {e}")

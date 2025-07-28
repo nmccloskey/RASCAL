@@ -23,21 +23,22 @@ def build_config_ui():
 
     if "tiers" not in st.session_state:
         st.session_state.tiers = [
-            {"label": "site", "values": "AC, BU, TU", "is_partition": True},
-            {"label": "test", "values": "Pre, Post, Maint", "is_partition": False},
-            {"label": "participantID", "values": "site##", "is_partition": False},
-            {"label": "narrative", "values": "CATGrandpa, BrokenWindow, RefusedUmbrella, CatRescue, BirthdayScene", "is_partition": False}
+            {"label": "site", "values": "AC, BU, TU", "is_partition": True, "is_blind": True},
+            {"label": "test", "values": "Pre, Post, Maint", "is_partition": False, "is_blind": True},
+            {"label": "participantID", "values": "site##", "is_partition": False, "is_blind": False},
+            {"label": "narrative", "values": "CATGrandpa, BrokenWindow, RefusedUmbrella, CatRescue, BirthdayScene", "is_partition": False, "is_blind": False}
         ]
 
     for i, tier in enumerate(st.session_state.tiers):
-        cols = st.columns([2, 4, 1])
+        cols = st.columns([2, 4, 1, 1])
         tier["label"] = cols[0].text_input(f"Name of Tier {i+1}", value=tier["label"], key=f"tier_label_{i}")
         tier["values"] = cols[1].text_area(f"Values (comma-separated) - {tier['label']}", value=tier["values"], key=f"tier_values_{i}")
         tier["is_partition"] = cols[2].checkbox("Partition", value=tier["is_partition"], key=f"tier_partition_{i}")
+        tier["is_blind"] = cols[3].checkbox("Blind", value=tier["is_blind"], key=f"tier_blind_{i}")
 
     col1, col2 = st.columns([1, 1])
     if col1.button("➕ Add Tier"):
-        st.session_state.tiers.append({"label": "", "values": "", "is_partition": False})
+        st.session_state.tiers.append({"label": "", "values": "", "is_partition": False, "is_blind": False})
     if col2.button("➖ Remove Last Tier"):
         if st.session_state.tiers:
             st.session_state.tiers.pop()

@@ -4,15 +4,21 @@ output_dir: "data/output"
 reliability_fraction: 0.2
 coders: [1, 2, 3]
 CU_paradigms: [SAE, AAE]
-blind_columns: [site, test]
 
 tiers:
-  "*site": [AC, BU, TU]
-  test: [Pre, Post, Maint]
-  participantID: "site##"
+  site:
+    values: [AC, BU, TU]
+    partition: true
+    blind: true
+  test:
+    values: [Pre, Post, Maint]
+    blind: true
+  participantID:
+    values: ["site##"]
   narrative:
-    - CATGrandpa
-    - BrokenWindow
-    - RefusedUmbrella
-    - CatRescue
-    - BirthdayScene
+    values:
+      - CATGrandpa
+      - BrokenWindow
+      - RefusedUmbrella
+      - CatRescue
+      - BirthdayScene
