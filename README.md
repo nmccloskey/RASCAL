@@ -1,4 +1,4 @@
-# RASCAL (Resources for Analyzing Speech in Clinical Aphasiology Labs)
+# RASCAL - Resources for Analyzing Speech in Clinical Aphasiology Labs
 
 RASCAL is a tool designed to facilitate the analysis of speech in clinical aphasiology research. It processes CHAT-formatted (.cha) transcriptions, organizes data into structured tiers, and automates key analytical steps in transcription reliability, CU coding, word counting, and core lexicon analysis.
 

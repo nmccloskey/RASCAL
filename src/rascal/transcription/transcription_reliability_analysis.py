@@ -55,6 +55,76 @@ def wrap_text(text, width=80):
 
     return lines
 
+def write_reliability_report(transc_rel_subdf, report_path, partition_labels=None):
+    """
+    Write a plain-text transcription-reliability report.
+
+    Parameters
+    ----------
+    transc_rel_subdf : pandas.DataFrame
+        One row per sample. Must contain a numeric column
+        'LevenshteinSimilarity' whose values lie in [0, 1].
+    report_path : str | pathlib.Path
+        Full path to the output .txt file.
+    partition_labels : list[str] | None
+        Optional tier / partition labels to display in the header.
+    """
+
+    try:
+        # ── sanity checks ──────────────────────────────────────────────────────
+        if 'LevenshteinSimilarity' not in transc_rel_subdf.columns:
+            raise KeyError("'LevenshteinSimilarity' column is missing.")
+
+        ls = transc_rel_subdf['LevenshteinSimilarity'].astype(float).dropna()
+        n_samples = len(ls)
+        mean_ls   = ls.mean()
+        sd_ls     = ls.std()
+        min_ls    = ls.min()
+        max_ls    = ls.max()
+
+        # ── similarity bands ───────────────────────────────────────────────────
+        bands = {
+            "Excellent (≥ .90)":        (ls >= 0.90),
+            "Sufficient (.80 – .89)":   ((ls >= 0.80) & (ls < 0.90)),
+            "Min. acceptable (.70 – .79)": ((ls >= 0.70) & (ls < 0.80)),
+            "Below .70":               (ls < 0.70),
+        }
+        counts = {label: mask.sum() for label, mask in bands.items()}
+
+        # ── compose the report text ────────────────────────────────────────────
+        header = "Transcription Reliability Report"
+        if partition_labels:
+            header += f" for {' '.join(map(str, partition_labels))}"
+
+        lines = [
+            header,
+            "=" * len(header),
+            f"Number of samples: {n_samples}",
+            "",
+            f"Levenshtein similarity score summary stats:",
+            f"  • Average: {mean_ls:.3f}",
+            f"  • Standard Deviation: {sd_ls:.3f}",
+            f"  • Min: {min_ls:.3f}",
+            f"  • Max: {max_ls:.3f}",
+            "",
+            "Similarity bands:",
+        ]
+        for label, count in counts.items():
+            pct = count / n_samples * 100 if n_samples else 0
+            lines.append(f"  • {label}: {count} ({pct:.1f}%)")
+
+        report_text = "\n".join(lines)
+
+        # ── write to disk ──────────────────────────────────────────────────────
+        Path(report_path).parent.mkdir(parents=True, exist_ok=True)
+        with open(report_path, "w", encoding="utf-8") as f:
+            f.write(report_text)
+
+        logging.info("Successfully wrote transcription reliability report to %s", report_path)
+
+    except Exception as e:
+        logging.error("Failed to write transcription reliability report to %s: %s", report_path, e)
+        raise
 
 def analyze_transcription_reliability(tiers, input_dir, output_dir, test=False):
     """
@@ -104,7 +174,7 @@ def analyze_transcription_reliability(tiers, input_dir, output_dir, test=False):
                 try:
                     org_chat_data = pylangacq.read_chat(str(org_cha))
                     rel_chat_data = pylangacq.read_chat(str(rel_cha))
-                    logging.info(f"Matching original file: {org_cha.name} with reliability file: {rel_cha.name}")
+                    # logging.info(f"Matching original file: {org_cha.name} with reliability file: {rel_cha.name}")
                 except Exception as e:
                     logging.error(f"Failed to read CHAT files {org_cha} or {rel_cha}: {e}")
                     continue
@@ -164,7 +234,7 @@ def analyze_transcription_reliability(tiers, input_dir, output_dir, test=False):
                     # Extract partition tier info from file name.
                     partition_labels = [t.match(rel_cha.name) for t in tiers.values() if t.partition]
                     text_filename = f"{''.join(rel_labels)}_TranscriptionReliabilityAlignment.txt"
-                    text_file_path = os.path.join(transc_rel_dir, *partition_labels, text_filename)
+                    text_file_path = os.path.join(transc_rel_dir, *partition_labels, 'GlobalAlignments', text_filename)
                     try:
                         os.makedirs(os.path.dirname(text_file_path), exist_ok=True)
                         with open(text_file_path, 'w') as file:
@@ -180,9 +250,13 @@ def analyze_transcription_reliability(tiers, input_dir, output_dir, test=False):
     results = []
     
     # Partition by designated tier(s).
-    for tup, subdf in tqdm(transc_rel_df.groupby(partition_tiers), desc="Saving grouped DataFrames"):
+    for tup, subdf in tqdm(transc_rel_df.groupby(partition_tiers), desc="Saving grouped DataFrames & reports"):
         df_filename = '_'.join(tup) + '_TranscriptionReliabilityAnalysis.xlsx'
         df_path = os.path.join(transc_rel_dir, *tup, df_filename)
+        report_filename = '_'.join(tup) + '_TranscriptionReliabilityReport.txt'
+        report_path = os.path.join(transc_rel_dir, *tup, report_filename)
+        write_reliability_report(subdf, report_path, tup)
+
         try:
             subdf.to_excel(df_path, index=False)
             logging.info(f"Saved reliability analysis DataFrame to: {df_path}")
