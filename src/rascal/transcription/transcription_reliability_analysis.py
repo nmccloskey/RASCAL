@@ -304,13 +304,11 @@ def analyze_transcription_reliability(
     tiers,
     input_dir,
     output_dir,
-    test=False,
-    *,
-    # expose extractor knobs so callers can choose policy here
     exclude_participants=("INV",),
     strip_clan=True,
     prefer_correction=True,
-    lowercase=True
+    lowercase=True,
+    test=False
 ):
     """
     Analyze transcription reliability by comparing original and reliability CHAT files.
@@ -323,10 +321,10 @@ def analyze_transcription_reliability(
         Directory containing input CHAT files.
     output_dir : str
         Base directory where analysis results will be saved.
-    test : bool
-        If True, return grouped DataFrames for tests instead of None.
     exclude_participants, strip_clan, prefer_correction, lowercase :
         Passed through to extract_cha_text().
+    test : bool
+        If True, return grouped DataFrames for tests instead of None.        
     """
     # --- setup output dirs ---
     transc_rel_dir = os.path.join(output_dir, "TranscriptionReliabilityAnalysis")
