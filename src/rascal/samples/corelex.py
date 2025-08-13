@@ -166,54 +166,64 @@ base_columns = [
     "cwpm_pwa_percentile", "cwpm_control_percentile"
 ]
 
+_UNINTELLIGIBLE = {"xxx", "yyy", "www"}  # common CHAT placeholders
+
 def reformat(text: str) -> str:
     """
     Prepares a transcription text string for CoreLex analysis.
 
-    - Expands most contractions (e.g., "it's" → "it is", but keeps possessive 's).
-    - Converts numeric digits to words.
-    - Removes most CHAT annotations except accepted corrections like [: dogs] [*].
-    - Removes disfluencies, fragments, gestures, etc.
-    
-    Args:
-        text (str): The transcription text to be formatted.
-        
-    Returns:
-        str: Cleaned and normalized text.
+    - Expands contractions (keeps possessive 's / ’s).
+    - Converts digits to words.
+    - Preserves replacements like '[: dogs] [*]' → 'dogs'.
+    - Removes other CHAT/CLAN annotations (repetitions, comments, gestures, events).
+    - Removes tokens that START with punctuation (e.g., &=draws:a:cat), except standalone "'s"/"’s".
     """
     try:
         text = text.lower().strip()
 
-        # Handle "he's got" and "it's got" → "he has got", etc.
+        # 1) Handle specific pattern: "(he|it)'s got" → "he has got" / "it has got"
         text = re.sub(r"\b(he|it)'s got\b", r"\1 has got", text)
 
-        # Expand contractions while preserving possessive 's (approximate strategy)
+        # 2) Expand contractions while keeping possessive 's approximately
         tokens = text.split()
         expanded = []
-        for token in tokens:
-            # Skip possessive 's (approximated by looking for preceding nouns)
-            if re.match(r"\w+'s\b", token) and not contractions.fix(token).startswith("it is"):
-                expanded.append(token)
+        for tok in tokens:
+            # If looks like possessive 's or ’s, keep as-is (don't expand to "is")
+            if re.fullmatch(r"\w+'s", tok) or re.fullmatch(r"\w+’s", tok):
+                expanded.append(tok)
             else:
-                expanded.append(contractions.fix(token))
-        text = ' '.join(expanded)
+                expanded.append(contractions.fix(tok))
+        text = " ".join(expanded)
 
-        # Convert digits to words (e.g., 3 → three)
-        text = re.sub(r'\b\d+\b', lambda m: n2w.num2words(int(m.group())), text)
+        # 3) Convert standalone digits to words
+        text = re.sub(r"\b\d+\b", lambda m: n2w.num2words(int(m.group())), text)
 
-        # Preserve accepted correction format: [: word] [*]
-        text = re.sub(r'\[: ([^\]]+)\] \[\*\]', r'\1', text)
+        # 4) Preserve accepted clinician replacement: "[: dogs] [*]" → "dogs"
+        text = re.sub(r'\[:\s*([^\]]+?)\s*\]\s*\[\*\]', r'\1', text)
 
-        # Remove all other square-bracketed content (e.g., [//], [?], [% ...], [&])
-        text = re.sub(r'\[[^\]]+\]', '', text)
+        # 5) Remove ALL other square-bracketed content (e.g., [//], [?], [% ...], [& ...])
+        text = re.sub(r'\[[^\]]+\]', ' ', text)
 
-        # Remove all non-word characters except apostrophes (keep possessives)
+        # 6) Remove other common CLAN containers: <...> events, ((...)) comments, {...} paralinguistic
+        text = re.sub(r'<[^>]+>', ' ', text)
+        text = re.sub(r'\(\([^)]*\)\)', ' ', text)
+        text = re.sub(r'\{[^}]+\}', ' ', text)
+
+        # 7) Remove tokens that START with punctuation (gesture/dep. tiers), e.g. &=draws:a:cat, +/., =laughs
+        #    Keep the standalone possessive token "'s"/"’s" if it appears.
+        #    (?<!\S)  -> start of token (preceded by start or whitespace)
+        #    (?!'s\b)(?!’s\b)  -> DO NOT match if the token is exactly 's/’s
+        #    [^\w\s']\S*  -> a non-word, non-space, non-apostrophe first char, then the rest of the token
+        text = re.sub(r"(?<!\S)(?!'s\b)(?!’s\b)[^\w\s']\S*", ' ', text)
+
+        # 8) Remove non-word characters except apostrophes (keeps possessives like cinderella’s)
         text = re.sub(r"[^\w\s']", ' ', text)
 
-        # Collapse multiple spaces
-        text = re.sub(r'\s+', ' ', text)
+        # 9) Token-level cleanup: drop CHAT placeholders like 'xxx', 'yyy', 'www'
+        toks = [t for t in text.split() if t not in _UNINTELLIGIBLE]
 
-        return text.strip()
+        # 10) Collapse whitespace and return
+        return " ".join(toks).strip()
 
     except Exception as e:
         logging.error(f"An error occurred while reformatting: {e}")

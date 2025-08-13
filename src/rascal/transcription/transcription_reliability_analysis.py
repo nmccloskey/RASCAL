@@ -15,21 +15,123 @@ def percent_difference(value1, value2):
     """
     return (abs(value1 - value2) / ((value1 + value2) / 2)) * 100
 
-def extract_cha_text(chat_data):
+def _clean_clan_for_reliability(text: str) -> str:
     """
-    Extract text from CHAT data, excluding clinician ('INV') utterances.
+    Strip CLAN markup while preserving speech content crucial for reliability.
+    - Keep fillers/disfluencies: '&um' -> 'um', '&uh' -> 'uh'
+    - Remove structural markers: retracings [/], [//], [///], events <...>, comments ((...)), paralinguistic {...}
+    - Remove bracket content [ ... ] *after* corrections handled, but preserve word-like content if any.
+    - Drop tokens that are pure markup (e.g., =laughs), but keep speech hidden behind & or + if letter-like.
+
+    This is intentionally milder than CoreLex reformatting: no contraction expansion, no digit->word, no stopword/filler removal.
     """
-    text = ''
-    for line in chat_data.utterances():
-        if line.participant != 'INV':
-            utterance = line.tiers.get(line.participant, "")
-            # Remove space before utterance delimiter.
-            utterance = re.sub(r'\s(?=[.!?])','',utterance)
-            text += utterance + ' '
-    # Remove non-word characters, regularize whitespace, and convert to lowercase.
-    text = re.sub(r'[^\w\s\n.!?]', '', text)
-    text = re.sub(r'\s+', ' ', text)
-    return text.lower().strip()
+    # --- remove containers that never carry client words ---
+    # Remove events <...>, comments ((...)), paralinguistic {...}
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\(\([^)]*\)\)", " ", text)
+    text = re.sub(r"\{[^}]+\}", " ", text)
+
+    # Retracing markers and similar bracket codes (after correction handling):
+    # [/], [//], [///], [?], [=! ...], [% ...], [& ...], etc.
+    # If bracket content is purely non-letters, drop entirely.
+    text = re.sub(r"\[\/*\]", " ", text)  # [/], [//], [///] variants
+    text = re.sub(r"\[\s*[?%!=&][^\]]*\]", " ", text)
+
+    # Any remaining bracketed spans (e.g., [x 2]) that aren't words → drop
+    text = re.sub(r"\[\s*[^\w\]]+\s*\]", " ", text)
+
+    # Remove standalone [*] (if any survived)
+    text = re.sub(r"\[\*\]", " ", text)
+
+    # --- convert speech-like tokens encoded as CLAN codes ---
+    # &um, &uh, &erm -> um, uh, erm
+    text = re.sub(r"(?<!\S)&([a-zA-Z]+)\b", r"\1", text)
+
+    # +... variants sometimes mark pauses/continuations; if they prefix letters, keep letters.
+    text = re.sub(r"(?<!\S)\++([a-zA-Z']+)\b", r"\1", text)
+
+    # &=draws:a:cat or =laughs etc.  If token starts with non-word chars and then letters,
+    # keep the tail letters; otherwise drop. (Conservative keep for speech-like tails)
+    text = re.sub(r"(?<!\S)[^a-zA-Z'\s]+([a-zA-Z']+)\b", r"\1", text)
+
+    # After the above, many pure markup tokens will reduce to nothing but punctuation; remove leftover [] explicitly
+    text = re.sub(r"\[[^\]]+\]", " ", text)
+
+    # Strip non-speech symbols but keep apostrophes and sentence punctuation .!?
+    text = re.sub(r"[^\w\s'!.?]", " ", text)
+
+    # Collapse multiple punctuation spaces like " ."
+    text = re.sub(r"\s+(?=[.!?])", "", text)
+
+    return text
+
+def extract_cha_text(
+    chat_data,
+    *,
+    exclude_participants=("INV",),   # exclude clinician by default
+    strip_clan=True,                # keep raw CLAN if False
+    prefer_correction=True,          # True => keep [: correction ] [*]; False => keep target
+    lowercase=True
+) -> str:
+    """
+    Extract a single comparison string from CHAT data for transcription reliability.
+
+    - Minimal normalization when strip_clan=False (verbatim CLAN kept).
+    - When strip_clan=True, CLAN markup is removed *but* speech-like content is preserved,
+      including filled pauses (e.g., '&um' -> 'um') and disfluencies.
+
+    Parameters
+    ----------
+    chat_data : pylangacq.Reader or compatible
+        Must provide .utterances() yielding objects with .participant and .tiers[participant]
+    exclude_participants : tuple[str]
+        Participant codes to exclude (e.g., clinician 'INV').
+    strip_clan : bool
+        If True, return a speech-only surface (no CLAN codes). If False, keep CLAN.
+    prefer_correction : bool
+        Policy for accepted corrections '[: x] [*]': True keeps x, False keeps original token(s).
+    lowercase : bool
+        Lowercase final string for case-insensitive Levenshtein.
+    """
+    try:
+        # 1) Collect utterances
+        parts = []
+        for line in chat_data.utterances():
+            if line.participant in exclude_participants:
+                continue
+            utt = line.tiers.get(line.participant, "")
+            # tighten spaces before . ! ?
+            utt = re.sub(r"\s+(?=[.!?])", "", utt)
+            parts.append(utt)
+        text = " ".join(parts).strip()
+
+        # 2) Normalize accepted corrections per policy
+        # Patterns like: "... birbday [: birthday] [*] ..."
+        if prefer_correction:
+            # Keep the correction content, drop the target.
+            # Also handle multiword corrections.
+            text = re.sub(r"\[:\s*([^\]]+?)\s*\]\s*\[\*\]", r"\1", text)
+            # Remove any stray [*] that appear without '[: ...]'
+            text = re.sub(r"\[\*\]", "", text)
+        else:
+            # Remove the correction block but keep original token(s)
+            text = re.sub(r"\s*\[:\s*[^\]]+?\s*\]\s*\[\*\]", "", text)
+
+        if strip_clan:
+            text = _clean_clan_for_reliability(text)
+        else:
+            # Keep CLAN; just normalize whitespace lightly
+            text = re.sub(r"[ \t]+", " ", text)
+
+        # 3) Final touches: standardize whitespace/case but keep sentence punctuation and apostrophes
+        text = re.sub(r"\s+", " ", text).strip()
+        if lowercase:
+            text = text.lower()
+        return text
+
+    except Exception as e:
+        logging.error("extract_cha_text failed: %s", e)
+        return ""
 
 # Helper function to wrap lines at approximately 80 characters or based on delimiters
 def wrap_text(text, width=80):
