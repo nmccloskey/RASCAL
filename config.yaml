@@ -8,6 +8,11 @@ coders:
 CU_paradigms:
 - SAE
 - AAE
+exclude_participants:
+- INV
+strip_clan: true
+prefer_correction: true
+lowercase: true
 tiers:
   site:
     values:

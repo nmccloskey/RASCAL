@@ -9,11 +9,15 @@ from Bio.Align import PairwiseAligner
 import logging
 
 
-def percent_difference(value1, value2):
-    """
-    Calculate percent difference between two values.
-    """
-    return (abs(value1 - value2) / ((value1 + value2) / 2)) * 100
+def percent_difference(a, b):
+    try:
+        a, b = float(a), float(b)
+        if a == 0 and b == 0:
+            return 0.0
+        denom = (abs(a) + abs(b)) / 2.0
+        return (abs(a - b) / denom) * 100.0 if denom != 0 else 0.0
+    except Exception:
+        return float("nan")
 
 def _clean_clan_for_reliability(text: str) -> str:
     """
@@ -134,7 +138,7 @@ def extract_cha_text(
         return ""
 
 # Helper function to wrap lines at approximately 80 characters or based on delimiters
-def wrap_text(text, width=80):
+def _wrap_text(text, width=80):
     """
     Wrap text to a specified width or based on utterance delimiters for better readability.
     """
@@ -228,145 +232,236 @@ def write_reliability_report(transc_rel_subdf, report_path, partition_labels=Non
         logging.error("Failed to write transcription reliability report to %s: %s", report_path, e)
         raise
 
-def analyze_transcription_reliability(tiers, input_dir, output_dir, test=False):
+# ---------- helpers: computation ----------
+
+def _compute_simple_stats(org_text: str, rel_text: str):
+    org_tokens = org_text.split()
+    rel_tokens = rel_text.split()
+    org_num_tokens = len(org_tokens)
+    rel_num_tokens = len(rel_tokens)
+    pdiff_num_tokens = percent_difference(org_num_tokens, rel_num_tokens)
+
+    org_num_chars = len(org_text)
+    rel_num_chars = len(rel_text)
+    pdiff_num_chars = percent_difference(org_num_chars, rel_num_chars)
+
+    return {
+        "OrgNumTokens": org_num_tokens,
+        "RelNumTokens": rel_num_tokens,
+        "PercDiffNumTokens": pdiff_num_tokens,
+        "OrgNumChars": org_num_chars,
+        "RelNumChars": rel_num_chars,
+        "PercDiffNumChars": pdiff_num_chars,
+    }
+
+def _levenshtein_metrics(org_text: str, rel_text: str):
+    Ldist = distance(org_text, rel_text)
+    max_len = max(len(org_text), len(rel_text)) or 1
+    Lscore = 1 - (Ldist / max_len)
+    return {"LevenshteinDistance": Ldist, "LevenshteinSimilarity": Lscore}
+
+def _needleman_wunsch_global(org_text: str, rel_text: str):
+    aligner = PairwiseAligner()
+    aligner.mode = "global"
+    alignments = aligner.align(org_text, rel_text)
+    best = alignments[0]
+    best_score = best.score
+    norm = best_score / (max(len(org_text), len(rel_text)) or 1)
+    return {"NeedlemanWunschScore": best_score,
+            "NeedlemanWunschNorm": norm,
+            "alignment": best}
+
+# ---------- helpers: alignment pretty print ----------
+
+def _format_alignment_output(alignment, best_score: float, normalized_score: float):
+    # Extract the two aligned sequences; Biopython's pairwise alignment object behaves like a 2-row alignment
+    seq1 = alignment[0]
+    seq2 = alignment[1]
+
+    seq1_lines = _wrap_text(seq1)
+    seq2_lines = _wrap_text(seq2)
+
+    out = []
+    out.append(f"Global alignment score: {best_score}")
+    out.append(f"Normalized score (by length): {normalized_score}")
+    out.append("")
+
+    for s1, s2 in zip(seq1_lines, seq2_lines):
+        out.append(f"Sequence 1: {s1}")
+        align_line = "".join("|" if a == b else " " for a, b in zip(s1, s2))
+        out.append(f"Alignment : {align_line}")
+        out.append(f"Sequence 2: {s2}")
+        out.append("")
+
+    return "\n".join(out)
+
+def _ensure_parent_dir(path: str | Path):
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+
+# ---------- main analysis ----------
+
+def analyze_transcription_reliability(
+    tiers,
+    input_dir,
+    output_dir,
+    test=False,
+    *,
+    # expose extractor knobs so callers can choose policy here
+    exclude_participants=("INV",),
+    strip_clan=True,
+    prefer_correction=True,
+    lowercase=True
+):
     """
     Analyze transcription reliability by comparing original and reliability CHAT files.
 
-    Parameters:
-    - tiers (dict): Dictionary of tier information for partitioning.
-    - input_dir (str): Directory containing input CHAT files.
-    - output_dir (str): Directory where analysis results will be saved.
-    - test (bool): If True, run in test mode.
+    Parameters
+    ----------
+    tiers : dict
+        Tier objects with attributes: .name, .partition, .match(filename)->label
+    input_dir : str
+        Directory containing input CHAT files.
+    output_dir : str
+        Base directory where analysis results will be saved.
+    test : bool
+        If True, return grouped DataFrames for tests instead of None.
+    exclude_participants, strip_clan, prefer_correction, lowercase :
+        Passed through to extract_cha_text().
     """
-    dfcols = list(tiers.keys()) + ['OrgFile', 'RelFile',
-                                   'OrgNumTokens', 'RelNumTokens', 'PercDiffNumTokens',
-                                   'OrgNumChars', 'RelNumChars', 'PercDiffNumChars',
-                                   'LevenshteinDistance','LevenshteinSimilarity',
-                                   'NeedlemanWunschDistance', 'NeedlemanWunschScore']
-    transc_rel_df = pd.DataFrame(columns=dfcols)
+    # --- setup output dirs ---
+    transc_rel_dir = os.path.join(output_dir, "TranscriptionReliabilityAnalysis")
+    os.makedirs(transc_rel_dir, exist_ok=True)
+    logging.info(f"Created directory: {transc_rel_dir}")
 
-    # Make output folder.
-    transc_rel_dir = os.path.join(output_dir, 'TranscriptionReliabilityAnalysis')
-    try:
-        os.makedirs(transc_rel_dir, exist_ok=True)
-        logging.info(f"Created directory: {transc_rel_dir}")
-    except Exception as e:
-        logging.error(f"Failed to create directory {transc_rel_dir}: {e}")
-        return
+    # Which tiers define partitions?
+    partition_tiers = [t.name for t in tiers.values() if getattr(t, "partition", False)]
 
-    # Output subfolders based on partition tiers.
-    partition_tiers = [t.name for t in tiers.values() if t.partition]
-
-    # Read all .cha files in input directory.
-    cha_files = [cha for cha in Path(input_dir).rglob("*.cha")]
+    # --- collect files and index originals by labels for O(1) match lookup ---
+    cha_files = list(Path(input_dir).rglob("*.cha"))
     logging.info(f"Found {len(cha_files)} .cha files in the input directory.")
-    rel_chats = [cha for cha in cha_files if 'Reliability' in cha.name]
-    org_chats = [cha for cha in cha_files if 'Reliability' not in cha.name]
-    
-    logging.info("Analyzing transcription reliability...")
+
+    rel_chats = [p for p in cha_files if "Reliability" in p.name]
+    org_chats = [p for p in cha_files if "Reliability" not in p.name]
+
+    def _labels_for(path: Path):
+        return tuple(t.match(path.name) for t in tiers.values())
+
+    org_index = {}
+    for org in org_chats:
+        labels = _labels_for(org)
+        org_index[labels] = org
+
+    # --- iterate reliability files and analyze ---
+    records = []
     for rel_cha in tqdm(rel_chats, desc="Analyzing reliability transcripts"):
-        rel_labels = [t.match(rel_cha.name) for t in tiers.values()]
-        logging.debug(f"Reliability file labels: {rel_labels}")
-
-        for org_cha in org_chats:
-            org_labels = [t.match(org_cha.name) for t in tiers.values()]
-            # logging.info(f"Original file labels: {org_labels}")
-
-            if rel_labels == org_labels:
-                try:
-                    org_chat_data = pylangacq.read_chat(str(org_cha))
-                    rel_chat_data = pylangacq.read_chat(str(rel_cha))
-                    # logging.info(f"Matching original file: {org_cha.name} with reliability file: {rel_cha.name}")
-                except Exception as e:
-                    logging.error(f"Failed to read CHAT files {org_cha} or {rel_cha}: {e}")
-                    continue
-
-                try:
-                    # Extract text from both samples.
-                    org_text = extract_cha_text(org_chat_data)
-                    rel_text = extract_cha_text(rel_chat_data)
-
-                    # Simple analysis.
-                    org_num_tokens = len(org_text.split(' '))
-                    rel_num_tokens = len(rel_text.split(' '))
-                    pdiff_num_tokens = percent_difference(org_num_tokens, rel_num_tokens)
-                    org_num_chars = len(org_text)
-                    rel_num_chars = len(rel_text)
-                    pdiff_num_chars = percent_difference(org_num_chars, rel_num_chars)
-                    
-                    # Levenshtein algorithm.
-                    Ldist = distance(org_text, rel_text)
-                    max_len = max(len(org_text), len(rel_text))
-                    Lscore = 1 - (Ldist / max_len)
-
-                    # Initialize the Needleman-Wunsch algorithm aligner
-                    aligner = PairwiseAligner()
-                    aligner.mode = 'global'
-                    alignments = aligner.align(org_text, rel_text)
-                    best_alignment = alignments[0]
-                    best_score = best_alignment.score
-                    longer_length = max(len(org_text), len(rel_text))
-                    normalized_score = best_score / longer_length
-
-                    row = rel_labels + [org_cha.name, rel_cha.name,
-                                        org_num_tokens, rel_num_tokens, pdiff_num_tokens,
-                                        org_num_chars, rel_num_chars, pdiff_num_chars,
-                                        Ldist, Lscore, best_score, normalized_score]
-                    transc_rel_df.loc[len(transc_rel_df)] = row
-                    logging.debug(f"Appended row to DataFrame: {row}")
-
-                    # Prepare the alignment output as formatted text
-                    alignment_str = f"Global alignment score: {best_score}\n"
-                    alignment_str += f"Normalized score (by length): {normalized_score}\n\n"
-
-                    # Prepare the alignment text with match indicators
-                    seq1 = best_alignment[0]
-                    seq2 = best_alignment[1]
-
-                    # Wrap each line to 80 characters
-                    seq1_lines = wrap_text(seq1)
-                    seq2_lines = wrap_text(seq2)
-
-                    for s1, s2 in zip(seq1_lines, seq2_lines):
-                        alignment_str += f"Sequence 1: {s1}\n"
-                        alignment_line = ''.join(['|' if a == b else ' ' for a, b in zip(s1, s2)])
-                        alignment_str += f"Alignment : {alignment_line}\n"
-                        alignment_str += f"Sequence 2: {s2}\n\n"
-
-                    # Extract partition tier info from file name.
-                    partition_labels = [t.match(rel_cha.name) for t in tiers.values() if t.partition]
-                    text_filename = f"{''.join(rel_labels)}_TranscriptionReliabilityAlignment.txt"
-                    text_file_path = os.path.join(transc_rel_dir, *partition_labels, 'GlobalAlignments', text_filename)
-                    try:
-                        os.makedirs(os.path.dirname(text_file_path), exist_ok=True)
-                        with open(text_file_path, 'w') as file:
-                            file.write(alignment_str)
-                        # logging.info(f"Saved alignment text to: {text_file_path}")
-                    except Exception as e:
-                        logging.error(f"Failed to write alignment file {text_file_path}: {e}")
-                
-                except Exception as e:
-                    logging.error(f"Failed to analyze transcription reliability for {org_cha} and {rel_cha}: {e}.")
-    
-    # Store results for testing.
-    results = []
-    
-    # Partition by designated tier(s).
-    for tup, subdf in tqdm(transc_rel_df.groupby(partition_tiers), desc="Saving grouped DataFrames & reports"):
-        df_filename = '_'.join(tup) + '_TranscriptionReliabilityAnalysis.xlsx'
-        df_path = os.path.join(transc_rel_dir, *tup, df_filename)
-        report_filename = '_'.join(tup) + '_TranscriptionReliabilityReport.txt'
-        report_path = os.path.join(transc_rel_dir, *tup, report_filename)
-        write_reliability_report(subdf, report_path, tup)
+        rel_labels = _labels_for(rel_cha)
+        org_cha = org_index.get(rel_labels)
+        if org_cha is None:
+            logging.warning(f"No matching original .cha for reliability file: {rel_cha.name}")
+            continue
 
         try:
+            org_chat_data = pylangacq.read_chat(str(org_cha))
+            rel_chat_data = pylangacq.read_chat(str(rel_cha))
+        except Exception as e:
+            logging.error(f"Failed to read CHAT files {org_cha} or {rel_cha}: {e}")
+            continue
+
+        try:
+            org_text = extract_cha_text(
+                org_chat_data,
+                exclude_participants=exclude_participants,
+                strip_clan=strip_clan,
+                prefer_correction=prefer_correction,
+                lowercase=lowercase,
+            )
+            rel_text = extract_cha_text(
+                rel_chat_data,
+                exclude_participants=exclude_participants,
+                strip_clan=strip_clan,
+                prefer_correction=prefer_correction,
+                lowercase=lowercase,
+            )
+
+            # Compute metrics
+            simple = _compute_simple_stats(org_text, rel_text)
+            lev = _levenshtein_metrics(org_text, rel_text)
+            nw = _needleman_wunsch_global(org_text, rel_text)
+
+            # ---------- save alignment pretty-print ----------
+            # Build path components from partitions (if any)
+            partition_labels = [t.match(rel_cha.name) for t in tiers.values() if getattr(t, "partition", False)]
+            text_filename = f"{''.join(rel_labels)}_TranscriptionReliabilityAlignment.txt"
+            text_file_path = os.path.join(transc_rel_dir, *partition_labels, "GlobalAlignments", text_filename)
+
+            try:
+                _ensure_parent_dir(text_file_path)
+                alignment_str = _format_alignment_output(nw["alignment"], nw["NeedlemanWunschScore"], nw["NeedlemanWunschNorm"])
+                with open(text_file_path, "w", encoding="utf-8") as fh:
+                    fh.write(alignment_str)
+            except Exception as e:
+                logging.error(f"Failed to write alignment file {text_file_path}: {e}")
+
+            # ---------- build record ----------
+            row = {
+                **{t.name: t.match(rel_cha.name) for t in tiers.values()},  # tier label cols
+                "OrgFile": org_cha.name,
+                "RelFile": rel_cha.name,
+                **simple,
+                **lev,
+                # Keep both raw and normalized NW scores; distance often undefined so None
+                "NeedlemanWunschDistance": nw["NeedlemanWunschDistance"],
+                "NeedlemanWunschScore": nw["NeedlemanWunschScore"],
+                "NeedlemanWunschNorm": nw["NeedlemanWunschNorm"],
+            }
+            records.append(row)
+
+        except Exception as e:
+            logging.error(f"Failed to analyze transcription reliability for {org_cha} and {rel_cha}: {e}")
+
+    # --- finalize DataFrame from records ---
+    if not records:
+        logging.warning("No transcription reliability records produced.")
+        return [] if test else None
+
+    transc_rel_df = pd.DataFrame.from_records(records)
+
+    # --- save grouped outputs + reports ---
+    results = []
+    if partition_tiers:
+        groups = transc_rel_df.groupby(partition_tiers, dropna=False)
+    else:
+        # Single “no-partition” group
+        transc_rel_df["_NO_PARTITION_"] = "ALL"
+        groups = transc_rel_df.groupby(["_NO_PARTITION_"])
+
+    for tup, subdf in tqdm(groups, desc="Saving grouped DataFrames & reports"):
+        tup_vals = (tup if isinstance(tup, tuple) else (tup,))
+        base_name = "_".join(str(x) for x in tup_vals if x is not None and x != "_NO_PARTITION_") or "ALL"
+
+        df_filename = f"{base_name}_TranscriptionReliabilityAnalysis.xlsx"
+        df_path = os.path.join(transc_rel_dir, *[str(x) for x in tup_vals if x not in (None, "_NO_PARTITION_")], df_filename)
+
+        report_filename = f"{base_name}_TranscriptionReliabilityReport.txt"
+        report_path = os.path.join(transc_rel_dir, *[str(x) for x in tup_vals if x not in (None, "_NO_PARTITION_")], report_filename)
+
+        try:
+            _ensure_parent_dir(df_path)
             subdf.to_excel(df_path, index=False)
             logging.info(f"Saved reliability analysis DataFrame to: {df_path}")
         except Exception as e:
             logging.error(f"Failed to write DataFrame to {df_path}: {e}")
-        
+
+        try:
+            write_reliability_report(subdf, report_path, tup_vals if partition_tiers else None)
+        except Exception as e:
+            logging.error(f"Failed to write reliability report to {report_path}: {e}")
+
         if test:
-            results.append(subdf)
-    
-    if test:
-        return results
+            results.append(subdf.copy())
+
+    # Clean helper column if we created it
+    if "_NO_PARTITION_" in transc_rel_df.columns:
+        transc_rel_df.drop(columns=["_NO_PARTITION_"], inplace=True, errors="ignore")
+
+    return results if test else None

@@ -37,9 +37,9 @@ def run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_para
     from .utterances.make_coding_files import make_CU_coding_files
     make_CU_coding_files(tiers=tiers, frac=frac, coders=coders, input_dir=input_dir, output_dir=output_dir, CU_paradigms=CU_paradigms)
 
-def run_analyze_transcription_reliability(tiers, input_dir, output_dir):
+def run_analyze_transcription_reliability(tiers, input_dir, output_dir, exclude_participants, strip_clan, prefer_correction, lowercase):
     from .transcription.transcription_reliability_analysis import analyze_transcription_reliability
-    analyze_transcription_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
+    analyze_transcription_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, exclude_participants=exclude_participants, strip_clan=strip_clan, prefer_correction=prefer_correction, lowercase=lowercase, test=False)
 
 def run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms):
     from .utterances.CU_analyzer import analyze_CU_reliability
@@ -89,6 +89,11 @@ def main(args):
     CU_paradigms = config.get('CU_paradigms', [])
     blind_columns =  config.get('blind_columns', [])
 
+    exclude_participants = config.get('exclude_participants', [])
+    strip_clan =  config.get('strip_clan', True)
+    prefer_correction =  config.get('prefer_correction', True)
+    lowercase =  config.get('lowercase', True)
+
     input_dir = os.path.abspath(os.path.expanduser(input_dir))
     output_dir = os.path.abspath(os.path.expanduser(output_dir))
 
@@ -117,7 +122,7 @@ def main(args):
     
     # Step 3.
     if 'd' in steps_to_run:
-        run_analyze_transcription_reliability(tiers, input_dir, output_dir)
+        run_analyze_transcription_reliability(tiers, input_dir, output_dir, exclude_participants, strip_clan, prefer_correction, lowercase)
     if 'e' in steps_to_run:
         run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms)
     if 'f' in steps_to_run:

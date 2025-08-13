@@ -7,17 +7,31 @@ def build_config_ui():
 
     input_dir = st.text_input("Input directory", value="data/input")
     output_dir = st.text_input("Output directory", value="data/output")
-    reliability_fraction = st.number_input("Reliability fraction", min_value=0.0, max_value=1.0, value=0.2)
-    
+    reliability_fraction = st.number_input(
+        "Reliability fraction", min_value=0.0, max_value=1.0, value=0.2
+    )
+
     coders = st.text_input("Coders (comma-separated)", value="1, 2, 3")
     coder_list = [c.strip() for c in coders.split(",") if c.strip()]
-    
+
     CU_paradigms = st.text_input("CU coding versions (comma-separated)", value="SAE, AAE")
     CU_paradigm_list = [p.strip() for p in CU_paradigms.split(",") if p.strip()]
 
+    exclude_participants_str = st.text_input(
+        "Exclude participants (comma-separated)", value="INV"
+    )
+    exclude_participants_list = [
+        ep.strip() for ep in exclude_participants_str.split(",") if ep.strip()
+    ]
+
+    # --- Boolean toggles ---
+    st.subheader("⚙️ Processing Options")
+    strip_clan = st.checkbox("Strip CLAN annotations", value=True)
+    prefer_correction = st.checkbox("Prefer correction over original", value=True)
+    lowercase = st.checkbox("Convert text to lowercase", value=True)
+
     # --- Tier Builder ---
     st.subheader("📐 Tier Definitions")
-
     if "tiers" not in st.session_state:
         st.session_state.tiers = [
             {"label": "site", "values": "AC, BU, TU", "is_partition": True, "is_blind": True},
@@ -42,7 +56,6 @@ def build_config_ui():
 
     # --- YAML Assembly ---
     tiers_dict = {}
-
     for tier in st.session_state.tiers:
         name = tier["label"].strip()
         values = [v.strip() for v in tier["values"].split(",") if v.strip()]
@@ -50,7 +63,6 @@ def build_config_ui():
             continue
 
         tier_entry = {"values": values if len(values) > 1 else values[0]}
-        
         if tier.get("is_partition"):
             tier_entry["partition"] = True
         if tier.get("is_blind"):
@@ -64,6 +76,10 @@ def build_config_ui():
         "reliability_fraction": reliability_fraction,
         "coders": coder_list,
         "CU_paradigms": CU_paradigm_list,
+        "exclude_participants": exclude_participants_list,
+        "strip_clan": strip_clan,
+        "prefer_correction": prefer_correction,
+        "lowercase": lowercase,
         "tiers": tiers_dict,
     }
 
