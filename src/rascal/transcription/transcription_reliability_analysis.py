@@ -407,8 +407,6 @@ def analyze_transcription_reliability(
                 "RelFile": rel_cha.name,
                 **simple,
                 **lev,
-                # Keep both raw and normalized NW scores; distance often undefined so None
-                "NeedlemanWunschDistance": nw["NeedlemanWunschDistance"],
                 "NeedlemanWunschScore": nw["NeedlemanWunschScore"],
                 "NeedlemanWunschNorm": nw["NeedlemanWunschNorm"],
             }
