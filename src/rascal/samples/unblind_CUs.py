@@ -2,6 +2,7 @@ import os
 import logging
 import pandas as pd
 from pathlib import Path
+from itertools import chain
 
 
 def unblind_CUs(tiers, input_dir, output_dir, blind_columns, test=False):
@@ -55,6 +56,7 @@ def unblind_CUs(tiers, input_dir, output_dir, blind_columns, test=False):
         logging.info(f"Unblinded utterances saved to {unblinded_utts}.")
 
         # Prepare blind codes and blinded utterances
+        # UPDATE Just select columns that are desired as opposed to dropping 
         blind_utts = merged_utts.drop(columns=["file", "participantID"])
         blind_codes_output = {}
         for tier_name in blind_columns:

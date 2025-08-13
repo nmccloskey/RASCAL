@@ -95,6 +95,7 @@ def make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigm
             logging.error(f"Failed to read file {file}: {e}")
             continue
 
+        # UPDATE Just select columns that are desired as opposed to dropping 
         CUdf = uttdf.drop(columns=[col for col in ['file', 'test', 'participantID'] if col in uttdf.columns]).copy()
         logging.debug("Dropped 'file', 'test', and 'participantID' columns.")
 
@@ -104,8 +105,6 @@ def make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigm
 
         # Dynamically add multiple paradigms if length >= 2
         if len(CU_paradigms) >= 2:
-            SV_cols = [f'{prefix}SV' for prefix in ['c1', 'c2']]
-            REL_cols = [f'{prefix}REL' for prefix in ['c1', 'c2']]
 
             for prefix in ['c1', 'c2']:
                 for tag in ['SV', 'REL']:
@@ -185,93 +184,6 @@ def make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigm
     if test:
         return results
 
-
-# def make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigms, test=False):
-#     """
-#     Generate CU coding and CU reliability coding files from utterance DataFrames.
-
-#     Parameters:
-#     - tiers (dict): Dictionary of tier objects used for partitioning.
-#     - frac (float): Fraction of samples to be selected for reliability.
-#     - coders (list): List of coder names.
-#     - input_dir (str): Directory possibly containing the utterance Excel files.
-#     - output_dir (str): Directory where the CU coding files should be saved.
-#     - test (bool): If True, return results for testing purposes.
-
-#     Returns:
-#     - None. Saves CU coding and reliability coding files to output directory.
-#     """
-
-#     if len(coders) < 3:
-#         logging.warning(f"Coders entered: {coders} do not meet minimum of 3. Using default 1, 2, 3.")
-#         coders = ['1', '2', '3']
-    
-#     CUcols = ['c1ID', 'c1SV', 'c1REL', 'c1com', 'c2ID', 'c2SV', 'c2REL', 'c2com']
-#     CU_coding_dir = os.path.join(output_dir, 'CUCoding')
-#     logging.info(f"Writing CU coding files to {CU_coding_dir}")
-#     utterance_files = list(Path(input_dir).rglob("*_Utterances.xlsx")) + list(Path(output_dir).rglob("*_Utterances.xlsx"))
-#     results = []
-
-#     for file in tqdm(utterance_files, desc="Generating CU coding files"):
-#         logging.info(f"Processing file: {file}")
-#         labels = [t.match(file.name, return_None=True) for t in tiers.values()]
-#         labels = [l for l in labels if l is not None]
-#         logging.debug(f"Extracted labels: {labels}")
-
-#         assignments = assign_CU_coders(coders)
-
-#         try:
-#             uttdf = pd.read_excel(str(file))
-#             logging.info(f"Successfully read file: {file}")
-#         except Exception as e:
-#             logging.error(f"Failed to read file {file}: {e}")
-#             continue
-
-#         CUdf = uttdf.drop(columns=[col for col in ['file', 'test', 'participantID'] if col in uttdf.columns]).copy()
-#         logging.debug("Dropped 'file', 'test', and 'participantID' columns.")
-
-#         for col in CUcols:
-#             CUdf[col] = CUdf.apply(lambda row: 'NA' if row['speaker'] == 'INV' else np.nan, axis=1)
-#         logging.debug("NAs placed in INV speaker rows.")
-
-#         unique_sample_ids = list(CUdf['sampleID'].drop_duplicates(keep='first'))
-#         segments = segment(unique_sample_ids, n=len(coders))
-#         rel_subsets = []
-
-#         for seg, ass in zip(segments, assignments):
-#             CUdf.loc[CUdf['sampleID'].isin(seg), 'c1ID'] = ass[0]
-#             CUdf.loc[CUdf['sampleID'].isin(seg), 'c2ID'] = ass[1]
-#             rel_samples = random.sample(seg, k=max(1, round(len(seg) * frac)))
-#             relsegdf = CUdf[CUdf['sampleID'].isin(rel_samples)].copy()
-#             relsegdf.drop(columns=['c1ID', 'c1SV', 'c1REL', 'c1com'], inplace=True, errors='ignore')
-#             relsegdf.rename(columns={'c2ID': 'c3ID', 'c2SV': 'c3SV', 'c2REL': 'c3REL', 'c2com': 'c3com'}, inplace=True)
-#             relsegdf['c3ID'] = ass[2]
-#             rel_subsets.append(relsegdf)
-
-#         reldf = pd.concat(rel_subsets)
-#         logging.info(f"Selected {len(set(reldf['sampleID']))} samples for reliability from {len(set(CUdf['sampleID']))} total samples.")
-
-#         cu_filename = os.path.join(CU_coding_dir, *labels, '_'.join(labels) + '_CUCoding.xlsx')
-#         rel_filename = os.path.join(CU_coding_dir, *labels, '_'.join(labels) + '_CUReliabilityCoding.xlsx')
-
-#         try:
-#             os.makedirs(os.path.dirname(cu_filename), exist_ok=True)
-#             CUdf.to_excel(cu_filename, index=False)
-#             logging.info(f"Successfully wrote CU coding file: {cu_filename}")
-#         except Exception as e:
-#             logging.error(f"Failed to write CU coding file {cu_filename}: {e}")
-
-#         try:
-#             reldf.to_excel(rel_filename, index=False)
-#             logging.info(f"Successfully wrote CU reliability coding file: {rel_filename}")
-#         except Exception as e:
-#             logging.error(f"Failed to write CU reliability coding file {rel_filename}: {e}")
-
-#         if test:
-#             results.append(CUdf)
-
-#     if test:
-#         return results
 
 def count_words(text, d):
     """

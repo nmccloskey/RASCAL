@@ -1,24 +1,33 @@
-input_dir: "data/input"
-output_dir: "data/output"
-
+input_dir: data/input
+output_dir: data/output
 reliability_fraction: 0.2
-coders: [1, 2, 3]
-CU_paradigms: [SAE, AAE]
-
+coders:
+- '1'
+- '2'
+- '3'
+CU_paradigms:
+- SAE
+- AAE
 tiers:
   site:
-    values: [AC, BU, TU]
+    values:
+    - AC
+    - BU
+    - TU
     partition: true
     blind: true
   test:
-    values: [Pre, Post, Maint]
+    values:
+    - Pre
+    - Post
+    - Maint
     blind: true
   participantID:
-    values: ["site##"]
+    values: site##
   narrative:
     values:
-      - CATGrandpa
-      - BrokenWindow
-      - RefusedUmbrella
-      - CatRescue
-      - BirthdayScene
+    - CATGrandpa
+    - BrokenWindow
+    - RefusedUmbrella
+    - CatRescue
+    - BirthdayScene

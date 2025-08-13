@@ -114,7 +114,49 @@ lemma_dict = {
 
     # Misc fix-ups
     "wanna": "want", "gonna": "go", "gotta": "get",
-    "yall": "you", "aint": "not", "cannot": "could"
+    "yall": "you", "aint": "not", "cannot": "could",
+
+    # Additional verb forms
+    "wants": "want", "wanted": "want", "wanting": "want",
+    "finds": "find", "found": "find", "finding": "find",
+    "makes": "make", "made": "make", "making": "make",
+    "tries": "try", "tried": "try", "trying": "try",
+    "tells": "tell", "told": "tell", "telling": "tell",
+    "runs": "run", "ran": "run", "running": "run",
+    "sits": "sit", "sat": "sit", "sitting": "sit",
+    "knows": "know", "knew": "know", "knowing": "know",
+    "walks": "walk", "walked": "walk", "walking": "walk",
+    "leaves": "leave", "left": "leave", "leaving": "leave",
+    "comes": "come", "came": "come", "coming": "come",
+    "calls": "call", "called": "call", "calling": "call",
+    "climbs": "climb", "climbed": "climb", "climbing": "climb",
+    "breaks": "break", "broke": "break", "breaking": "break",
+    "starts": "start", "started": "start", "starting": "start",
+    "turns": "turn", "turned": "turn", "turning": "turn",
+    "puts": "put", "putting": "put",  # 'put' is same for present/past
+
+    # Copula contractions (useful if splitting fails elsewhere)
+    "'m": "be", "'re": "be", "'s": "be",  # context-dependent, but may help
+
+    # More noun plurals
+    "slippers": "slipper", "daughters": "daughter", "sons": "son",
+    "knives": "knife", "pieces": "piece", "sticks": "stick",
+
+    # Pronoun common errors
+    "themself": "they", "our": "we", "ours": "we", "ourselves": "we", "we're": "we",
+
+    # Additional contractions and speech forms
+    "didnt": "did", "couldnt": "could", "wouldnt": "would", "shouldnt": "should",
+    "wasnt": "was", "werent": "were", "isnt": "is", "aint": "not", "havent": "have",
+    "hasnt": "have", "hadnt": "have", "dont": "do", "doesnt": "do", "didnt": "do",
+    "did": "do", "does": "do", "doing": "do",
+
+    # Determiners and articles (in case spoken strangely)
+    "th": "the", "da": "the", "uh": "a", "an": "a",
+
+    # Spoken reductions
+    "lemme": "let", "gimme": "give", "cmon": "come", "outta": "out",
+    "inna": "in", "coulda": "could", "shoulda": "should", "woulda": "would",
 }
 
 base_columns = [
@@ -319,8 +361,6 @@ def run_corelex(input_dir, output_dir):
     logging.info("Starting CoreLex processing.")
     timestamp = datetime.now().strftime('%y%m%d_%H%M')
 
-    corelexdf = pd.DataFrame()
-
     corelex_dir = os.path.join(output_dir, 'CoreLex')
     os.makedirs(corelex_dir, exist_ok=True)
     logging.info(f"Output directory created: {corelex_dir}")
@@ -333,14 +373,16 @@ def run_corelex(input_dir, output_dir):
     utt_df = pd.read_excel(utt_data_path)
     utt_df = utt_df[utt_df['narrative'].isin(urls.keys())]
     utt_df = utt_df[~np.isnan(utt_df['wordCount'])]
-    
+
     # Preload all needed norms
     present_narratives = set(utt_df['narrative'].unique())
     norm_lookup = preload_corelex_norms(present_narratives)
 
-    # Prepare token set columns and initialize data frame
+    # Prepare token columns
     token_columns = generate_token_columns(present_narratives)
-    corelexdf = pd.DataFrame(columns=base_columns + token_columns)
+    all_columns = base_columns + token_columns
+
+    rows = []  # Will hold each row as a dictionary
 
     for sample in tqdm(set(utt_df['sampleID'])):
         subdf = utt_df[utt_df['sampleID'] == sample]
@@ -368,25 +410,29 @@ def run_corelex(input_dir, output_dir):
         acc_percentiles = get_percentiles(num_core_words, acc_df, "CoreLex Score")
         eff_percentiles = get_percentiles(cwpm, eff_df, "CoreLex/min")
 
-        idx = len(corelexdf)
-        corelexdf.loc[idx, "sampleID"] = sample
-        corelexdf.loc[idx, "participantID"] = pID
-        corelexdf.loc[idx, "narrative"] = scene_name
-        corelexdf.loc[idx, "speakingTime"] = speaking_time
-        corelexdf.loc[idx, "numTokens"] = num_tokens
-        corelexdf.loc[idx, "numCoreWords"] = num_core_words
-        corelexdf.loc[idx, "numCoreWordTokens"] = num_cw_tokens
-        corelexdf.loc[idx, "lexiconCoverage"] = lexicon_coverage
-        corelexdf.loc[idx, "coreWordsPerMinute"] = cwpm
-        corelexdf.loc[idx, "core_words_pwa_percentile"] = acc_percentiles["pwa_percentile"]
-        corelexdf.loc[idx, "core_words_control_percentile"] = acc_percentiles["control_percentile"]
-        corelexdf.loc[idx, "cwpm_pwa_percentile"] = eff_percentiles["pwa_percentile"]
-        corelexdf.loc[idx, "cwpm_control_percentile"] = eff_percentiles["control_percentile"]
+        row = {
+            "sampleID": sample,
+            "participantID": pID,
+            "narrative": scene_name,
+            "speakingTime": speaking_time,
+            "numTokens": num_tokens,
+            "numCoreWords": num_core_words,
+            "numCoreWordTokens": num_cw_tokens,
+            "lexiconCoverage": lexicon_coverage,
+            "coreWordsPerMinute": cwpm,
+            "core_words_pwa_percentile": acc_percentiles["pwa_percentile"],
+            "core_words_control_percentile": acc_percentiles["control_percentile"],
+            "cwpm_pwa_percentile": eff_percentiles["pwa_percentile"],
+            "cwpm_control_percentile": eff_percentiles["control_percentile"]
+        }
 
-        # Add individual lemma-based token sets as string columns
         for lemma, surface_forms in token_sets.items():
             col_name = f"{scene_name[:3]}_{lemma}"
-            corelexdf.loc[idx, col_name] = ', '.join(sorted(surface_forms))
+            row[col_name] = ', '.join(sorted(surface_forms))
+
+        rows.append(row)
+
+    corelexdf = pd.DataFrame(rows, columns=all_columns)
 
     output_file = os.path.join(corelex_dir, f'CoreLexData_{timestamp}.xlsx')
     corelexdf.to_excel(output_file, index=False)

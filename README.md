@@ -74,36 +74,46 @@ This file specifies the directories, coders, reliability settings, and tier stru
 You can download the example config file from the repo or create your own like this:
 
 ```yaml
-input_dir: rascal_data/input
-output_dir: rascal_data/output
+input_dir: data/input
+output_dir: data/output
 reliability_fraction: 0.2
 coders:
 - '1'
 - '2'
 - '3'
+CU_paradigms:
+- SAE
+- AAE
 tiers:
-  '*site':
-  - AC
-  - BU
-  - TU
+  site:
+    values:
+    - AC
+    - BU
+    - TU
+    partition: true
+    blind: true
   test:
-  - Pre
-  - Post
-  - Maint
-  participantID: site##
+    values:
+    - Pre
+    - Post
+    - Maint
+    blind: true
+  participantID:
+    values: site##
   narrative:
-  - CATGrandpa
-  - BrokenWindow
-  - RefusedUmbrella
-  - CatRescue
-  - BirthdayScene
+    values:
+    - CATGrandpa
+    - BrokenWindow
+    - RefusedUmbrella
+    - CatRescue
+    - BirthdayScene
 ```
 
 Explanation:
 
-- Keys prefixed with `*` and surrounded by `""` (e.g., `"*site"`) define partition tiers — these group files for separate coding and output.
+- `partition: true` indicates partition tiers — these group files for separate coding and output. In this example, separate CU coding files will be generated for each `site` (AC, BU, TU), but not for each `narrative` or `test` value.
 
-- In this example, separate CU coding files will be generated for each `site` (AC, BU, TU), but not for each `narrative` or `test` value.
+- `blind: true` indicates fields to remove for blinding purposes in CU summaries.
 
 - `"participantID": "site##"` enables pattern matching where the participant ID is derived from the site name followed by digits (e.g., AC01, BU23).
 
@@ -136,10 +146,11 @@ rascal f
 | i       | analyze_word_count_reliability()             | Manually completed g output                                                                | _WordCountingReliabilityResults.xlsx, _WordCountingReliabilityReport.txt                |
 | j       | unblind_CUs()                                | b output, manually completed c, h & i outputs, (optional) ParticipantData.xlsx             | Blind/unblind sample data files                                                          |
 | k       | run_corelex()                                | j output                                                                                   | CoreLexDataYYMMDD.xlsx                                                                   |
-
+| l       | reselect_CU_reliability()                                | Manually completed c output                                                                                   | reselected_CUReliabilityCoding.xlsx                                                                   |
+| m       | analyze_digital_convo_turns()                                | _ConvoTurns.xlsx                                                                                   | _ConvoTurnsAnalysis.xlsx                                                                   |
 ---
 
-## Notes
+## Notes on Input Transcriptions
 
 - `.cha` files must be formatted correctly according to CHAT conventions.
 - Ensure filenames match tier values as specified in `config.yaml`.
@@ -161,12 +172,10 @@ If using RASCAL in your research, please cite:
 
 > McCloskey, N., et al. (2025, April). *The RASCAL pipeline: User-friendly and time-saving computational resources for coding and analyzing language samples*. Poster presented at the Aphasia Access Leadership Summit, Pittsburgh, PA.
 
-A copy of the poster will be available through Aphasia Access shared resources.
-
 ## Acknowledgments
 
 RASCAL builds on and integrates functionality from two excellent open-source tools which I highly recommend to researchers and clinicians working with language data:
 
 - [**batchalign2**](https://github.com/TalkBank/batchalign2) – Developed by the TalkBank team, batchalign provides a robust backend for automatic speech recognition. RASCAL is designed to function downstream of this system, leveraging its debulletized `.cha` files as input. This integration allows researchers to significantly expedite batch transcription, which without an ASR springboard might bottleneck discourse analysis.
 
-- [**coreLexicon**](https://github.com/rbcavanaugh/coreLexicon) – A web-based interface for Core Lexicon analysis developed by Rob Cavanaugh. RASCAL interfaces with this tool via Selenium to enable batch submission of samples to an otherwise single-sample system. The underlying functionality and analysis methodology are essential to the Core Lexicon scoring components in RASCAL.
+- [**coreLexicon**](https://github.com/rbcavanaugh/coreLexicon) – A web-based interface for Core Lexicon analysis developed by Rob Cavanaugh, et al. RASCAL implements its own Core Lexicon analysis that has high reliability with this web app: ICC(2) values (two-way random, absolute agreement) on primary metrics are 0.915140 for accuracy (number of core words) and 0.968863 for efficiency (core words per minute) - measured on 402 narratives (Brokem Window, Cat Rescue, and Refused Umbrella) in our study. RASCAL does not use the webapp but accesses the normative data associated with this repository (using Google sheet IDs) to calculate percentiles.
