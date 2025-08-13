@@ -83,6 +83,11 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
         CU_paradigms = config.get("CU_paradigms", [])
         blind_columns = config.get("blind_columns", [])
 
+        exclude_participants = config.get('exclude_participants', [])
+        strip_clan =  config.get('strip_clan', True)
+        prefer_correction =  config.get('prefer_correction', True)
+        lowercase =  config.get('lowercase', True)
+
         step_mapping = {
             "Step 1 (abc)": ['a. Select transcription reliability samples',
                             'b. Prepare utterance tables',
@@ -136,7 +141,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
             if "c. Make CU coding files" in selected_funcs:
                 run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigms)
             if "d. Analyze transcription reliability" in selected_funcs:
-                run_analyze_transcription_reliability(tiers, input_dir, output_dir)
+                run_analyze_transcription_reliability(tiers, input_dir, output_dir, exclude_participants, strip_clan, prefer_correction, lowercase)
             if "e. Analyze CU reliability" in selected_funcs:
                 run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms)
             if "f. Analyze CU coding" in selected_funcs:
@@ -161,10 +166,11 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
 
             # --- Timestamped ZIP filename ---
             timestamp = datetime.now().strftime("%y%m%d_%H%M")
+            func_str = ''.join([f[0] for f in selected_funcs])
             zip_buffer = zip_folder(output_dir)
             st.download_button(
                 label="Download Results ZIP",
                 data=zip_buffer,
-                file_name=f"rascal_output_{timestamp}.zip",
+                file_name=f"rascal_{func_str}_output_{timestamp}.zip",
                 mime="application/zip"
             )
