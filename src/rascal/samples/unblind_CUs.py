@@ -5,7 +5,7 @@ from pathlib import Path
 from itertools import chain
 
 
-def unblind_CUs(tiers, input_dir, output_dir, blind_columns, test=False):
+def unblind_CUs(tiers, input_dir, output_dir, test=False):
     """
     Unblinds participant utterances and prepares both an unblinded and blinded summary.
 
@@ -31,7 +31,7 @@ def unblind_CUs(tiers, input_dir, output_dir, blind_columns, test=False):
 
         # Read CU data
         CUbyUtts = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*_CUCoding_ByUtterance.xlsx')])
-        CUbyUtts.drop(columns=['site', 'narrative', 'sampleID', 'speaker', 'utterance', 'comment'], inplace=True)
+        CUbyUtts = CUbyUtts.loc[:, ['UtteranceID', 'sampleID'] + list(CUbyUtts.iloc[:, CUbyUtts.columns.to_list().index('comment')+1:].columns)]
         logging.info("CU utterance data loaded successfully.")
 
         # Read word count data
@@ -45,7 +45,7 @@ def unblind_CUs(tiers, input_dir, output_dir, blind_columns, test=False):
 
         # Merge datasets
         merged_utts = utts.copy()
-        merged_utts = pd.merge(merged_utts, CUbyUtts, on='UtteranceID', how='inner')
+        merged_utts = pd.merge(merged_utts, CUbyUtts, on=['UtteranceID', 'sampleID'], how='inner')
         merged_utts = pd.merge(merged_utts, WCs, on=['UtteranceID', 'sampleID'], how='inner')
         merged_utts = pd.merge(merged_utts, times, on='sampleID', how='inner')
         logging.info("Utterance data merged successfully.")
@@ -56,9 +56,10 @@ def unblind_CUs(tiers, input_dir, output_dir, blind_columns, test=False):
         logging.info(f"Unblinded utterances saved to {unblinded_utts}.")
 
         # Prepare blind codes and blinded utterances
-        # UPDATE Just select columns that are desired as opposed to dropping 
-        blind_utts = merged_utts.drop(columns=["file", "participantID"])
+        remove_tiers = [t.name for t in tiers.values() if not t.blind]
+        blind_utts = merged_utts.drop(columns=["file"]+remove_tiers)
         blind_codes_output = {}
+        blind_columns = [t.name for t in tiers.values() if t.blind]
         for tier_name in blind_columns:
             tier = tiers[tier_name]
             blind_codes = tier.make_blind_codes()
@@ -101,6 +102,7 @@ def unblind_CUs(tiers, input_dir, output_dir, blind_columns, test=False):
 
         # Prepare blinded samples
         blind_samples = merged_samples.copy()
+        blind_samples = blind_samples.drop(columns=remove_tiers)
         for tier_name in blind_columns:
             tier = tiers[tier_name]
             column_name = tier.name

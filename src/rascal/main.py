@@ -63,9 +63,9 @@ def run_analyze_word_count_reliability(tiers, input_dir, output_dir):
     from .utterances.word_count_reliability_analyzer import analyze_word_count_reliability
     analyze_word_count_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
 
-def run_unblind_CUs(tiers, input_dir, output_dir, blind_columns):
+def run_unblind_CUs(tiers, input_dir, output_dir):
     from .samples.unblind_CUs import unblind_CUs
-    unblind_CUs(tiers=tiers, input_dir=input_dir, output_dir=output_dir, blind_columns=blind_columns, test=False)
+    unblind_CUs(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
 
 def run_run_corelex(input_dir, output_dir):
     from .samples.corelex import run_corelex
@@ -89,7 +89,6 @@ def main(args):
     frac = config.get('reliability_fraction', 0.2)
     coders = config.get('coders', [])
     CU_paradigms = config.get('CU_paradigms', [])
-    blind_columns =  config.get('blind_columns', [])
 
     exclude_participants = config.get('exclude_participants', [])
     strip_clan =  config.get('strip_clan', True)
@@ -142,7 +141,7 @@ def main(args):
     if 'i' in steps_to_run:
         run_analyze_word_count_reliability(tiers, input_dir, output_dir)
     if 'j' in steps_to_run:
-        run_unblind_CUs(tiers, input_dir, output_dir, blind_columns)
+        run_unblind_CUs(tiers, input_dir, output_dir)
     if 'k' in steps_to_run:
         run_run_corelex(input_dir, output_dir)
 
