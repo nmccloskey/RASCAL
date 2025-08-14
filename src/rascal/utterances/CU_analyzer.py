@@ -390,7 +390,7 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
             df_new_rel = df_cu[df_cu['sampleID'].isin(reselected_ids)].copy()
 
             # --- Build rel_columns and rename_map dynamically ---
-            shared_cols = ['UtteranceID', 'narrative', 'sampleID', 'speaker', 'utterance', 'comment']
+            shared_cols = list(df_cu.loc[:, :'comment'].columns)
             rel_columns = ['c2ID', 'c2com']
             rename_map = {'c2ID': 'c3ID', 'c2com': 'c3com'}
 

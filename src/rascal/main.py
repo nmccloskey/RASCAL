@@ -3,6 +3,8 @@ import os
 import yaml
 import argparse
 import logging
+from datetime import datetime
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -98,7 +100,6 @@ def main(args):
     output_dir = os.path.abspath(os.path.expanduser(output_dir))
 
     os.makedirs(input_dir, exist_ok=True)
-    os.makedirs(output_dir, exist_ok=True)
 
     tiers = run_read_tiers(config.get('tiers', {}))
     
@@ -109,6 +110,11 @@ def main(args):
     }
 
     steps_to_run = ''.join(step_mapping.get(s, s) for s in args.step)
+
+    # --- Timestamped output folder ---
+    timestamp = datetime.now().strftime("%y%m%d_%H%M")
+    output_dir = os.path.join(output_dir, f"rascal_{steps_to_run}_output_{timestamp}")
+    os.makedirs(output_dir, exist_ok=True)
 
     # Step 1.
     if 'a' in steps_to_run or 'b' in steps_to_run:
