@@ -51,9 +51,9 @@ def run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms):
     from .utterances.CU_analyzer import analyze_CU_coding
     analyze_CU_coding(tiers=tiers, input_dir=input_dir, output_dir=output_dir, CU_paradigms=CU_paradigms, test=False)
 
-def run_make_word_count_files(tiers, frac, coders, output_dir):
+def run_make_word_count_files(tiers, frac, coders, input_dir, output_dir):
     from .utterances.make_coding_files import make_word_count_files
-    make_word_count_files(tiers=tiers, frac=frac, coders=coders, output_dir=output_dir, test=False)
+    make_word_count_files(tiers=tiers, frac=frac, coders=coders, input_dir=input_dir, output_dir=output_dir, test=False)
 
 def run_make_timesheets(tiers, input_dir, output_dir):
     from .utils.make_timesheets import make_timesheets
@@ -133,7 +133,7 @@ def main(args):
     if 'f' in steps_to_run:
         run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms)
     if 'g' in steps_to_run:
-        run_make_word_count_files(tiers, frac, coders, output_dir)
+        run_make_word_count_files(tiers, frac, coders, input_dir, output_dir)
     if 'h' in steps_to_run:
         run_make_timesheets(tiers, input_dir, output_dir)
     

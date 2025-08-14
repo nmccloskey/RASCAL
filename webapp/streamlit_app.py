@@ -147,7 +147,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
             if "f. Analyze CU coding" in selected_funcs:
                 run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms)
             if "g. Make word count files" in selected_funcs:
-                run_make_word_count_files(tiers, frac, coders, output_dir)
+                run_make_word_count_files(tiers, frac, coders, input_dir, output_dir)
             if "h. Make timesheets" in selected_funcs:
                 run_make_timesheets(tiers, input_dir, output_dir)
             if "i. Analyze word count reliability" in selected_funcs:

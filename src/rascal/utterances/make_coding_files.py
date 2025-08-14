@@ -231,7 +231,7 @@ def count_words(text, d):
     tokens = [word for word in text.split() if d(word)]
     return len(tokens)
 
-def make_word_count_files(tiers, frac, coders, output_dir, test=False):
+def make_word_count_files(tiers, frac, coders, input_dir, output_dir, test=False):
     """
     Generate word count coding and reliability files from CU coding DataFrames.
 
@@ -239,7 +239,8 @@ def make_word_count_files(tiers, frac, coders, output_dir, test=False):
     - tiers (dict): Dictionary of tier objects used for partitioning.
     - frac (float): Fraction of samples to be selected for reliability.
     - CU_coding_dir (str): Directory containing the CU coding Excel files.
-    - output_dir (str): Directory where the CU coding files should be saved.
+    - input_dir (str): Directory where the CU coding files could be saved.
+    - output_dir (str): Directory where the CU coding files could be saved.
 
     Returns:
     - None. Saves word count coding and reliability coding files to output directory.
@@ -253,7 +254,9 @@ def make_word_count_files(tiers, frac, coders, output_dir, test=False):
     results = []
 
     # Convert utterance-level CU coding files to word counting files.
-    for file in tqdm(Path(output_dir).rglob("*_CUCoding_ByUtterance.xlsx"), desc="Generating word count coding files"):
+    CU_files = list(Path(input_dir).rglob("*_CUCoding_ByUtterance.xlsx")) + list(Path(output_dir).rglob("*_CUCoding_ByUtterance.xlsx"))
+    for file in tqdm(CU_files, desc="Generating word count coding files"):
+
         logging.info(f"Processing file: {file}")
         
         # Extract partition tier info from file name.
@@ -281,7 +284,8 @@ def make_word_count_files(tiers, frac, coders, output_dir, test=False):
         WCdf['wordCount'] = WCdf.apply(lambda row: count_words(row['utterance'], d) if not np.isnan(row['c2CU']) else 'NA', axis=1)
 
         # Winnow columns.
-        WCdf = WCdf.drop(columns=['c2SV', 'c2REL', 'c2CU', 'c2com'])
+        drop_cols = [c for c in WCdf.columns if c.startswith(('c2SV', 'c2REL', 'c2CU', 'c2com', 'AG'))]
+        WCdf = WCdf.drop(columns=drop_cols)
         logging.debug("Dropped CU-specific columns.")
 
         # Only first two coders used in these assignments.
