@@ -66,7 +66,7 @@ def assign_CU_coders(coders):
     random.shuffle(assignments)
     return assignments
 
-def make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigms, test=False):
+def make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigms, exclude_participants, test=False):
     """
     Generate CU coding and CU reliability coding files from utterance DataFrames.
     """
@@ -101,7 +101,7 @@ def make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigm
 
         # Set up base coding columns
         for col in base_cols:
-            CUdf[col] = CUdf.apply(lambda row: 'NA' if row['speaker'] == 'INV' else np.nan, axis=1)
+            CUdf[col] = CUdf.apply(lambda row: 'NA' if row['speaker'].isin(exclude_participants) else np.nan, axis=1)
 
         # Dynamically add multiple paradigms if length >= 2
         if len(CU_paradigms) >= 2:
@@ -113,7 +113,7 @@ def make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigm
 
                     for paradigm in CU_paradigms:
                         new_col = f"{prefix}{tag}_{paradigm}"
-                        CUdf[new_col] = CUdf.apply(lambda row: 'NA' if row['speaker'] == 'INV' else np.nan, axis=1)
+                        CUdf[new_col] = CUdf.apply(lambda row: 'NA' if row['speaker'].isin(exclude_participants) else np.nan, axis=1)
 
         unique_sample_ids = list(CUdf['sampleID'].drop_duplicates(keep='first'))
         segments = segment(unique_sample_ids, n=len(coders))

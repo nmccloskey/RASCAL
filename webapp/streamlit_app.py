@@ -139,7 +139,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
             if "b. Prepare utterance tables" in selected_funcs:
                 run_prepare_utterance_dfs(tiers, chats, output_dir)
             if "c. Make CU coding files" in selected_funcs:
-                run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigms)
+                run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigms, exclude_participants)
             if "d. Analyze transcription reliability" in selected_funcs:
                 run_analyze_transcription_reliability(tiers, input_dir, output_dir, exclude_participants, strip_clan, prefer_correction, lowercase)
             if "e. Analyze CU reliability" in selected_funcs:
