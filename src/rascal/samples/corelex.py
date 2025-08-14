@@ -334,25 +334,71 @@ def get_percentiles(score: float, norm_df: pd.DataFrame, column: str) -> dict:
         "pwa_percentile": percentileofscore(pwa_scores, score, kind="weak")
     }
 
-def find_utterance_file(input_dir: str, output_dir: str) -> str:
+def _read_excel_safely(path):
+    try:
+        return pd.read_excel(path)
+    except Exception as e:
+        logging.warning(f"Failed reading {path}: {e}")
+        return None
+
+def find_corelex_inputs(input_dir: str, output_dir: str) -> dict:
     """
-    Searches for the unblindUtteranceData.xlsx file in input/output subdirectories.
-
-    Args:
-        input_dir (str): Path to the input directory.
-        output_dir (str): Path to the output directory.
-
-    Returns:
-        str: Path to the found file, or None if not found.
+    Find available inputs for CoreLex in priority order:
+      1) *unblindUtteranceData.xlsx (best)
+      2) *_Utterances.xlsx            (fallback)
+    Optionally: *_SpeakingTimes.xlsx  (merge with fallback)
+    
+    Returns dict:
+      {
+        "mode": "unblind" | "utterances",
+        "utt_df": pd.DataFrame,
+        "times_df": pd.DataFrame | None,
+        "paths": {"utt": <Path|list>, "times": <list>}
+      }
+    or None if nothing usable is found.
     """
-    for base_dir in [output_dir, input_dir]:
-        matches = list(Path(base_dir).rglob('unblindUtteranceData.xlsx'))
-        if matches:
-            logging.info(f"Found utterance file: {matches[0]}")
-            return str(matches[0])
+    search_dirs = [Path(output_dir), Path(input_dir)]
 
-    logging.error("unblindUtteranceData.xlsx not found in input or output directories.")
-    return None
+    # 1) Look for unblindUtteranceData.xlsx
+    unblind_matches = []
+    for d in search_dirs:
+        unblind_matches += list(d.rglob("*unblindUtteranceData.xlsx"))
+    if unblind_matches:
+        p = unblind_matches[0]
+        df = _read_excel_safely(p)
+        if df is not None:
+            logging.info(f"Using unblind utterance data: {p}")
+            return {"mode": "unblind", "utt_df": df, "times_df": None, "paths": {"utt": p, "times": []}}
+
+    # 2) Fallback to *_Utterances.xlsx (may be multiple; concat)
+    utt_files = []
+    for d in search_dirs:
+        utt_files += list(d.rglob("*_Utterances.xlsx"))
+    if not utt_files:
+        logging.error("No utterance files found (neither *unblindUtteranceData.xlsx nor *_Utterances.xlsx).")
+        return None
+
+    utt_frames = [df for f in utt_files if (df := _read_excel_safely(f)) is not None]
+    if not utt_frames:
+        logging.error("Utterance files were found but none could be read.")
+        return None
+    utt_df = pd.concat(utt_frames, ignore_index=True, sort=False)
+    logging.info(f"Using concatenated utterances from {len(utt_files)} file(s).")
+
+    # Optional speaking times: *_SpeakingTimes.xlsx (concat)
+    time_files = []
+    for d in search_dirs:
+        time_files += list(d.rglob("*_SpeakingTimes.xlsx"))
+    times_df = None
+    if time_files:
+        time_frames = [df for f in time_files if (df := _read_excel_safely(f)) is not None]
+        if time_frames:
+            times_df = pd.concat(time_frames, ignore_index=True, sort=False)
+            logging.info(f"Loaded speaking times from {len(time_files)} file(s).")
+        else:
+            logging.warning("Speaking time files found but none could be read; proceeding without times.")
+
+    return {"mode": "utterances", "utt_df": utt_df, "times_df": times_df, "paths": {"utt": utt_files, "times": time_files}}
 
 def generate_token_columns(present_narratives):
     token_cols = [f"{scene[:3]}_{token}"
@@ -360,14 +406,16 @@ def generate_token_columns(present_narratives):
                   for token in scene_tokens.get(scene, [])]
     return token_cols
 
-def run_corelex(input_dir, output_dir):
+def run_corelex(input_dir, output_dir, exclude_participants=None):
     """
     Runs CoreLex analysis on utterance data and saves the results.
 
     Args:
-        input_dir (str): The directory where input files may be located.
-        output_dir (str): The directory where output files will be saved.
+        input_dir (str)
+        output_dir (str)
+        exclude_participants (list|set|None): speakers to exclude (e.g., {"Clinician", "Investigator"})
     """
+    exclude_participants = set(exclude_participants or [])
     logging.info("Starting CoreLex processing.")
     timestamp = datetime.now().strftime('%y%m%d_%H%M')
 
@@ -375,31 +423,107 @@ def run_corelex(input_dir, output_dir):
     os.makedirs(corelex_dir, exist_ok=True)
     logging.info(f"Output directory created: {corelex_dir}")
 
-    # Read in utterance file
-    utt_data_path = find_utterance_file(input_dir, output_dir)
-    if utt_data_path is None:
+    # ---- Find inputs (logic gates) ----
+    inputs = find_corelex_inputs(input_dir, output_dir)
+    if inputs is None:
         return
 
-    utt_df = pd.read_excel(utt_data_path)
-    utt_df = utt_df[utt_df['narrative'].isin(urls.keys())]
-    utt_df = utt_df[~np.isnan(utt_df['wordCount'])]
+    mode = inputs["mode"]
+    utt_df = inputs["utt_df"].copy()
+    times_df = inputs["times_df"]
 
-    # Preload all needed norms
-    present_narratives = set(utt_df['narrative'].unique())
+    # ---- Normalize column names to a common expectation where possible ----
+    # We expect at least: sampleID, participantID, narrative, utterance
+    # Try to auto-fix common variants in fallback mode
+    def _col(df, candidates):
+        for c in candidates:
+            if c in df.columns:
+                return c
+        return None
+
+    if mode == "unblind":
+        # Filter to relevant narratives present in urls
+        utt_df = utt_df[utt_df['narrative'].isin(urls.keys())]
+
+        # Inclusion: prefer CU indicator if present; else wordCount
+        cu_col = next((c for c in utt_df.columns if c.startswith("c2CU")), None)
+        na_col = cu_col or ('wordCount' if 'wordCount' in utt_df.columns else None)
+        if na_col:
+            utt_df = utt_df[~np.isnan(utt_df[na_col])]
+        else:
+            logging.warning("No CU/wordCount column found; proceeding without that filter in unblind mode.")
+
+        # Present narratives
+        present_narratives = set(utt_df['narrative'].dropna().unique())
+
+    else:  # mode == 'utterances'
+        # Map common column name variants
+        sample_col = _col(utt_df, ["sampleID", "sample_id", "sample"])
+        part_col   = _col(utt_df, ["participantID", "participant_id", "participant"])
+        narr_col   = _col(utt_df, ["narrative", "scene", "story"])
+        utt_col    = _col(utt_df, ["utterance", "text", "tokens"])
+        speak_col  = _col(utt_df, ["client_time", "speaking_time", "speech_time", "time_s", "time_sec", "time_seconds"])
+
+        missing = [name for name, c in {
+            "sampleID": sample_col, "participantID": part_col, "narrative": narr_col, "utterance": utt_col
+        }.items() if c is None]
+        if missing:
+            logging.error(f"Required columns missing in *_Utterances.xlsx mode: {missing}")
+            return
+
+        # Filter by narratives in urls
+        utt_df = utt_df[utt_df[narr_col].isin(urls.keys())]
+
+        # Exclude by speaker if available
+        if "speaker" in utt_df.columns and exclude_participants:
+            utt_df = utt_df[~utt_df["speaker"].isin(exclude_participants)]
+
+        # Merge speaking times if not present inline
+        if speak_col is None and times_df is not None:
+            # Find time columns in times_df
+            t_sample = _col(times_df, ["sampleID", "sample_id", "sample"])
+            t_time   = _col(times_df, ["client_time", "speaking_time", "speech_time", "time_s", "time_sec", "time_seconds"])
+            if t_sample and t_time:
+                times_small = times_df[[t_sample, t_time]].dropna()
+                times_small = times_small.rename(columns={t_sample: sample_col, t_time: "client_time"})
+                utt_df = utt_df.merge(times_small, on=sample_col, how="left")
+                speak_col = "client_time"
+                logging.info("Merged speaking times into utterances data.")
+            else:
+                logging.warning("SpeakingTimes file found but required columns missing; proceeding without times.")
+                speak_col = None
+
+        # Present narratives
+        present_narratives = set(utt_df[narr_col].dropna().unique())
+
+        # For downstream code, normalize a few names explicitly
+        utt_df = utt_df.rename(columns={sample_col: "sampleID", part_col: "participantID", narr_col: "narrative"})
+        if utt_col != "utterance":
+            utt_df = utt_df.rename(columns={utt_col: "utterance"})
+        if speak_col and speak_col != "client_time":
+            utt_df = utt_df.rename(columns={speak_col: "client_time"})
+
+    # ---- Preload all needed norms ----
     norm_lookup = preload_corelex_norms(present_narratives)
 
-    # Prepare token columns
+    # ---- Prepare output columns ----
     token_columns = generate_token_columns(present_narratives)
     all_columns = base_columns + token_columns
+    rows = []
 
-    rows = []  # Will hold each row as a dictionary
-
-    for sample in tqdm(set(utt_df['sampleID'])):
+    # ---- Iterate by sample ----
+    for sample in tqdm(sorted(utt_df['sampleID'].dropna().unique())):
         subdf = utt_df[utt_df['sampleID'] == sample]
+        if subdf.empty:
+            continue
+
         scene_name = subdf['narrative'].iloc[0]
         pID = subdf['participantID'].iloc[0]
-        speaking_time = subdf['client_time'].iloc[0]
-        text = ' '.join(subdf['utterance'])
+
+        # speaking_time present in unblind OR merged into utterances mode
+        speaking_time = subdf['client_time'].iloc[0] if 'client_time' in subdf.columns else np.nan
+        # Concatenate participant's utterances (already filtered speaker if applicable)
+        text = ' '.join([u for u in subdf['utterance'].astype(str) if u.strip()])
 
         reformatted_text = reformat(text)
         core_stats = id_core_words(scene_name, reformatted_text)
@@ -410,21 +534,28 @@ def run_corelex(input_dir, output_dir):
         lexicon_coverage = core_stats["lexicon_coverage"]
         token_sets = core_stats["token_sets"]
 
-        # Core words per minute
-        minutes = speaking_time / 60 if speaking_time and speaking_time > 0 else np.nan
-        cwpm = num_core_words / minutes if minutes else np.nan
+        # CWPM only if speaking_time is available
+        minutes = (float(speaking_time) / 60.0) if (pd.notnull(speaking_time) and speaking_time > 0) else np.nan
+        cwpm = (num_core_words / minutes) if (pd.notnull(minutes) and minutes > 0) else np.nan
 
-        # Load and calculate percentiles
+        # Percentiles: always compute accuracy; efficiency only if cwpm is finite
         acc_df = norm_lookup[scene_name]["accuracy"]
-        eff_df = norm_lookup[scene_name]["efficiency"]
         acc_percentiles = get_percentiles(num_core_words, acc_df, "CoreLex Score")
-        eff_percentiles = get_percentiles(cwpm, eff_df, "CoreLex/min")
+
+        if pd.notnull(cwpm):
+            eff_df = norm_lookup[scene_name]["efficiency"]
+            eff_percentiles = get_percentiles(cwpm, eff_df, "CoreLex/min")
+            cwpm_pwa = eff_percentiles["pwa_percentile"]
+            cwpm_ctrl = eff_percentiles["control_percentile"]
+        else:
+            cwpm_pwa = np.nan
+            cwpm_ctrl = np.nan
 
         row = {
             "sampleID": sample,
             "participantID": pID,
             "narrative": scene_name,
-            "speakingTime": speaking_time,
+            "speakingTime": speaking_time if pd.notnull(speaking_time) else np.nan,
             "numTokens": num_tokens,
             "numCoreWords": num_core_words,
             "numCoreWordTokens": num_cw_tokens,
@@ -432,13 +563,15 @@ def run_corelex(input_dir, output_dir):
             "coreWordsPerMinute": cwpm,
             "core_words_pwa_percentile": acc_percentiles["pwa_percentile"],
             "core_words_control_percentile": acc_percentiles["control_percentile"],
-            "cwpm_pwa_percentile": eff_percentiles["pwa_percentile"],
-            "cwpm_control_percentile": eff_percentiles["control_percentile"]
+            "cwpm_pwa_percentile": cwpm_pwa,
+            "cwpm_control_percentile": cwpm_ctrl
         }
 
+        # Add per-lemma surface forms as columns
         for lemma, surface_forms in token_sets.items():
             col_name = f"{scene_name[:3]}_{lemma}"
-            row[col_name] = ', '.join(sorted(surface_forms))
+            if col_name in token_columns:
+                row[col_name] = ', '.join(sorted(surface_forms))
 
         rows.append(row)
 

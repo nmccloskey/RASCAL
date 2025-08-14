@@ -155,7 +155,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
             if "j. Unblind CU samples" in selected_funcs:
                 run_unblind_CUs(tiers, input_dir, output_dir, blind_columns)
             if "k. Run CoreLex" in selected_funcs:
-                run_run_corelex(input_dir, output_dir)
+                run_run_corelex(input_dir, output_dir, exclude_participants)
             if "l. Reselect CU reliability samples" in selected_funcs:
                 coder3 = coders[2] or '3'
                 run_reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac)

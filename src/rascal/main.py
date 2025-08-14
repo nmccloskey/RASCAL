@@ -67,9 +67,9 @@ def run_unblind_CUs(tiers, input_dir, output_dir):
     from .samples.unblind_CUs import unblind_CUs
     unblind_CUs(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
 
-def run_run_corelex(input_dir, output_dir):
+def run_run_corelex(input_dir, output_dir, exclude_participants):
     from .samples.corelex import run_corelex
-    run_corelex(input_dir=input_dir, output_dir=output_dir)
+    run_corelex(input_dir=input_dir, output_dir=output_dir, exclude_participants=exclude_participants)
 
 def run_reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
     from .utterances.CU_analyzer import reselect_CU_reliability
@@ -143,7 +143,7 @@ def main(args):
     if 'j' in steps_to_run:
         run_unblind_CUs(tiers, input_dir, output_dir)
     if 'k' in steps_to_run:
-        run_run_corelex(input_dir, output_dir)
+        run_run_corelex(input_dir, output_dir, exclude_participants)
 
     # Other functions.
     if 'l' in steps_to_run:
