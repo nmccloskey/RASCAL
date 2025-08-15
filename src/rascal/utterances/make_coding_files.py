@@ -20,6 +20,8 @@ from nltk.corpus import words
 valid_words = set(words.words())
 d = lambda word: word in valid_words
 
+stim_cols = ["narrative", "scene", "story", "stimulus",
+             "Narrative", "Scene", "Story", "Stimulus",]
 
 def segment(x, n):
     """
@@ -95,8 +97,7 @@ def make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigm
             logging.error(f"Failed to read file {file}: {e}")
             continue
 
-        # UPDATE Just select columns that are desired as opposed to dropping 
-        CUdf = uttdf.drop(columns=[col for col in ['file', 'test', 'participantID'] if col in uttdf.columns]).copy()
+        CUdf = uttdf.drop(columns=[col for col in ['file'] + [t for t in tiers if t not in stim_cols] if col in uttdf.columns]).copy()
         logging.debug("Dropped 'file', 'test', and 'participantID' columns.")
 
         # Set up base coding columns

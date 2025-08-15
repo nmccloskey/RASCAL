@@ -14,7 +14,7 @@ def build_config_ui():
     coders = st.text_input("Coders (comma-separated)", value="1, 2, 3")
     coder_list = [c.strip() for c in coders.split(",") if c.strip()]
 
-    CU_paradigms = st.text_input("CU coding versions (comma-separated)", value="SAE, AAE")
+    CU_paradigms = st.text_input("CU coding versions (comma-separated), e.g., SAE, AAE", value="")
     CU_paradigm_list = [p.strip() for p in CU_paradigms.split(",") if p.strip()]
 
     exclude_participants_str = st.text_input(
