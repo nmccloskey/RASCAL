@@ -160,7 +160,7 @@ lemma_dict = {
 }
 
 base_columns = [
-    "sampleID", "participantID", "narrative", "speakingTime", "numTokens",
+    "sampleID", "narrative", "speakingTime", "numTokens",
     "numCoreWords", "numCoreWordTokens", "lexiconCoverage", "coreWordsPerMinute",
     "core_words_pwa_percentile", "core_words_control_percentile",
     "cwpm_pwa_percentile", "cwpm_control_percentile"
@@ -459,13 +459,13 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
     else:  # mode == 'utterances'
         # Map common column name variants
         sample_col = _col(utt_df, ["sampleID", "sample_id", "sample"])
-        part_col   = _col(utt_df, ["participantID", "participant_id", "participant"])
+        # part_col   = _col(utt_df, ["participantID", "participant_id", "participant"])
         narr_col   = _col(utt_df, ["narrative", "scene", "story"])
         utt_col    = _col(utt_df, ["utterance", "text", "tokens"])
         speak_col  = _col(utt_df, ["client_time", "speaking_time", "speech_time", "time_s", "time_sec", "time_seconds"])
 
         missing = [name for name, c in {
-            "sampleID": sample_col, "participantID": part_col, "narrative": narr_col, "utterance": utt_col
+            "sampleID": sample_col, "narrative": narr_col, "utterance": utt_col
         }.items() if c is None]
         if missing:
             logging.error(f"Required columns missing in *_Utterances.xlsx mode: {missing}")
@@ -497,7 +497,7 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
         present_narratives = set(utt_df[narr_col].dropna().unique())
 
         # For downstream code, normalize a few names explicitly
-        utt_df = utt_df.rename(columns={sample_col: "sampleID", part_col: "participantID", narr_col: "narrative"})
+        utt_df = utt_df.rename(columns={sample_col: "sampleID", narr_col: "narrative"})
         if utt_col != "utterance":
             utt_df = utt_df.rename(columns={utt_col: "utterance"})
         if speak_col and speak_col != "client_time":
@@ -518,7 +518,7 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
             continue
 
         scene_name = subdf['narrative'].iloc[0]
-        pID = subdf['participantID'].iloc[0]
+        # pID = subdf['participantID'].iloc[0]
 
         # speaking_time present in unblind OR merged into utterances mode
         speaking_time = subdf['client_time'].iloc[0] if 'client_time' in subdf.columns else np.nan
@@ -553,7 +553,7 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
 
         row = {
             "sampleID": sample,
-            "participantID": pID,
+            # "participantID": pID,
             "narrative": scene_name,
             "speakingTime": speaking_time if pd.notnull(speaking_time) else np.nan,
             "numTokens": num_tokens,
