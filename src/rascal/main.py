@@ -90,7 +90,7 @@ def main(args):
     coders = config.get('coders', [])
     CU_paradigms = config.get('CU_paradigms', [])
 
-    exclude_participants = config.get('exclude_participants', [])
+    exclude_participants = config.get('exclude_participants', []) or []
     strip_clan =  config.get('strip_clan', True)
     prefer_correction =  config.get('prefer_correction', True)
     lowercase =  config.get('lowercase', True)

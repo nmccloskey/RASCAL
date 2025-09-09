@@ -72,7 +72,7 @@ def _clean_clan_for_reliability(text: str) -> str:
 def extract_cha_text(
     chat_data,
     *,
-    exclude_participants=("INV",),   # exclude clinician by default
+    exclude_participants=[],  
     strip_clan=True,                # keep raw CLAN if False
     prefer_correction=True,          # True => keep [: correction ] [*]; False => keep target
     lowercase=True
@@ -98,6 +98,10 @@ def extract_cha_text(
         Lowercase final string for case-insensitive Levenshtein.
     """
     try:
+
+        print(f"EXCLUDE: {exclude_participants}")
+
+
         # 1) Collect utterances
         parts = []
         for line in chat_data.utterances():
@@ -304,7 +308,7 @@ def analyze_transcription_reliability(
     tiers,
     input_dir,
     output_dir,
-    exclude_participants=("INV",),
+    exclude_participants=[],
     strip_clan=True,
     prefer_correction=True,
     lowercase=True,

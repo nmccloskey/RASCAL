@@ -9,7 +9,6 @@ CU_paradigms:
 - SAE
 - AAE
 exclude_participants:
-- INV
 strip_clan: true
 prefer_correction: true
 lowercase: true
@@ -27,12 +26,7 @@ tiers:
     - Post
     - Maint
     blind: true
-  participantID:
-    values: site##
-  narrative:
-    values:
-    - CATGrandpa
-    - BrokenWindow
-    - RefusedUmbrella
-    - CatRescue
-    - BirthdayScene
+  study_id:
+    values: (AC|BU|TU)\d+
+  communication:
+    values: Dialogue
