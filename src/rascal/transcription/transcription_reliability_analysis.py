@@ -98,10 +98,6 @@ def extract_cha_text(
         Lowercase final string for case-insensitive Levenshtein.
     """
     try:
-
-        print(f"EXCLUDE: {exclude_participants}")
-
-
         # 1) Collect utterances
         parts = []
         for line in chat_data.utterances():
@@ -355,12 +351,31 @@ def analyze_transcription_reliability(
 
     # --- iterate reliability files and analyze ---
     records = []
+    seen_rel_files = set()
+    seen_org_files = set()
+
     for rel_cha in tqdm(rel_chats, desc="Analyzing reliability transcripts"):
         rel_labels = _labels_for(rel_cha)
         org_cha = org_index.get(rel_labels)
         if org_cha is None:
             logging.warning(f"No matching original .cha for reliability file: {rel_cha.name}")
             continue
+
+        # --- safeguard: skip if reliability file already processed ---
+        if rel_cha.name in seen_rel_files:
+            logging.warning(f"Skipping duplicate reliability file: {rel_cha.name}")
+            continue
+
+        # --- safeguard: skip if original file already paired ---
+        if org_cha.name in seen_org_files:
+            logging.warning(
+                f"Skipping reliability file {rel_cha.name} because original already used: {org_cha.name}"
+            )
+            continue
+
+        # mark both as seen
+        seen_rel_files.add(rel_cha.name)
+        seen_org_files.add(org_cha.name)
 
         try:
             org_chat_data = pylangacq.read_chat(str(org_cha))
@@ -430,38 +445,47 @@ def analyze_transcription_reliability(
     results = []
     if partition_tiers:
         groups = transc_rel_df.groupby(partition_tiers, dropna=False)
+        for tup, subdf in tqdm(groups, desc="Saving grouped DataFrames & reports"):
+            tup_vals = (tup if isinstance(tup, tuple) else (tup,))
+            base_name = "_".join(str(x) for x in tup_vals if x is not None)
+
+            df_filename = f"{base_name}_TranscriptionReliabilityAnalysis.xlsx"
+            df_path = os.path.join(transc_rel_dir, *[str(x) for x in tup_vals if x is not None], df_filename)
+
+            report_filename = f"{base_name}_TranscriptionReliabilityReport.txt"
+            report_path = os.path.join(transc_rel_dir, *[str(x) for x in tup_vals if x is not None], report_filename)
+
+            try:
+                _ensure_parent_dir(df_path)
+                subdf.to_excel(df_path, index=False)
+                logging.info(f"Saved reliability analysis DataFrame to: {df_path}")
+            except Exception as e:
+                logging.error(f"Failed to write DataFrame to {df_path}: {e}")
+
+            try:
+                write_reliability_report(subdf, report_path, tup_vals)
+            except Exception as e:
+                logging.error(f"Failed to write reliability report to {report_path}: {e}")
+
+            if test:
+                results.append(subdf.copy())
     else:
-        # Single “no-partition” group
-        transc_rel_df["_NO_PARTITION_"] = "ALL"
-        groups = transc_rel_df.groupby(["_NO_PARTITION_"])
-
-    for tup, subdf in tqdm(groups, desc="Saving grouped DataFrames & reports"):
-        tup_vals = (tup if isinstance(tup, tuple) else (tup,))
-        base_name = "_".join(str(x) for x in tup_vals if x is not None and x != "_NO_PARTITION_") or "ALL"
-
-        df_filename = f"{base_name}_TranscriptionReliabilityAnalysis.xlsx"
-        df_path = os.path.join(transc_rel_dir, *[str(x) for x in tup_vals if x not in (None, "_NO_PARTITION_")], df_filename)
-
-        report_filename = f"{base_name}_TranscriptionReliabilityReport.txt"
-        report_path = os.path.join(transc_rel_dir, *[str(x) for x in tup_vals if x not in (None, "_NO_PARTITION_")], report_filename)
+        # No partitions → save one Excel + one report directly under transc_rel_dir
+        df_path = os.path.join(transc_rel_dir, "TranscriptionReliabilityAnalysis.xlsx")
+        report_path = os.path.join(transc_rel_dir, "TranscriptionReliabilityReport.txt")
 
         try:
-            _ensure_parent_dir(df_path)
-            subdf.to_excel(df_path, index=False)
+            transc_rel_df.to_excel(df_path, index=False)
             logging.info(f"Saved reliability analysis DataFrame to: {df_path}")
         except Exception as e:
             logging.error(f"Failed to write DataFrame to {df_path}: {e}")
 
         try:
-            write_reliability_report(subdf, report_path, tup_vals if partition_tiers else None)
+            write_reliability_report(transc_rel_df, report_path, None)
         except Exception as e:
             logging.error(f"Failed to write reliability report to {report_path}: {e}")
 
         if test:
-            results.append(subdf.copy())
-
-    # Clean helper column if we created it
-    if "_NO_PARTITION_" in transc_rel_df.columns:
-        transc_rel_df.drop(columns=["_NO_PARTITION_"], inplace=True, errors="ignore")
+            results.append(transc_rel_df.copy())
 
     return results if test else None
