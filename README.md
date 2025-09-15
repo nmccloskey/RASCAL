@@ -168,9 +168,11 @@ rascal f
 ```mermaid
 flowchart TD
     A[a: Select transcription reliability samples] --> B[b: Prepare utterance tables]
+    A --> D[d: Analyze transcription reliability]
+
     B --> C[c: Create CU coding files]
 
-    C --> D[d: Analyze transcription reliability]
+    
     C --> E[e: Analyze CU reliability]
     C --> F[f: Analyze CU coding]
 
@@ -184,6 +186,7 @@ flowchart TD
     J --> K[k: Run CoreLex analysis]
 
     C --> L[l: Reselect CU reliability]
+    L --> E
 ```
 
 ## Notes on Input Transcriptions
