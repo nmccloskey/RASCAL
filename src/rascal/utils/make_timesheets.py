@@ -17,8 +17,10 @@ def make_timesheets(tiers, input_dir, output_dir, test=False):
     # Store results for test.
     results = []
 
+    utterance_files = list(Path(input_dir).rglob("*_Utterances.xlsx")) + list(Path(output_dir).rglob("*_Utterances.xlsx"))
+
     # Convert utterance files to CU coding files.
-    for file in tqdm(Path(input_dir).rglob("*_Utterances.xlsx"), desc="Generating time table files"):
+    for file in tqdm(utterance_files, desc="Generating time table files"):
         logging.info(f"Processing file: {file}")
         
         # Extract partition tier info from file name.

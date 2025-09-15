@@ -75,10 +75,6 @@ def run_reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
     from .utterances.CU_analyzer import reselect_CU_reliability
     reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac, test=False)
 
-def run_digital_convo_turns_analyzer(input_dir, output_dir):
-    from .utils.digital_convo_turns_analyzer import analyze_digital_convo_turns
-    analyze_digital_convo_turns(input_dir, output_dir, test=False)
-
 
 def main(args):
     """Main function to process input arguments and execute appropriate steps."""
@@ -145,17 +141,14 @@ def main(args):
     if 'k' in steps_to_run:
         run_run_corelex(input_dir, output_dir, exclude_participants)
 
-    # Other functions.
+    # Other: CU reliability reselection.
     if 'l' in steps_to_run:
         coder3 = coders[2] or '3'
         run_reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac)
-    if 'm' in steps_to_run:
-        run_digital_convo_turns_analyzer(input_dir, output_dir)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process the step argument for main script.")
-    parser.add_argument('step', type=str, help="Specify the step (e.g., '1' or 'abc').")
+    parser.add_argument('step', type=str, help="Specify the step or function(s) (e.g., '1' or 'abc').")
     parser.add_argument('--config', type=str, default='config.yaml', help="Path to the config file")
     args = parser.parse_args()
     main(args)

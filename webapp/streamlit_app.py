@@ -19,8 +19,7 @@ from rascal.main import (
     run_analyze_CU_reliability, run_analyze_CU_coding,
     run_make_word_count_files, run_make_timesheets,
     run_analyze_word_count_reliability, run_unblind_CUs,
-    run_run_corelex, run_reselect_CU_reliability,
-    run_digital_convo_turns_analyzer
+    run_run_corelex, run_reselect_CU_reliability
 )
 
 st.title("RASCAL Web App")
@@ -114,8 +113,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
             "i. Analyze word count reliability",
             "j. Unblind CU samples",
             "k. Run CoreLex",
-            "l. Reselect CU reliability samples",
-            "m. Analyze digital conversation turns"
+            "l. Reselect CU reliability samples"
         ]
 
         st.header("Part 3: Select steps or functions")
@@ -159,8 +157,6 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
             if "l. Reselect CU reliability samples" in selected_funcs:
                 coder3 = coders[2] or '3'
                 run_reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac)
-            if "m. Analyze digital conversation turns" in selected_funcs:
-                run_digital_convo_turns_analyzer(input_dir, output_dir)
 
             st.success("Functions completed!")
 
