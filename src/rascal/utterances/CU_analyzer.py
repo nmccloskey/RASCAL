@@ -327,9 +327,68 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms):
                     CUrelsum.to_excel(summary_path, index=False)
                     
 
-def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=None):
+def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=[]):
     """
-    Analyzes CU coding by summarizing results for all paradigms in one combined output.
+    Summarize coder-2 Complete Utterance (CU) coding at the sample level, optionally
+    across multiple CU paradigms, and write both utterance-level and sample-level outputs.
+
+    Parameters
+    ----------
+    tiers : dict[str, Any]
+        Mapping of tier name -> tier object. Each tier object should provide:
+          - .match(filename, ...) -> label string used for partitioning outputs, and
+          - .partition : bool indicating inclusion in the output path.
+        Example partitioning: site/test/participant labels derived from filenames.
+
+    input_dir : str | os.PathLike
+        Root directory searched (recursively) for "*_CUCoding.xlsx" files.
+
+    output_dir : str | os.PathLike
+        Base directory where outputs are written under:
+          "<output_dir>/CUCodingAnalysis/<partition_labels...>/"
+
+    CU_paradigms : list[str] | None, default []
+        CU paradigm labels (e.g., ["SAE","AAE"]). Behavior:
+          - If None or [], paradigms are **inferred** from columns that start with "c2SV_".
+            * If any are found, each such suffix is treated as a paradigm (e.g., "SAE").
+            * If none are found, a single pass is run using the **base columns**
+              'c2SV' and 'c2REL' (internally represented as paradigm == None).
+              Note: summary column names will be suffixed with the string "None" (e.g.,
+              'percCU_None'), reflecting current implementation.
+
+    Outputs
+    -------
+    Two Excel files per coding file (and per partition path):
+      1. Utterance-level: "<labels>_CUCoding_ByUtterance.xlsx"
+         - Full coding frame with newly computed CU column per paradigm.
+      2. Sample-level combined summary: "<labels>_CUCoding_BySample.xlsx"
+         - If multiple paradigms are present, their per-sample summaries are merged on 'sampleID'.
+         - For each paradigm P (or "None" for base), the summary includes:
+             'no_utt_P', 'pSV_P', 'mSV_P', 'pREL_P', 'mREL_P', 'CU_P', 'percCU_P'
+
+    Details
+    -------
+    - For each paradigm P:
+        sv_col  = f"c2SV_{P}"  (or "c2SV" if P is None)
+        rel_col = f"c2REL_{P}" (or "c2REL" if P is None)
+        cu_col  = f"c2CU_{P}"  (or "c2CU" if P is None)
+      The CU column is computed via `compute_CU_column(SV, REL)`, which returns:
+        1 if SV==REL==1; 0 if both present but not both 1; NaN if both NaN; logs error if only one is NaN.
+
+    - The function drops benign columns if present: ['c1ID', 'c1com', 'c2ID'].
+
+    - Partition path uses tier labels from filename for tiers with `.partition == True`.
+      Example: "<output_dir>/CUCodingAnalysis/<site>/"
+
+    Returns
+    -------
+    None
+        All artifacts are saved to disk; the function does not return a value.
+
+    Notes
+    -----
+    - If a paradigm’s required columns are missing in a file, that paradigm is skipped with a warning.
+    - Summary percentages are rounded to 3 decimals.
     """
     CUanalysis_dir = os.path.join(output_dir, 'CUCodingAnalysis')
     try:
