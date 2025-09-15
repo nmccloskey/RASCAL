@@ -146,15 +146,14 @@ rascal f
 | i       | analyze_word_count_reliability()             | Manually completed g output                                                                | _WordCountingReliabilityResults.xlsx, _WordCountingReliabilityReport.txt                |
 | j       | unblind_CUs()                                | b output, manually completed c, h & i outputs, (optional) ParticipantData.xlsx             | Blind/unblind sample data files                                                          |
 | k       | run_corelex()                                | j output                                                                                   | CoreLexDataYYMMDD.xlsx                                                                   |
-| l       | reselect_CU_reliability()                                | Manually completed c output                                                                                   | reselected_CUReliabilityCoding.xlsx                                                                   |
-| m       | analyze_digital_convo_turns()                                | _ConvoTurns.xlsx                                                                                   | _ConvoTurnsAnalysis.xlsx                                                                   |
+| l       | reselect_CU_reliability()                                | Manually completed c output                                                                                   | reselected_CUReliabilityCoding.xlsx                                                                   |                                                                |
 ---
 
 ## Notes on Input Transcriptions
 
 - `.cha` files must be formatted correctly according to CHAT conventions.
 - Ensure filenames match tier values as specified in `config.yaml`.
-- RASCAL searches values using exact spelling and capitalization.
+- RASCAL searches tier values using exact spelling and capitalization.
 
 ## Status and Contact
 
@@ -178,4 +177,4 @@ RASCAL builds on and integrates functionality from two excellent open-source too
 
 - [**batchalign2**](https://github.com/TalkBank/batchalign2) – Developed by the TalkBank team, batchalign provides a robust backend for automatic speech recognition. RASCAL is designed to function downstream of this system, leveraging its debulletized `.cha` files as input. This integration allows researchers to significantly expedite batch transcription, which without an ASR springboard might bottleneck discourse analysis.
 
-- [**coreLexicon**](https://github.com/rbcavanaugh/coreLexicon) – A web-based interface for Core Lexicon analysis developed by Rob Cavanaugh, et al. RASCAL implements its own Core Lexicon analysis that has high reliability with this web app: ICC(2) values (two-way random, absolute agreement) on primary metrics are 0.915140 for accuracy (number of core words) and 0.968863 for efficiency (core words per minute) - measured on 402 narratives (Brokem Window, Cat Rescue, and Refused Umbrella) in our study. RASCAL does not use the webapp but accesses the normative data associated with this repository (using Google sheet IDs) to calculate percentiles.
+- [**coreLexicon**](https://github.com/rbcavanaugh/coreLexicon) – A web-based interface for Core Lexicon analysis developed by Rob Cavanaugh, et al. RASCAL implements its own Core Lexicon analysis that has high reliability with this web app: ICC(2) values (two-way random, absolute agreement) on primary metrics are 0.9627 for accuracy (number of core words) and 0.9689 for efficiency (core words per minute) - measured on 402 narratives (Brokem Window, Cat Rescue, and Refused Umbrella) in our study. RASCAL does not use the webapp but accesses the normative data associated with this repository (using Google sheet IDs) to calculate percentiles.
