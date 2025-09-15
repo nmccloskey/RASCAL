@@ -160,7 +160,7 @@ lemma_dict = {
 }
 
 base_columns = [
-    "sampleID", "narrative", "speakingTime", "numTokens",
+    "sample_id", "narrative", "speakingTime", "numTokens",
     "numCoreWords", "numCoreWordTokens", "lexiconCoverage", "coreWordsPerMinute",
     "core_words_pwa_percentile", "core_words_control_percentile",
     "cwpm_pwa_percentile", "cwpm_control_percentile"
@@ -433,7 +433,7 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
     times_df = inputs["times_df"]
 
     # ---- Normalize column names to a common expectation where possible ----
-    # We expect at least: sampleID, participantID, narrative, utterance
+    # We expect at least: sample_id, narrative, utterance
     # Try to auto-fix common variants in fallback mode
     def _col(df, candidates):
         for c in candidates:
@@ -442,8 +442,9 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
         return None
 
     if mode == "unblind":
+        narr_col   = _col(utt_df, ["narrative", "scene", "story", "stimulus"])
         # Filter to relevant narratives present in urls
-        utt_df = utt_df[utt_df['narrative'].isin(urls.keys())]
+        utt_df = utt_df[utt_df[narr_col].isin(urls.keys())]
 
         # Inclusion: prefer CU indicator if present; else wordCount
         cu_col = next((c for c in utt_df.columns if c.startswith("c2CU")), None)
@@ -459,13 +460,12 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
     else:  # mode == 'utterances'
         # Map common column name variants
         sample_col = _col(utt_df, ["sampleID", "sample_id", "sample"])
-        # part_col   = _col(utt_df, ["participantID", "participant_id", "participant"])
-        narr_col   = _col(utt_df, ["narrative", "scene", "story"])
+        narr_col   = _col(utt_df, ["narrative", "scene", "story", "stimulus"])
         utt_col    = _col(utt_df, ["utterance", "text", "tokens"])
         speak_col  = _col(utt_df, ["client_time", "speaking_time", "speech_time", "time_s", "time_sec", "time_seconds"])
 
         missing = [name for name, c in {
-            "sampleID": sample_col, "narrative": narr_col, "utterance": utt_col
+            "sample_id": sample_col, "narrative": narr_col, "utterance": utt_col
         }.items() if c is None]
         if missing:
             logging.error(f"Required columns missing in *_Utterances.xlsx mode: {missing}")
@@ -497,7 +497,7 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
         present_narratives = set(utt_df[narr_col].dropna().unique())
 
         # For downstream code, normalize a few names explicitly
-        utt_df = utt_df.rename(columns={sample_col: "sampleID", narr_col: "narrative"})
+        utt_df = utt_df.rename(columns={sample_col: "sample_id", narr_col: "narrative"})
         if utt_col != "utterance":
             utt_df = utt_df.rename(columns={utt_col: "utterance"})
         if speak_col and speak_col != "client_time":
@@ -512,13 +512,12 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
     rows = []
 
     # ---- Iterate by sample ----
-    for sample in tqdm(sorted(utt_df['sampleID'].dropna().unique())):
-        subdf = utt_df[utt_df['sampleID'] == sample]
+    for sample in tqdm(sorted(utt_df['sample_id'].dropna().unique())):
+        subdf = utt_df[utt_df['sample_id'] == sample]
         if subdf.empty:
             continue
 
         scene_name = subdf['narrative'].iloc[0]
-        # pID = subdf['participantID'].iloc[0]
 
         # speaking_time present in unblind OR merged into utterances mode
         speaking_time = subdf['client_time'].iloc[0] if 'client_time' in subdf.columns else np.nan
@@ -552,8 +551,7 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
             cwpm_ctrl = np.nan
 
         row = {
-            "sampleID": sample,
-            # "participantID": pID,
+            "sample_id": sample,
             "narrative": scene_name,
             "speakingTime": speaking_time if pd.notnull(speaking_time) else np.nan,
             "numTokens": num_tokens,
