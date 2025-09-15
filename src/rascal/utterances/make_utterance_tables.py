@@ -60,7 +60,7 @@ def _write_utterance_tables(
 
     if not partition_tiers:
         df = df.copy()
-        df.insert(0, "UtteranceID", "U" + df.reset_index(drop=True).index.astype(str))
+        df.insert(0, "utterance_id", "U" + df.reset_index(drop=True).index.astype(str))
         filename = os.path.join(utterance_dir, "Utterances.xlsx")
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         df.to_excel(filename, index=False)
@@ -74,7 +74,7 @@ def _write_utterance_tables(
         subdf = subdf.copy()
         subdf.insert(
             0,
-            "UtteranceID",
+            "utterance_id",
             "".join(map(str, tup)) + "U" + subdf.reset_index(drop=True).index.astype(str),
         )
 

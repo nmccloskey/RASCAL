@@ -69,7 +69,7 @@ def summarize_CU_reliability(CUrelcod, sv2, rel2, sv3, rel3):
     -----
     CUrelcod : pd.DataFrame
         Merged utterance-level dataframe containing:
-        - identifiers: 'UtteranceID', 'sampleID'
+        - identifiers: 'utterance_id', 'sample_id'
         - coder-2 columns: sv2, rel2 (names passed in), and computed 'c2CU'
         - coder-3 columns: sv3, rel3 (names passed in), and computed 'c3CU'
         - agreement flags: 'AGSV', 'AGREL', 'AGCU' (1 if equal or both NaN, else 0)
@@ -80,7 +80,7 @@ def summarize_CU_reliability(CUrelcod, sv2, rel2, sv3, rel3):
     Returns
     -------
     pd.DataFrame
-        One row per sampleID with:
+        One row per sample_id with:
         - Counts per coder (no_utt2/no_utt3, CU2/CU3, pSV*/mSV*, pREL*/mREL*)
         - Percent CU per coder (percCU2, percCU3)
         - Percent agreement on SV/REL/CU (percAGSV, percAGREL, percAGCU)
@@ -93,10 +93,10 @@ def summarize_CU_reliability(CUrelcod, sv2, rel2, sv3, rel3):
     - Returns an empty DataFrame on aggregation failure (with error logged).
     """
     CUrelsum = CUrelcod.copy()
-    CUrelsum.drop(columns=['UtteranceID'], inplace=True, errors='ignore')
+    CUrelsum.drop(columns=['utterance_id'], inplace=True, errors='ignore')
 
     try:
-        CUrelsum = CUrelsum.groupby(['sampleID']).agg(
+        CUrelsum = CUrelsum.groupby(['sample_id']).agg(
             no_utt2=('c2CU', utt_ct),
             pSV2=(sv2, ptotal),
             mSV2=(sv2, lambda x: utt_ct(x) - ptotal(x) if utt_ct(x) > 0 else np.nan),
@@ -281,11 +281,11 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms):
                         sv2, rel2, sv3, rel3 = 'c2SV', 'c2REL', 'c3SV', 'c3REL'
                         out_subdir = CUReliability_dir
 
-                    CUcod_sub = CUcod.loc[:, ['UtteranceID', 'sampleID', sv2, rel2]].copy()
-                    CUrel_sub = CUrel.loc[:, ['UtteranceID', sv3, rel3]].copy()
+                    CUcod_sub = CUcod.loc[:, ['utterance_id', 'sample_id', sv2, rel2]].copy()
+                    CUrel_sub = CUrel.loc[:, ['utterance_id', sv3, rel3]].copy()
 
                     try:
-                        CUrelcod = pd.merge(CUcod_sub, CUrel_sub, on="UtteranceID", how="inner")
+                        CUrelcod = pd.merge(CUcod_sub, CUrel_sub, on="utterance_id", how="inner")
                     except Exception as e:
                         logging.error(f"Merge failed for paradigm {paradigm} on {rel.name}: {e}")
                         continue
@@ -362,7 +362,7 @@ def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=[]):
       1. Utterance-level: "<labels>_CUCoding_ByUtterance.xlsx"
          - Full coding frame with newly computed CU column per paradigm.
       2. Sample-level combined summary: "<labels>_CUCoding_BySample.xlsx"
-         - If multiple paradigms are present, their per-sample summaries are merged on 'sampleID'.
+         - If multiple paradigms are present, their per-sample summaries are merged on 'sample_id'.
          - For each paradigm P (or "None" for base), the summary includes:
              'no_utt_P', 'pSV_P', 'mSV_P', 'pREL_P', 'mREL_P', 'CU_P', 'percCU_P'
 
@@ -433,11 +433,11 @@ def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=[]):
             CUcod[cu_col] = CUcod[[sv_col, rel_col]].apply(compute_CU_column, axis=1)
 
             # Create summary stats
-            agg_df = CUcod[['sampleID', sv_col, rel_col, cu_col]].copy()
+            agg_df = CUcod[['sample_id', sv_col, rel_col, cu_col]].copy()
             agg_df[[sv_col, rel_col, cu_col]] = agg_df[[sv_col, rel_col, cu_col]].apply(pd.to_numeric, errors='coerce')
 
             try:
-                CUcodsum = agg_df.groupby('sampleID').agg(
+                CUcodsum = agg_df.groupby('sample_id').agg(
                     **{
                         f'no_utt_{paradigm}': (cu_col, utt_ct),
                         f'pSV_{paradigm}': (sv_col, ptotal),
@@ -475,7 +475,7 @@ def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=[]):
             try:
                 CUcodsum_all = summary_list[0]
                 for df in summary_list[1:]:
-                    CUcodsum_all = pd.merge(CUcodsum_all, df, on='sampleID', how='outer')
+                    CUcodsum_all = pd.merge(CUcodsum_all, df, on='sample_id', how='outer')
 
                 summary_path = os.path.join(out_dir, f"{'_'.join(partition_labels)}_CUCoding_BySample.xlsx")
                 CUcodsum_all.to_excel(summary_path, index=False)
@@ -495,7 +495,7 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
     It computes the set difference between all samples coded by coder-2 and the samples
     already present in coder-3's reliability table, randomly selects a fraction of the
     total unique samples, and emits a fresh reliability sheet restricted to the newly
-    selected sampleIDs.
+    selected sample_ids.
 
     Parameters
     ----------
@@ -518,9 +518,9 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
 
     Behavior & Output
     -----------------
-    - Selection excludes any sampleID already present in the paired reliability file.
+    - Selection excludes any sample_id already present in the paired reliability file.
     - Selection is random with a fixed RNG seed (88) for reproducibility within a run.
-    - For each selected sampleID, the function builds a new reliability DataFrame by:
+    - For each selected sample_id, the function builds a new reliability DataFrame by:
         * Carrying forward **shared** columns up to and including 'comment'
           (via `df_cu.loc[:, :'comment']`).
         * Copying coder-2 ID/comment into 'c3ID'/'c3com' and then overwriting:
@@ -571,8 +571,8 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
             df_cu = pd.read_excel(cu_file)
             df_rel = pd.read_excel(rel_file)
 
-            used_sample_ids = set(df_rel['sampleID'].unique())
-            all_sample_ids = set(df_cu['sampleID'].unique())
+            used_sample_ids = set(df_rel['sample_id'].unique())
+            all_sample_ids = set(df_cu['sample_id'].unique())
             available_ids = list(all_sample_ids - used_sample_ids)
 
             if len(available_ids) == 0:
@@ -586,7 +586,7 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
 
             reselected_ids = random.sample(available_ids, k=num_to_select)
 
-            df_new_rel = df_cu[df_cu['sampleID'].isin(reselected_ids)].copy()
+            df_new_rel = df_cu[df_cu['sample_id'].isin(reselected_ids)].copy()
 
             # --- Build rel_columns and rename_map dynamically ---
             shared_cols = list(df_cu.loc[:, :'comment'].columns)
