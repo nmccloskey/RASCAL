@@ -33,19 +33,19 @@ def run_select_transcription_reliability_samples(tiers, chats, frac, output_dir)
 
 def run_prepare_utterance_dfs(tiers, chats, output_dir):
     from .utterances.make_utterance_tables import prepare_utterance_dfs
-    return prepare_utterance_dfs(tiers=tiers, chats=chats, output_dir=output_dir, test=False)
+    return prepare_utterance_dfs(tiers=tiers, chats=chats, output_dir=output_dir)
 
 def run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigms, exclude_participants):
     from .utterances.make_coding_files import make_CU_coding_files
-    make_CU_coding_files(tiers=tiers, frac=frac, coders=coders, input_dir=input_dir, output_dir=output_dir, CU_paradigms=CU_paradigms, exclude_participants=exclude_participants, test=False)
+    make_CU_coding_files(tiers=tiers, frac=frac, coders=coders, input_dir=input_dir, output_dir=output_dir, CU_paradigms=CU_paradigms, exclude_participants=exclude_participants)
 
 def run_analyze_transcription_reliability(tiers, input_dir, output_dir, exclude_participants, strip_clan, prefer_correction, lowercase):
     from .transcription.transcription_reliability_analysis import analyze_transcription_reliability
-    analyze_transcription_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, exclude_participants=exclude_participants, strip_clan=strip_clan, prefer_correction=prefer_correction, lowercase=lowercase, test=False)
+    analyze_transcription_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, exclude_participants=exclude_participants, strip_clan=strip_clan, prefer_correction=prefer_correction, lowercase=lowercase)
 
 def run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms):
     from .utterances.CU_analyzer import analyze_CU_reliability
-    analyze_CU_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, CU_paradigms=CU_paradigms, test=False)
+    analyze_CU_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, CU_paradigms=CU_paradigms)
 
 def run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms):
     from .utterances.CU_analyzer import analyze_CU_coding

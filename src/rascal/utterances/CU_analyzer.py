@@ -30,13 +30,24 @@ def ag_check(x):
 
 def compute_CU_column(row):
     """
-    Compute CU value for a single coder based on SV and REL columns.
+    Compute a single coder's CU value from paired SV/REL fields.
 
-    Returns:
-    - 1 if SV==REL==1
-    - 0 if SV!=1 or REL!=1 but both are 0 or 0-like
-    - np.nan if both are NaN
-    - Logs error and returns np.nan if only one is NaN
+    Input
+    -----
+    row : pd.Series
+        A two-element series ordered as [SV_col, REL_col] containing values {1, 0, NaN}.
+
+    Returns
+    -------
+    int | float
+        1  -> when SV == 1 and REL == 1 (coder marked the utterance as a CU on both dimensions)
+        0  -> when SV and REL are both non-1 but present (e.g., 0/0, 0/0-like)
+        NaN -> when both entries are NaN
+
+    Notes
+    -----
+    - If exactly one of (SV, REL) is NaN while the other is not, an error is logged
+      (neutrality inconsistency) and NaN is returned.
     """
     sv, rel = row.iloc[0], row.iloc[1]
 
@@ -52,15 +63,34 @@ def compute_CU_column(row):
 
 def summarize_CU_reliability(CUrelcod, sv2, rel2, sv3, rel3):
     """
-    Summarize CU reliability metrics at the sample level.
+    Aggregate utterance-level CU reliability to the sample level.
 
-    Parameters:
-    - CUrelcod (DataFrame): Merged CU coding and reliability dataframe with c2CU and c3CU added.
-    - sv2, rel2: Column names for coder 2's SV and REL fields.
-    - sv3, rel3: Column names for coder 3's SV and REL fields.
+    Input
+    -----
+    CUrelcod : pd.DataFrame
+        Merged utterance-level dataframe containing:
+        - identifiers: 'UtteranceID', 'sampleID'
+        - coder-2 columns: sv2, rel2 (names passed in), and computed 'c2CU'
+        - coder-3 columns: sv3, rel3 (names passed in), and computed 'c3CU'
+        - agreement flags: 'AGSV', 'AGREL', 'AGCU' (1 if equal or both NaN, else 0)
 
-    Returns:
-    - CUrelsum (DataFrame): Aggregated reliability stats grouped by sampleID.
+    sv2, rel2, sv3, rel3 : str
+        Column names for the respective SV/REL fields used in aggregation.
+
+    Returns
+    -------
+    pd.DataFrame
+        One row per sampleID with:
+        - Counts per coder (no_utt2/no_utt3, CU2/CU3, pSV*/mSV*, pREL*/mREL*)
+        - Percent CU per coder (percCU2, percCU3)
+        - Percent agreement on SV/REL/CU (percAGSV, percAGREL, percAGCU)
+        - Binary sample-level agreement indicators (sampleAGSV, sampleAGREL, sampleAGCU),
+          where 1 indicates ≥80% agreement across utterances, 0 otherwise.
+
+    Notes
+    -----
+    - Agreement thresholds use the 'ag_check' helper: ≥0.8 proportion => 1, else 0.
+    - Returns an empty DataFrame on aggregation failure (with error logged).
     """
     CUrelsum = CUrelcod.copy()
     CUrelsum.drop(columns=['UtteranceID'], inplace=True, errors='ignore')
@@ -102,12 +132,27 @@ def summarize_CU_reliability(CUrelcod, sv2, rel2, sv3, rel3):
 
 def write_reliability_report(CUrelsum, report_path, partition_labels=None):
     """
-    Writes a plain text summary report of CU reliability to the given file path.
+    Write a plain-text CU reliability summary.
 
-    Parameters:
-    - CUrelsum (DataFrame): Summary stats by sample, including agreement columns.
-    - report_path (str): Full path to the output .txt file.
-    - partition_labels (list or None): Optional list of tier labels to include in the header.
+    Input
+    -----
+    CUrelsum : pd.DataFrame
+        Sample-level summary produced by `summarize_CU_reliability`, including:
+        'sampleAGCU', 'percAGSV', 'percAGREL', 'percAGCU'.
+    report_path : str | os.PathLike
+        Destination .txt filepath.
+    partition_labels : list[str] | None
+        Optional tier labels (e.g., site/test/participant) to render in the header.
+
+    Side Effects
+    ------------
+    Creates a text file with:
+      - Count and percent of samples meeting ≥80% CU agreement (sampleAGCU == 1)
+      - Average SV/REL/CU percent agreement across samples
+
+    Logging
+    -------
+    Logs success or an error if the report cannot be written.
     """
     try:
         num_samples_AG = np.nansum(CUrelsum['sampleAGCU'])
@@ -128,17 +173,68 @@ def write_reliability_report(CUrelsum, report_path, partition_labels=None):
     except Exception as e:
         logging.error(f"Failed to write reliability report to {report_path}: {e}")
 
-def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms, test=False):
+def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms):
     """
-    Analyzes CU reliability coding by comparing coder results and generating summary statistics.
+    Analyze Complete Utterance (CU) reliability by pairing coder-2 coding with coder-3
+    reliability coding, computing utterance-level agreement, and summarizing by sample.
 
-    Parameters:
-    - tiers (dict): Dictionary of tier information used for matching file names.
-    - input_dir (str): Directory containing the input CU coding and reliability files.
-    - output_dir (str): Directory where the output reliability summaries will be saved.
+    Inputs
+    ------
+    tiers : dict[str, Any]
+        Mapping of tier name -> tier object. Each tier object is expected to provide:
+          - .match(filename, ...) -> label string used for partitioning
+          - .partition : bool indicating whether this tier participates in the output path
+        Example: site/test/participant tiers derived from filenames.
 
-    Returns:
-    - None. Saves reliability summaries and analyzed DataFrames to output directory.
+    input_dir : str | os.PathLike
+        Root directory searched (recursively) for:
+          - "*_CUCoding.xlsx" (coder 2)
+          - "*_CUReliabilityCoding.xlsx" (coder 3)
+    output_dir : str | os.PathLike
+        Base directory where outputs are written under:
+          "<output_dir>/CUReliability[/<PARADIGM>]/<partition_labels...>/"
+
+    CU_paradigms : list[str]
+        List of paradigm labels (e.g., ["SAE", "AAE"]). **Behavior by case:**
+          - **0 paradigms ([])**: run **once** using the **base columns**
+            'c2SV', 'c2REL', 'c3SV', 'c3REL'; outputs go directly under
+            "<output_dir>/CUReliability/<partition_labels...>/".
+          - **1 paradigm (['X'])**: treated the **same as 0**—still uses base columns
+            (no suffix). This matches RASCAL's convention: when only one paradigm is in
+            use, columns remain unsuffixed and no per-paradigm subfolder is created.
+          - **2+ paradigms (['X','Y',...])**: for each paradigm `p`, expect **suffixed**
+            columns in both files:
+              'c2SV_{p}', 'c2REL_{p}', 'c3SV_{p}', 'c3REL_{p}'
+            Results for each `p` are written to:
+              "<output_dir>/CUReliability/{p}/<partition_labels...>/".
+
+    Outputs (per matched coding/reliability pair and paradigm)
+    ---------------------------------------------------------
+    - Utterance-level Excel:
+        ".../<labels>[_<PARADIGM>]_CUReliabilityCoding_ByUtterance.xlsx"
+      (contains c2/c3 CU flags and AGSV/AGREL/AGCU indicators)
+    - Sample-level Excel:
+        ".../<labels>[_<PARADIGM>]_CUReliabilityCoding_BySample.xlsx"
+    - Text report:
+        ".../<labels>[_<PARADIGM>]_CUReliabilityCodingReport.txt"
+
+    Pairing & Validation
+    --------------------
+    - Files are paired when all tier labels extracted from filenames match.
+    - A failed merge or read logs an error and skips that pair.
+    - If the merge reduces row count relative to the reliability file, a length
+      mismatch is logged.
+
+    Returns
+    -------
+    None
+        All results are written to disk; nothing is returned.
+
+    Notes
+    -----
+    - The function assumes `CU_paradigms` is a list (possibly empty). Upstream code
+      should pass an empty list rather than None (e.g., `config.get('CU_paradigms', []) or []`).
+    - Agreement on SV/REL/CU is defined as exact equality or both NaN.
     """
     
     # Make CU Reliability folder.
@@ -152,9 +248,6 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms, test=Fals
 
     coding_files = [f for f in Path(input_dir).rglob('*_CUCoding.xlsx')]
     rel_files = [f for f in Path(input_dir).rglob('*_CUReliabilityCoding.xlsx')]
-
-    # Store results for testing.
-    results = []
 
     # Match CU coding and reliability files.
     for rel in tqdm(rel_files, desc="Analyzing CU reliability coding..."):
@@ -233,13 +326,8 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms, test=Fals
                     summary_path = os.path.join(output_path, f"{'_'.join(partition_labels)}{paradigm_str}_CUReliabilityCoding_BySample.xlsx")
                     CUrelsum.to_excel(summary_path, index=False)
                     
-                    if test:
-                        results.append(CUrelsum)
-    
-    if test:
-        return results
 
-def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=None, test=False):
+def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=None):
     """
     Analyzes CU coding by summarizing results for all paradigms in one combined output.
     """
@@ -252,7 +340,6 @@ def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=None, test=Fals
         return
 
     coding_files = list(Path(input_dir).rglob('*_CUCoding.xlsx'))
-    results = []
 
     for cod in tqdm(coding_files, desc="Analyzing CU coding..."):
         try:
@@ -335,16 +422,11 @@ def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=None, test=Fals
                 CUcodsum_all.to_excel(summary_path, index=False)
                 logging.info(f"Saved combined CU summary: {summary_path}")
 
-                if test:
-                    results.append(CUcodsum_all)
             except Exception as e:
                 logging.error(f"Failed to merge and save summary files: {e}")
 
-    if test:
-        return results
 
-
-def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=False):
+def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
     """
     Reselects new CU reliability samples from previously unused samples,
     avoiding overlap with the original reliability set.
@@ -360,7 +442,6 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
         return
 
     coding_files = [f for f in Path(input_dir).rglob('*_CUCoding.xlsx')]
-    results = []
 
     for cu_file in tqdm(coding_files, desc="Reselecting CU reliability samples"):
         try:
@@ -416,11 +497,5 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2, test=Fa
             df_new_rel.to_excel(out_file, index=False)
             logging.info(f"Saved reselected CU reliability file: {out_file}")
 
-            if test:
-                results.append(df_new_rel)
-
         except Exception as e:
             logging.error(f"Unexpected error with file {cu_file.name}: {e}")
-
-    if test:
-        return results
