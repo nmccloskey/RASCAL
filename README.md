@@ -137,27 +137,84 @@ For example, to run the CU coding analysis function:
 rascal f
 ```
 
-| Command | Function                                     | Input                                                                                      | Output                                                                                   |
-| ------- | -------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| a       | select_transcription_reliability_samples()   | .cha files                                                                                 | _TranscriptionReliabilitySamples.xlsx, _Reliability.cha files                           |
-| b       | prepare_utterance_dfs()                      | .cha files                                                                                 | _Utterances.xlsx                                                                         |
-| c       | make_CU_coding_files()                       | b output                                                                                   | _CU_Coding.xlsx, _CUReliabilityCoding.xlsx                                               |
-| d       | analyze_transcription_reliability()          | .cha file pairs                                                                            | _TranscriptionReliabilityAnalysis.xlsx, .txt alignment files                             |
-| e       | analyze_CU_reliability()                     | Manually completed c output                                                                | _CUReliabilityCoding_BySample.xlsx, _CUReliabilityCodingReport.txt                      |
-| f       | analyze_CU_coding()                          | Manually completed c output                                                                | _CUCoding_BySample.xlsx, _CUCoding_ByUtterance.xlsx                                     |
-| g       | make_word_count_files()                      | f output                                                                                   | _WordCounting.xlsx, _WordCountingReliability.xlsx                                       |
-| h       | make_timesheets()                            | b output                                                                                   | _SpeakingTimes.xlsx                                                                      |
-| i       | analyze_word_count_reliability()             | Manually completed g output                                                                | _WordCountingReliabilityResults.xlsx, _WordCountingReliabilityReport.txt                |
-| j       | unblind_CUs()                                | b output, manually completed c, h & i outputs, (optional) ParticipantData.xlsx             | Blind/unblind sample data files                                                          |
-| k       | run_corelex()                                | j output                                                                                   | CoreLexDataYYMMDD.xlsx                                                                   |
-| l       | reselect_CU_reliability()                                | Manually completed c output                                                                                   | reselected_CUReliabilityCoding.xlsx                                                                   |                                                                |
+### Pipeline Commands
+
+| Command | Step (Python function)                       | Input                                  | Output (described)                                  |
+|---------|----------------------------------------------|----------------------------------------|-----------------------------------------------------|
+| a       | Select transcription reliability samples (*select_transcription_reliability_samples*) | Raw `.cha` files                       | Sample list + paired reliability `.cha` files        |
+| b       | Prepare utterance tables (*prepare_utterance_dfs*) | Raw `.cha` files                       | Utterance spreadsheets                              |
+| c       | Create CU coding files (*make_CU_coding_files*) | Utterance tables (from **b**)          | CU coding + reliability coding spreadsheets         |
+| d       | Analyze transcription reliability (*analyze_transcription_reliability*) | Reliability `.cha` pairs               | Agreement metrics + alignment text reports           |
+| e       | Analyze CU reliability (*analyze_CU_reliability*) | Manually completed CU coding (from **c**) | Reliability summary tables + reports                 |
+| f       | Analyze CU coding (*analyze_CU_coding*)      | Manually completed CU coding (from **c**) | Sample-level CU summaries                           |
+| g       | Create word count files (*make_word_count_files*) | CU coding tables (from **f**)          | Word count + reliability spreadsheets               |
+| h       | Make timesheets (*make_timesheets*)          | Utterance tables (from **b**)          | Speaking time entry sheets                          |
+| i       | Analyze word count reliability (*analyze_word_count_reliability*) | Manually completed word counts (from **g**) | Reliability summaries + agreement reports            |
+| j       | Unblind samples (*unblind_CUs*)              | Utterance tables (**b**), CU coding (**c**), timesheets (**h**), word counts (**i**) | Blind + unblind utterance and sample summaries       |
+| k       | Run CoreLex analysis (*run_corelex*)         | Sample summaries (from **j**)          | CoreLex coverage and percentile metrics             |
+| l       | Reselect CU reliability (*reselect_CU_reliability*) | Manually completed CU coding (from **c**) | New reliability subsets                             |
+
+### Step mapping:
+| Step | Letters | Description                                |
+|------|----------|--------------------------------------------|
+| 1    | a, b, c  | Read CHA, select reliability, prepare utterances |
+| 3    | d–h      | Analyze transcription & CU, word counts, timesheets |
+| 5    | i, j, k  | Word count reliability, unblind CUs, CoreLex |
+
 ---
+
+### 📊 RASCAL Workflow Overview
+
+```mermaid
+flowchart TD
+    A[a: Select transcription reliability samples] --> B[b: Prepare utterance tables]
+    B --> C[c: Create CU coding files]
+
+    C --> D[d: Analyze transcription reliability]
+    C --> E[e: Analyze CU reliability]
+    C --> F[f: Analyze CU coding]
+
+    F --> G[g: Create word count files]
+    B --> H[h: Make timesheets]
+
+    G --> I[i: Analyze word count reliability]
+
+    B & C & H & I --> J[j: Unblind samples]
+
+    J --> K[k: Run CoreLex analysis]
+
+    C --> L[l: Reselect CU reliability]
+```
 
 ## Notes on Input Transcriptions
 
 - `.cha` files must be formatted correctly according to CHAT conventions.
 - Ensure filenames match tier values as specified in `config.yaml`.
 - RASCAL searches tier values using exact spelling and capitalization.
+
+## 🧪 Testing
+
+This project uses [pytest](https://docs.pytest.org/) for its testing suite.  
+All tests are located under the `tests/` directory, organized by module/function.
+
+### Running Tests
+To run the full suite:
+
+```bash
+pytest
+```
+Run with verbose output:
+```bash
+pytest -v
+```
+Run a specific test file:
+```bash
+pytest tests/test_samples/test_run_corelex.py
+```
+
+### Notes
+- Tests stub out heavy dependencies (e.g., `openpyxl`, external web requests) to keep them fast and reproducible.
+- Many tests use temporary directories (`tmp_path`) to simulate file I/O without affecting your real data.
 
 ## Status and Contact
 

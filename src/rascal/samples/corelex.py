@@ -408,12 +408,58 @@ def generate_token_columns(present_narratives):
 
 def run_corelex(input_dir, output_dir, exclude_participants=None):
     """
-    Runs CoreLex analysis on utterance data and saves the results.
+    Run CoreLex analysis on aphasia narrative samples, producing lexical diversity
+    and coverage metrics against published CoreLex norms.
 
-    Args:
-        input_dir (str)
-        output_dir (str)
-        exclude_participants (list|set|None): speakers to exclude (e.g., {"Clinician", "Investigator"})
+    Workflow
+    --------
+    1. Load utterance-level input:
+       - If mode = "unblind" (determined with find_corelex_inputs): expects a single "unblindUtteranceData.xlsx"
+         containing columns: ['sample_id','narrative','utterance','client_time','c2CU',...].
+       - Else: expects "*_Utterances.xlsx" and "*_SpeakingTimes.xlsx" files.
+         * Utterances are filtered to exclude speakers in `exclude_participants`
+           (e.g., {"INV"} to drop investigators).
+    2. For each sample x narrative:
+       - Tokenize utterances, normalize, and match against the CoreLex lists.
+       - Count:
+           * numTokens: total tokens
+           * numCoreWords: distinct core lemmas
+           * numCoreWordTokens: total core-word tokens
+       - Merge with speaking time, compute:
+           * coreWordsPerMinute (cwpm)
+    3. Preload CoreLex norms for the relevant narratives and compute percentiles:
+           * core_words_control_percentile, core_words_pwa_percentile
+           * cwpm_control_percentile, cwpm_pwa_percentile
+    4. Write results to:
+           "<output_dir>/CoreLex/CoreLexData_<timestamp>.xlsx"
+
+    Parameters
+    ----------
+    input_dir : str | os.PathLike
+        Directory containing input files (unblinded summary OR utterance/time files).
+    output_dir : str | os.PathLike
+        Directory where the "CoreLex/" subdirectory and results file are created.
+    exclude_participants : set[str] | None, default None
+        Speaker codes (e.g., {"INV"}) to exclude when reading utterance-level data
+        in fallback mode (`unblind=False`).
+
+    Outputs
+    -------
+    Excel file:
+      "<output_dir>/CoreLex/CoreLexData_<timestamp>.xlsx"
+
+    Returns
+    -------
+    None
+        Results are written to disk.
+
+    Notes
+    -----
+    - Narrative values in the data must match keys available in CoreLex norms
+      (e.g., "Sandwich", "BrokenWindow", "CatRescue").
+    - Speaking time is required for cwpm calculations; in unblind mode this must
+      be a 'client_time' column, in fallback mode it comes from *_SpeakingTimes.xlsx.
+    - Logs warnings if norms or percentiles cannot be computed.
     """
     exclude_participants = set(exclude_participants or [])
     logging.info("Starting CoreLex processing.")
