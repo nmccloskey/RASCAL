@@ -6,21 +6,20 @@ RASCAL is a tool designed to facilitate the analysis of speech in clinical aphas
 
 ## Analysis Pipeline
 
-### **BU-TU Conversation Treatment Monologic Narrative Analysis Protocol**
+### **BU-TU Semi-Automated Monologic Narrative Analysis Overview**
 
 1. **Step 0 (Manual):** Complete transcription for all samples.
 2. **Step 1 (RASCAL):**
-   - **Input:** Transcriptions (`.cha`), Tiers (`.txt`)
-   - **Output:** Transcription reliability files (`.xlsx`, `.cha`), CU coding files
+   - **Input:** Transcriptions (`.cha`)
+   - **Output:** Transcription reliability files, utterance files, CU coding and reliability files
 3. **Step 2 (Manual):** CU coding and reliability checks
 4. **Step 3 (RASCAL):**
-   - **Input:** Transcriptions, CU coding files
-   - **Output:** Reliability reports, coding summaries, word count templates
-5. **Step 4 (Manual):** Finalize word counts and speaking times
+   - **Input:** Original & reliability transcriptions, CU coding & reliability files
+   - **Output:** Reliability reports, coding summaries, word count & reliability files, speaking time file
+5. **Step 4 (Manual):** Finalize word counts and record speaking times
 6. **Step 5 (RASCAL):**
-   - **Input:** Word counts, speaking times, participant data
-   - **Output:** Blind/unblind CU coding summaries, word count reliability, core lexicon analysis
-
+   - **Input:** Utterance file, utterance-level CU summary, speaking times, word counts & reliability
+   - **Output:** Blind & unblind, utterance- & sample-level CU coding summaries, word count reliability, core lexicon analysis
 ---
 
 ## Try the Web App
@@ -62,7 +61,7 @@ Example structure:
 ```plaintext
 your_project/
 ├── config.yaml           # Configuration file (see below)
-└── rascal_data/
+└── data/
     └── input/            # Place your CHAT (.cha) files and/or Excel data here
                           # (RASCAL will make an output directory)
 ```
@@ -84,6 +83,11 @@ coders:
 CU_paradigms:
 - SAE
 - AAE
+exclude_participants:
+- INV
+strip_clan: true
+prefer_correction: true
+lowercase: true
 tiers:
   site:
     values:
@@ -98,8 +102,8 @@ tiers:
     - Post
     - Maint
     blind: true
-  participantID:
-    values: site##
+  study_id:
+    values: (AC|BU|TU)\d+
   narrative:
     values:
     - CATGrandpa
@@ -115,7 +119,7 @@ Explanation:
 
 - `blind: true` indicates fields to remove for blinding purposes in CU summaries.
 
-- `"participantID": "site##"` enables pattern matching where the participant ID is derived from the site name followed by digits (e.g., AC01, BU23).
+- `"study_id": (AC|BU|TU)\d+` enables pattern matching where the study (participant) ID is derived from the site name followed by digits (e.g., AC01, TU23).
 
 ---
 
@@ -124,10 +128,10 @@ Explanation:
 Once installed, RASCAL can be run from any directory using the command-line interface:
 
 ```bash
-rascal <step>
+rascal <step or function>
 ```
 
-For example, to run the CU analysis step:
+For example, to run the CU coding analysis function:
 
 ```bash
 rascal f
