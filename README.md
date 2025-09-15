@@ -181,9 +181,9 @@ flowchart TD
 
     G --> I[i: Analyze word count reliability]
 
-    B & C & H & G --> J[j: Unblind samples]
+    B & F & G & H --> J[j: Unblind samples]
 
-    J --> K[k: Run CoreLex analysis]
+    B & H & J --> K[k: Run CoreLex analysis]
 
     C --> L[l: Reselect CU reliability]
     L --> E

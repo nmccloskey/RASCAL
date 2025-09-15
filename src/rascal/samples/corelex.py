@@ -501,7 +501,7 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
             logging.warning("No CU/wordCount column found; proceeding without that filter in unblind mode.")
 
         # Present narratives
-        present_narratives = set(utt_df['narrative'].dropna().unique())
+        present_narratives = set(utt_df[narr_col].dropna().unique())
 
     else:  # mode == 'utterances'
         # Map common column name variants
