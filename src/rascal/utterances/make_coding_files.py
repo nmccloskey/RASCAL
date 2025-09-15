@@ -300,15 +300,6 @@ def count_words(text, d):
     text = re.sub(r'(^|\b)(u|e)+?(h|m|r)+?(\b|$)', '', text)
     text = re.sub(r'(^|\b|\b.)x+(\b|$)', '', text)
     
-    # Handle parentheses
-    open_par_count = text.count('(')
-    closed_par_count = text.count(')')
-    if open_par_count == closed_par_count:
-        for _ in range(open_par_count):
-            text = re.sub(r'\([^\(]*?\)', '', text)
-    else:
-        print('Mismatched parentheses detected')
-    
     # Remove annotations and special markers
     text = re.sub(r'\[.+?\]', '', text)
     text = re.sub(r'\*.+?\*', '', text)
@@ -325,27 +316,60 @@ def count_words(text, d):
     tokens = [word for word in text.split() if d(word)]
     return len(tokens)
 
-def make_word_count_files(tiers, frac, coders, input_dir, output_dir, test=False):
+def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
     """
-    Generate word count coding and reliability files from CU coding DataFrames.
+    Generate utterance-level word count coding files and reliability subsets
+    from existing CU coding outputs.
 
-    Parameters:
-    - tiers (dict): Dictionary of tier objects used for partitioning.
-    - frac (float): Fraction of samples to be selected for reliability.
-    - CU_coding_dir (str): Directory containing the CU coding Excel files.
-    - input_dir (str): Directory where the CU coding files could be saved.
-    - output_dir (str): Directory where the CU coding files could be saved.
+    Workflow
+    --------
+    1. Locate all "*_CUCoding_ByUtterance.xlsx" files under both `input_dir`
+       and `output_dir`.
+    2. For each file:
+       - Extract partition labels from filename using `tiers`.
+       - Read CU coding DataFrame.
+       - Drop CU-specific columns (c2SV*, c2REL*, c2CU*, c2com*, AG*).
+       - Add empty coder-1 assignment column ('c1ID') and reliability comment ('WCcom').
+       - Compute 'wordCount' for each utterance using `count_words(utterance, d)`
+         if c2CU is not NaN, otherwise assign "NA".
+       - Assign coders to samples via `assign_CU_coders(coders)` and
+         distribute sampleIDs across coders using `segment(...)`.
+       - Select a fraction (`frac`) of samples for reliability per coder pair.
+         For these, rename 'c1ID'→'c2ID' and 'WCcom'→'WCrelCom',
+         and assign the second coder ID.
 
-    Returns:
-    - None. Saves word count coding and reliability coding files to output directory.
+    Outputs
+    -------
+    Under "<output_dir>/WordCounts[/<partition_labels...>]":
+      - "<labels>_WordCounting.xlsx"
+        Full utterance-level coding frame with 'wordCount', 'c1ID', 'WCcom'.
+      - "<labels>_WordCountingReliability.xlsx"
+        Subset of samples (≈ frac of total) for reliability, with 'c2ID' and 'WCrelCom'.
+
+    Parameters
+    ----------
+    tiers : dict[str, Any]
+        Tier objects with `.match(filename, ...)` and `.partition` attributes.
+        Used to derive subdirectories and labels for outputs.
+    frac : float
+        Fraction of unique sampleIDs to include in the reliability subset
+        (minimum 1 per coder assignment).
+    coders : list[str]
+        Coder IDs; first two are used for assignments.
+    input_dir : str | os.PathLike
+        Directory containing CU coding utterance-level Excel files.
+    output_dir : str | os.PathLike
+        Directory to save word count outputs.
+
+    Returns
+    -------
+    None
+        Saves Excel files to disk; does not return.
     """
     
     # Make word count coding file path.
     word_count_dir = os.path.join(output_dir, 'WordCounts')
     logging.info(f"Writing word count files to {word_count_dir}")
-
-    # Store results for test.
-    results = []
 
     # Convert utterance-level CU coding files to word counting files.
     CU_files = list(Path(input_dir).rglob("*_CUCoding_ByUtterance.xlsx")) + list(Path(output_dir).rglob("*_CUCoding_ByUtterance.xlsx"))
@@ -418,9 +442,3 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir, test=False
             WCreldf.to_excel(filename, index=False)
         except Exception as e:
             logging.error(f"Failed to write word count reliability coding file {filename}: {e}")
-        
-        if test:
-            results.append(WCdf)
-        
-    if test:
-        return results
