@@ -11,13 +11,11 @@ def read_cha_files(input_dir, shuffle=False):
 
     Parameters:
     - input_dir (str): The directory containing input `.cha` files.
-    - shuffle (bool): Whether to shuffle the list of files before reading. Default is False.
+    - shuffle (bool): Whether to shuffle the list of files before reading.
 
     Returns:
-    - dict: A dictionary where keys are filenames and values are CHAT data objects.
+    - dict[str, pylangacq.Reader]: keys are filenames, values are CHAT reader objects.
     """
-    
-    # Retrieve all .cha files in the input directory and subdirectories
     cha_files = list(Path(input_dir).rglob("*.cha"))
 
     if shuffle:
@@ -26,7 +24,7 @@ def read_cha_files(input_dir, shuffle=False):
 
     chats = {}
 
-    logging.info(f'Reading .cha files from directory: {input_dir}')
+    logging.info(f"Reading .cha files from directory: {input_dir}")
     for cha in tqdm(cha_files, desc="Reading .cha files..."):
         try:
             chat_data = pylangacq.read_chat(str(cha))
@@ -36,5 +34,4 @@ def read_cha_files(input_dir, shuffle=False):
             logging.error(f"Failed to read {cha}: {e}")
 
     logging.info(f"Successfully read {len(chats)} .cha files from {input_dir}.")
-    
     return chats
