@@ -53,7 +53,7 @@ def run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms):
 
 def run_make_word_count_files(tiers, frac, coders, input_dir, output_dir):
     from .utterances.make_coding_files import make_word_count_files
-    make_word_count_files(tiers=tiers, frac=frac, coders=coders, input_dir=input_dir, output_dir=output_dir, test=False)
+    make_word_count_files(tiers=tiers, frac=frac, coders=coders, input_dir=input_dir, output_dir=output_dir)
 
 def run_make_timesheets(tiers, input_dir, output_dir):
     from .utils.make_timesheets import make_timesheets
@@ -61,11 +61,11 @@ def run_make_timesheets(tiers, input_dir, output_dir):
 
 def run_analyze_word_count_reliability(tiers, input_dir, output_dir):
     from .utterances.word_count_reliability_analyzer import analyze_word_count_reliability
-    analyze_word_count_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
+    analyze_word_count_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir)
 
 def run_unblind_CUs(tiers, input_dir, output_dir):
     from .samples.unblind_CUs import unblind_CUs
-    unblind_CUs(tiers=tiers, input_dir=input_dir, output_dir=output_dir, test=False)
+    unblind_CUs(tiers=tiers, input_dir=input_dir, output_dir=output_dir)
 
 def run_run_corelex(input_dir, output_dir, exclude_participants):
     from .samples.corelex import run_corelex
@@ -73,7 +73,7 @@ def run_run_corelex(input_dir, output_dir, exclude_participants):
 
 def run_reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
     from .utterances.CU_analyzer import reselect_CU_reliability
-    reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac, test=False)
+    reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac)
 
 
 def main(args):

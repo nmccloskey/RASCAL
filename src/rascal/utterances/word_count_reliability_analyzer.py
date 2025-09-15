@@ -78,18 +78,56 @@ def calculate_icc(data):
 
     return round(icc, 4)
 
-def analyze_word_count_reliability(tiers, input_dir, output_dir, test=False):
+def analyze_word_count_reliability(tiers, input_dir, output_dir):
     """
-    Analyzes word count reliability between original and reliability files.
+    Analyze word count reliability by comparing coder-1 word counts with
+    coder-2 reliability word counts.
 
-    Args:
-        tiers (dict): Dictionary containing tier information and matching criteria.
-        input_dir (str): Directory containing input files.
-        output_dir (str): Directory to save output results.
-        test (bool): If True, the function will return results for testing. Default is False.
+    Workflow
+    --------
+    1. Collect all "*_WordCounting.xlsx" (coding) and
+       "*_WordCountingReliability.xlsx" (reliability) files under `input_dir`.
+    2. For each reliability file, find the coding file with matching tier labels.
+    3. Read both DataFrames and clean the reliability frame to
+       ['utterance_id','WCrelCom','wordCount'], dropping NaN word counts.
+    4. Merge on 'utterance_id' with suffixes (_org for coding, _rel for reliability).
+    5. For each utterance, compute:
+         - AbsDiff  : raw difference (org − rel)
+         - PercDiff : percent difference (using `percent_difference`)
+         - PercSim  : 100 − PercDiff
+         - AG       : binary agreement (1 if abs diff ≤1 or percSim ≥85)
+    6. Save merged results to
+         "<output_dir>/WordCountReliability/<partition_labels>/<labels>_WordCountingReliabilityResults.xlsx"
+    7. Compute ICC(2,1) across utterances (using `calculate_icc`).
+    8. Write a plain-text report:
+         "<labels>_WordCountReliabilityReport.txt"
+       with number/percent of utterances agreed and ICC value.
 
-    Returns:
-        list: Results of the analysis (only if `test=True`).
+    Parameters
+    ----------
+    tiers : dict[str, Any]
+        Mapping of tier name -> tier object, each with:
+          - .match(filename, return_None=True) → label string
+          - .partition flag → whether included in output path.
+    input_dir : str | os.PathLike
+        Directory searched recursively for coding and reliability files.
+    output_dir : str | os.PathLike
+        Directory where results are written under "WordCountReliability/".
+
+    Outputs
+    -------
+    - Excel file with merged utterance-level reliability results and agreement.
+    - Text report with summary agreement and ICC.
+
+    Returns
+    -------
+    None
+        Results are written to disk; function has no return value.
+
+    Notes
+    -----
+    - Logs warnings if file read/merge fails or row counts mismatch.
+    - Agreement rule: abs diff ≤1 OR percent similarity ≥85%.
     """
 
     # Make Word Count Reliability folder
@@ -104,9 +142,6 @@ def analyze_word_count_reliability(tiers, input_dir, output_dir, test=False):
     # Collect relevant files
     coding_files = [f for f in Path(input_dir).rglob('*_WordCounting.xlsx')]
     rel_files = [f for f in Path(input_dir).rglob('*_WordCountingReliability.xlsx')]
-
-    # Store results for testing
-    results = []
 
     # Match word counting and reliability files
     for rel in tqdm(rel_files, desc="Analyzing word count reliability..."):
@@ -126,12 +161,12 @@ def analyze_word_count_reliability(tiers, input_dir, output_dir, test=False):
                     continue
 
                 # Clean and filter the reliability DataFrame
-                WCreldf = WCreldf.loc[:, ['UtteranceID', 'WCrelCom', 'wordCount']]
+                WCreldf = WCreldf.loc[:, ['utterance_id', 'WCrelCom', 'wordCount']]
                 WCreldf = WCreldf[~np.isnan(WCreldf['wordCount'])]
 
-                # Merge on UtteranceID
+                # Merge on utterance_id
                 try:
-                    WCmerged = pd.merge(WCdf, WCreldf, on="UtteranceID", how="inner", suffixes=('_org', '_rel'))
+                    WCmerged = pd.merge(WCdf, WCreldf, on="utterance_id", how="inner", suffixes=('_org', '_rel'))
                     logging.info(f"Merged reliability file with coding file for {rel.name}")
                 except Exception as e:
                     logging.error(f"Failed to merge {cod.name} with {rel.name}: {e}")
@@ -184,6 +219,3 @@ def analyze_word_count_reliability(tiers, input_dir, output_dir, test=False):
                     logging.info(f"Reliability report written to {report_path}")
                 except Exception as e:
                     logging.error(f"Failed to write reliability report {report_path}: {e}")
-
-    if test:
-        return results

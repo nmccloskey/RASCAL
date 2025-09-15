@@ -37,8 +37,8 @@ def test_make_word_count_files_basic(tmp_path, monkeypatch):
 
     # Fake CU coding DataFrame
     df_cu = pd.DataFrame({
-        "UtteranceID": ["U1","U2","U3"],
-        "sampleID":    ["S1","S2","S3"],
+        "utterance_id": ["U1","U2","U3"],
+        "sample_id":    ["S1","S2","S3"],
         "utterance":   ["hello world", "foo bar", "baz"],
         "c2CU":        [1, 1, np.nan],  # one missing -> should produce "NA"
         "c2SV":        [1, 1, 0],
@@ -64,7 +64,7 @@ def test_make_word_count_files_basic(tmp_path, monkeypatch):
     monkeypatch.setattr(mcf, "count_words", lambda text, d: 5)
     # assign_CU_coders returns list of assignments [(c1,c2), ...]
     monkeypatch.setattr(mcf, "assign_CU_coders", lambda coders: [(coders[0], coders[1])])
-    # segment splits sampleIDs evenly across coders
+    # segment splits sample_ids evenly across coders
     monkeypatch.setattr(mcf, "segment", lambda ids, n: [ids])
 
     # Dummy d(word) always True
@@ -96,4 +96,4 @@ def test_make_word_count_files_basic(tmp_path, monkeypatch):
     assert "c2ID" in reliability_df.columns
     assert "WCrelCom" in reliability_df.columns
     # Reliability should only contain a subset of samples (frac=0.5 -> at least 1)
-    assert len(set(reliability_df["sampleID"])) >= 1
+    assert len(set(reliability_df["sample_id"])) >= 1
