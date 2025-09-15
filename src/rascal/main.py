@@ -49,7 +49,7 @@ def run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms):
 
 def run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms):
     from .utterances.CU_analyzer import analyze_CU_coding
-    analyze_CU_coding(tiers=tiers, input_dir=input_dir, output_dir=output_dir, CU_paradigms=CU_paradigms, test=False)
+    analyze_CU_coding(tiers=tiers, input_dir=input_dir, output_dir=output_dir, CU_paradigms=CU_paradigms)
 
 def run_make_word_count_files(tiers, frac, coders, input_dir, output_dir):
     from .utterances.make_coding_files import make_word_count_files

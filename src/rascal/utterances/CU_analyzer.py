@@ -487,8 +487,67 @@ def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=[]):
 
 def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
     """
-    Reselects new CU reliability samples from previously unused samples,
-    avoiding overlap with the original reliability set.
+    Reselect a new set of CU reliability samples from coder-2 CU coding tables,
+    **excluding** samples already present in the corresponding coder-3 reliability files.
+
+    For each "*_CUCoding.xlsx" found under `input_dir`, this function looks for a
+    sibling reliability file named with the same stem but "*_CUReliabilityCoding.xlsx".
+    It computes the set difference between all samples coded by coder-2 and the samples
+    already present in coder-3's reliability table, randomly selects a fraction of the
+    total unique samples, and emits a fresh reliability sheet restricted to the newly
+    selected sampleIDs.
+
+    Parameters
+    ----------
+    input_dir : str | os.PathLike
+        Root directory searched (recursively) for coder-2 CU coding files named
+        "*_CUCoding.xlsx" and their paired "*_CUReliabilityCoding.xlsx".
+
+    output_dir : str | os.PathLike
+        Base directory where outputs are written under:
+          "<output_dir>/reselected_CU_reliability/"
+
+    coder3 : str, default '3'
+        Value written to the 'c3ID' column in the reselected reliability sheet.
+
+    frac : float in (0,1], default 0.2
+        Target fraction of **all unique samples** (from the coder-2 file) to select.
+        The number selected is `max(1, round(len(all_sample_ids) * frac))`. If fewer
+        than this number of **unused** samples are available, all available unused
+        samples are selected (with a warning).
+
+    Behavior & Output
+    -----------------
+    - Selection excludes any sampleID already present in the paired reliability file.
+    - Selection is random with a fixed RNG seed (88) for reproducibility within a run.
+    - For each selected sampleID, the function builds a new reliability DataFrame by:
+        * Carrying forward **shared** columns up to and including 'comment'
+          (via `df_cu.loc[:, :'comment']`).
+        * Copying coder-2 ID/comment into 'c3ID'/'c3com' and then overwriting:
+            - 'c3ID' with the `coder3` parameter,
+            - 'c3com' with NaN (wipe comments).
+        * Renaming any coder-2 CU columns to coder-3:
+            - Base columns: 'c2SV' -> 'c3SV', 'c2REL' -> 'c3REL'
+            - Suffixed columns: 'c2SV_*' -> 'c3SV_*', 'c2REL_*' -> 'c3REL_*'
+        * Wiping all **suffixed** coder-3 CU columns ('c3SV_*', 'c3REL_*') to NaN,
+          so these must be re-entered by the reliability coder.
+          (Note: the base columns 'c3SV'/'c3REL' are currently preserved.)
+
+    - One Excel file is written per coder-2 file:
+        "<output_dir>/reselected_CU_reliability/<stem>_reselected_CUReliabilityCoding.xlsx"
+
+    Returns
+    -------
+    None
+        All artifacts are saved to disk; the function does not return a value.
+
+    Notes
+    -----
+    - If the paired reliability file is missing, this file is skipped (with warning).
+    - If no unused samples remain, this file is skipped (with warning).
+    - The current implementation wipes suffixed CU fields but **not** the unsuffixed
+      'c3SV'/'c3REL'. If you intend to wipe base columns as well, extend the wipe
+      loop accordingly.
     """
     random.seed(88)
 
@@ -548,7 +607,7 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
             df_new_rel['c3com'] = np.nan  # Wipe comments
             # Wipe coding
             for col in df_new_rel.columns:
-                if col.startswith('c3SV_') or col.startswith('c3REL_'):
+                if col.startswith('c3SV') or col.startswith('c3REL'):
                     df_new_rel[col] = np.nan
 
             base_name = cu_file.stem.replace('_CUCoding', '')
