@@ -84,7 +84,7 @@ def main(args):
     
     frac = config.get('reliability_fraction', 0.2)
     coders = config.get('coders', [])
-    CU_paradigms = config.get('CU_paradigms', [])
+    CU_paradigms = config.get('CU_paradigms', []) or []
 
     exclude_participants = config.get('exclude_participants', []) or []
     strip_clan =  config.get('strip_clan', True)
