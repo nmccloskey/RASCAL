@@ -2,24 +2,72 @@ import os
 import logging
 import pandas as pd
 from pathlib import Path
-from itertools import chain
 
 
-def unblind_CUs(tiers, input_dir, output_dir, test=False):
+def unblind_CUs(tiers, input_dir, output_dir):
     """
-    Unblinds participant utterances and prepares both an unblinded and blinded summary.
+    Build unblinded and blinded summaries by merging utterances, CU coding,
+    word counts, and speaking-time data; then export both utterance-level and
+    sample-level tables plus the blind-code key.
 
-    This function reads in participant, utterance, CU data, word counts, and speaking times,
-    merges them into a comprehensive DataFrame, calculates words per minute, and prepares a blinded version.
+    Workflow
+    --------
+    1) Read and vertically concat the following from `input_dir`:
+         - "*_Utterances.xlsx" (expects at least: 'utterance_id','sample_id',
+           'file','speaker','utterance','comment', and any tier columns by name)
+         - "*_CUCoding_ByUtterance.xlsx" (expects: 'utterance_id','sample_id',
+           'comment', and CU/coder columns to the **right** of 'comment')
+         - "*_WordCounting.xlsx" (expects: 'utterance_id','sample_id','wordCount','WCcom')
+         - "*_SpeakingTimes.xlsx" (expects: 'sample_id','client_time')
+         - "*_CUCoding_BySample.xlsx" (sample-level CU metrics; merged later)
+    2) Merge utterance-level tables on ['utterance_id','sample_id'] and add speaking time.
+       Save as "Summaries/unblindUtteranceData.xlsx".
+    3) Produce a **blinded** utterance table by:
+         - Dropping "file" and any tier columns whose tier.blind == False,
+         - Mapping each blind tier’s labels via `tier.make_blind_codes()`.
+       Save as "Summaries/blindUtteranceData.xlsx" and retain the mapping(s).
+    4) Build a sample-level table:
+         - From utterances, drop ['utterance_id','speaker','utterance','comment'] and dedupe,
+         - Merge with "*_CUCoding_BySample.xlsx", summed word counts per sample,
+           and speaking time,
+         - Compute words-per-minute (wpm) = wordCount / (client_time / 60).
+       Save as "Summaries/unblindSampleData.xlsx".
+    5) Produce a **blinded** sample table by dropping non-blind tiers and applying
+       the same blind-code mapping(s). Save as "Summaries/blindSampleData.xlsx".
+    6) Export the blind-code key as "Summaries/blindCodes.xlsx".
 
-    Args:
-        tiers (list): List of Tier objects defining the columns to be blinded.
-        input_dir (str): Directory containing the input files.
-        output_dir (str): Directory to save the output files.
-        test (bool): If True, the function will return results for testing.
+    Parameters
+    ----------
+    tiers : dict[str, Any]
+        Mapping of tier name → tier object. Each tier object must provide:
+          - .name : str  (column name present in the data)
+          - .blind : bool (True if this tier should be blinded/mapped)
+          - .make_blind_codes() -> dict[str, dict[str, str]]
+                Returns { tier.name : { raw_label : blind_code, ... } }
+    input_dir : str | os.PathLike
+        Root directory searched recursively for the input Excel files listed above.
+    output_dir : str | os.PathLike
+        Base directory where outputs are written under "<output_dir>/Summaries/".
 
-    Returns:
-        None or pd.DataFrame: Returns the merged DataFrame if `test` is True.
+    Outputs
+    -------
+    Summaries/unblindUtteranceData.xlsx
+    Summaries/blindUtteranceData.xlsx
+    Summaries/unblindSampleData.xlsx
+    Summaries/blindSampleData.xlsx
+    Summaries/blindCodes.xlsx
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    - Blinding only touches columns for tiers with tier.blind == True.
+      Non-blind tier columns are removed from the blinded outputs.
+    - If required columns are missing or a merge fails, an error is logged and
+      the exception is re-raised by the outer try/except.
+    - wpm is computed as wordCount / (client_time / 60) and rounded to 2 decimals.
     """
     try:
         # Specify subfolder and create directory
@@ -31,23 +79,23 @@ def unblind_CUs(tiers, input_dir, output_dir, test=False):
 
         # Read CU data
         CUbyUtts = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*_CUCoding_ByUtterance.xlsx')])
-        CUbyUtts = CUbyUtts.loc[:, ['UtteranceID', 'sampleID'] + list(CUbyUtts.iloc[:, CUbyUtts.columns.to_list().index('comment')+1:].columns)]
+        CUbyUtts = CUbyUtts.loc[:, ['utterance_id', 'sample_id'] + list(CUbyUtts.iloc[:, CUbyUtts.columns.to_list().index('comment')+1:].columns)]
         logging.info("CU utterance data loaded successfully.")
 
         # Read word count data
         WCs = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*_WordCounting.xlsx')])
-        WCs = WCs.loc[:, ['UtteranceID', 'sampleID', 'wordCount', 'WCcom']]
+        WCs = WCs.loc[:, ['utterance_id', 'sample_id', 'wordCount', 'WCcom']]
 
         # Read speaking time data
         times = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*_SpeakingTimes.xlsx')])
-        times = times.loc[:, ['sampleID', 'client_time']]
+        times = times.loc[:, ['sample_id', 'client_time']]
         logging.info("Speaking time data loaded successfully.")
 
         # Merge datasets
         merged_utts = utts.copy()
-        merged_utts = pd.merge(merged_utts, CUbyUtts, on=['UtteranceID', 'sampleID'], how='inner')
-        merged_utts = pd.merge(merged_utts, WCs, on=['UtteranceID', 'sampleID'], how='inner')
-        merged_utts = pd.merge(merged_utts, times, on='sampleID', how='inner')
+        merged_utts = pd.merge(merged_utts, CUbyUtts, on=['utterance_id', 'sample_id'], how='inner')
+        merged_utts = pd.merge(merged_utts, WCs, on=['utterance_id', 'sample_id'], how='inner')
+        merged_utts = pd.merge(merged_utts, times, on='sample_id', how='inner')
         logging.info("Utterance data merged successfully.")
 
         # Save unblinded utterances
@@ -75,20 +123,20 @@ def unblind_CUs(tiers, input_dir, output_dir, test=False):
         logging.info(f"Blinded utterances saved to {blind_utts_file}.")
 
         # Aggregate by sample - first filter utterance data.
-        utts = utts.drop(columns=['UtteranceID', 'speaker', 'utterance', 'comment']).drop_duplicates(keep='first')
+        utts = utts.drop(columns=['utterance_id', 'speaker', 'utterance', 'comment']).drop_duplicates(keep='first')
         logging.info("Utterance data loaded and preprocessed successfully.")
     
         # Load sample CU data.
         CUbySample = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*_CUCoding_BySample.xlsx')])
         
         # Sum word counts.
-        WCs = WCs.groupby(['sampleID']).agg(wordCount=('wordCount', 'sum'))
+        WCs = WCs.groupby(['sample_id']).agg(wordCount=('wordCount', 'sum'))
         logging.info("Word count data aggregated successfully.")
 
         merged_samples = utts.copy()
-        merged_samples = pd.merge(merged_samples, CUbySample, on='sampleID', how='inner')
-        merged_samples = pd.merge(merged_samples, WCs, on='sampleID', how='inner')
-        merged_samples = pd.merge(merged_samples, times, on='sampleID', how='inner')
+        merged_samples = pd.merge(merged_samples, CUbySample, on='sample_id', how='inner')
+        merged_samples = pd.merge(merged_samples, WCs, on='sample_id', how='inner')
+        merged_samples = pd.merge(merged_samples, times, on='sample_id', how='inner')
         logging.info("Sample data merged successfully.")
 
         # Calculate words per minute
@@ -119,9 +167,6 @@ def unblind_CUs(tiers, input_dir, output_dir, test=False):
         blind_codes_file = os.path.join(output_dir, 'blindCodes.xlsx')
         pd.DataFrame(blind_codes_output).to_excel(blind_codes_file, index=True)
         logging.info(f"Blind codes saved to {blind_codes_file}.")
-
-        if test:
-            return blind_samples, blind_utts, merged_samples, merged_utts 
     
     except Exception as e:
         logging.error(f"An error occurred: {e}")
