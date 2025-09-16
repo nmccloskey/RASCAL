@@ -64,18 +64,10 @@ def build_config_ui():
     - Digits only: `\\d+`
     - Lab site + digits: `(AC|BU|TU)\\d+`
     - Three uppercase letters + three digits: `[A-Z]{3}\\d{3}`
-    - Match the entire string? Anchor it: `^(AC|BU|TU)\\d+$`
 
-- **Placeholder system** (optional): if a value contains `##`, it references a **previous tier’s** pattern and appends `\\d+`.
-  - Example – if you have a tier named `site` and you set:
-    ```
-    participantID = site##
-    ```
-    then `participantID` will reuse the `site` tier’s pattern and match trailing digits.
-
-**Partition / Blind**
-- **Partition**: creates separate coding files and **separate reliability** calculations by that tier (e.g., by test).
-- **Blind**: generates blind codes (for CU summaries, etc.) at analysis time.
+- **Tier attributes**
+  - **Partition**: creates separate coding files and **separate reliability** calculations by that tier (e.g., by test).
+  - **Blind**: generates blind codes (for CU summaries, etc.) at analysis time.
             """
         )
         st.caption("Tip: If your regex contains commas, paste it as a single value (no commas or newlines).")

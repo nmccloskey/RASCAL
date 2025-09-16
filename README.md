@@ -113,14 +113,54 @@ tiers:
     - BirthdayScene
 ```
 
-Explanation:
+### Explanation:
 
-- `partition: true` indicates partition tiers — these group files for separate coding and output. In this example, separate CU coding files will be generated for each `site` (AC, BU, TU), but not for each `narrative` or `test` value.
+- General
 
-- `blind: true` indicates fields to remove for blinding purposes in CU summaries.
+  - `reliability_fraction` - the proportion of data to subset for reliability (default 20%).
 
-- `"study_id": (AC|BU|TU)\d+` enables pattern matching where the study (participant) ID is derived from the site name followed by digits (e.g., AC01, TU23).
+  - `coders` - alphanumeric coder identifiers (2 required for function **g** and 3 for **c**, see below).
 
+  - `CU_paradigms` - allows users to accommodate multiple dialects if desired. If at least two paradigms are entered, parallel coding columns will be prepared and processed in all CU functions.
+
+  - `exclude_participants` - speakers appearing in .cha files to exclude from transcription reliability and CU coding (neutral utterances).
+
+- Transcription Reliability
+
+  - `strip_clan` - removes CLAN markup but preserve speech-like content, including filled pauses (e.g., '&um' -> 'um') and partial words.
+
+  - `prefer_correction` - toggles policy for accepted corrections '[: x] [*]': True keeps x, False keeps original.
+
+  - `lowercase` - toggles case regularization.
+
+**Specifying tiers:**
+The tier system facilitates tabularization by associating a unit of analysis with its possible values and extracting this information from the file name of individual transcripts.
+
+- **Multiple values**: enter as a comma- or newline-separated list. These are treated as **literal choices** and combined into a regex internally. See below examples.
+  - *narrative*: `BrokenWindow, RefusedUmbrella, CatRescue`
+  - *test*: `PreTx, PostTx`
+  
+- **Single value**: treated as a **regular expression** and validated immediately. Examples include:
+  - Digits only: `\\d+`
+  - Lab site + digits: `(AC|BU|TU)\\d+`
+  - Three uppercase letters + three digits: `[A-Z]{3}\\d{3}`
+
+- **Tier attributes**
+  - **Partition**: creates separate coding files and **separate reliability** subsets by that tier. In this example, separate CU coding files will be generated for each site (AC, BU, TU), but not for each narrative or test value.
+  - **Blind**: generates blind codes for CU summaries (function **j** below).
+
+***Example: Tier-Based Tabularization from Filenames (according to the above config).***
+
+Source files:
+- `TU88PreTxBrokenWindow.cha`
+- `BU77Maintenance_CatRescue.cha`
+
+Tabularization:
+
+| Site | Test  | ParticipantID | Narrative     |
+|------|-------|---------------|---------------|
+| TU   | Pre   | TU88          | BrokenWindow  |
+| BU   | Maint | BU77          | CatRescue     |
 ---
 
 ## Running the Program
@@ -146,7 +186,7 @@ rascal f
 | c       | Create CU coding files (*make_CU_coding_files*) | Utterance tables (from **b**)          | CU coding + reliability coding spreadsheets         |
 | d       | Analyze transcription reliability (*analyze_transcription_reliability*) | Reliability `.cha` pairs               | Agreement metrics + alignment text reports           |
 | e       | Analyze CU reliability (*analyze_CU_reliability*) | Manually completed CU coding (from **c**) | Reliability summary tables + reports                 |
-| f       | Analyze CU coding (*analyze_CU_coding*)      | Manually completed CU coding (from **c**) | Sample-level CU summaries                           |
+| f       | Analyze CU coding (*analyze_CU_coding*)      | Manually completed CU coding (from **c**) | Sample- and utterance-level CU summaries                           |
 | g       | Create word count files (*make_word_count_files*) | CU coding tables (from **f**)          | Word count + reliability spreadsheets               |
 | h       | Make timesheets (*make_timesheets*)          | Utterance tables (from **b**)          | Speaking time entry sheets                          |
 | i       | Analyze word count reliability (*analyze_word_count_reliability*) | Manually completed word counts (from **g**) | Reliability summaries + agreement reports            |
