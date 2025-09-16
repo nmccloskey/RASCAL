@@ -35,7 +35,7 @@ def test_make_timesheets_basic(tmp_path, monkeypatch):
 
     # Fake utterance DataFrame
     uttdf = pd.DataFrame({
-        "UtteranceID": ["U1","U2","U3"],
+        "utterance_id": ["U1","U2","U3"],
         "site": ["TU","TU","TU"],
         "participantID": ["P01","P01","P01"],
         "speaker": ["PAR","INV","PAR"],
@@ -71,7 +71,7 @@ def test_make_timesheets_basic(tmp_path, monkeypatch):
 
     df = captured["df"]
     # Should no longer have utterance-level columns
-    for col in ["UtteranceID","speaker","utterance","comment"]:
+    for col in ["utterance_id","speaker","utterance","comment"]:
         assert col not in df.columns
     # Should have new blank time columns
     for col in ["total_time","clinician_time","client_time"]:
