@@ -223,16 +223,13 @@ flowchart TD
 
     B & F & G & H --> J[j: Unblind samples]
 
-    J --> K[k: Run CoreLex analysis]
-
-    B & H --> K
+    B & H & J --> K[k: Run CoreLex analysis]
 
     C --> L[l: Reselect CU reliability]
     L --> E
 
-    linkStyle 10 stroke:blue
-    linkStyle 11 stroke:red
-    linkStyle 12 stroke:red
+    linkStyle 13 & 14 stroke:blue
+    linkStyle 15 & 16 stroke:red
 ```
 
 ## Notes on Input Transcriptions
