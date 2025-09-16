@@ -22,7 +22,7 @@ RASCAL is a tool designed to facilitate the analysis of speech in clinical aphas
    - **Output:** Blind & unblind, utterance- & sample-level CU coding summaries, word count reliability, core lexicon analysis
 ---
 
-## Try the Web App
+## Web App
 
 You can use RASCAL in your browser — no installation required:
 
@@ -41,7 +41,12 @@ conda create --name rascal_env python=3.9
 conda activate rascal_env
 ```
 
-### 2. Install RASCAL from GitHub:
+### 2. Install RASCAL directly from PyPI:
+```bash
+pip install rascal-speech
+```
+
+### ...or from GitHub:
 ```bash
 pip install git+https://github.com/nmccloskey/rascal.git@main
 ```
