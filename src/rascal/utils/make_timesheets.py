@@ -12,7 +12,7 @@ def make_timesheets(tiers, input_dir, output_dir):
     Workflow
     --------
     1. Search `input_dir` and `output_dir` recursively for files matching
-       "*_Utterances.xlsx".
+       "*Utterances.xlsx".
     2. For each utterance file:
        - Extract partition labels from the filename using `tiers`.
        - Read the utterance DataFrame.
@@ -58,7 +58,7 @@ def make_timesheets(tiers, input_dir, output_dir):
     timesheet_dir = os.path.join(output_dir, 'TimeSheets')
     logging.info(f"Writing time sheet files to {timesheet_dir}")
 
-    utterance_files = list(Path(input_dir).rglob("*_Utterances.xlsx")) + list(Path(output_dir).rglob("*_Utterances.xlsx"))
+    utterance_files = list(Path(input_dir).rglob("*Utterances.xlsx")) + list(Path(output_dir).rglob("*Utterances.xlsx"))
 
     # Convert utterance files to CU coding files.
     for file in tqdm(utterance_files, desc="Generating time table files"):
@@ -77,7 +77,7 @@ def make_timesheets(tiers, input_dir, output_dir):
             logging.error(f"Failed to read file {file}: {e}")
             continue
 
-        time_df = uttdf.drop(columns=['UtteranceID', 'speaker','utterance','comment'])
+        time_df = uttdf.drop(columns=['utterance_id', 'speaker','utterance','comment'])
         logging.debug("Dropped CU-specific columns.")
         time_df.drop_duplicates(inplace=True)
 

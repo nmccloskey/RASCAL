@@ -22,7 +22,7 @@ class TestMakeTimesheets(unittest.TestCase):
 
         # Test output.
         output_dir = os.path.join(base_dir, '..', '..', 'test_data', 'test_step3_output')
-        test_dfs = [pd.read_excel(str(file)) for file in Path(output_dir).rglob("*_SpeakingTimes.xlsx")]
+        test_dfs = [pd.read_excel(str(file)) for file in Path(output_dir).rglob("*SpeakingTimes.xlsx")]
 
         # Call the function.
         dfs = make_timesheets(tiers=tiers, input_dir=input_dir, output_dir="mock/transc_rel_dir", test=True)

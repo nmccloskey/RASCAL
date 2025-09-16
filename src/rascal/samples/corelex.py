@@ -345,8 +345,8 @@ def find_corelex_inputs(input_dir: str, output_dir: str) -> dict:
     """
     Find available inputs for CoreLex in priority order:
       1) *unblindUtteranceData.xlsx (best)
-      2) *_Utterances.xlsx            (fallback)
-    Optionally: *_SpeakingTimes.xlsx  (merge with fallback)
+      2) *Utterances.xlsx            (fallback)
+    Optionally: *SpeakingTimes.xlsx  (merge with fallback)
     
     Returns dict:
       {
@@ -370,12 +370,12 @@ def find_corelex_inputs(input_dir: str, output_dir: str) -> dict:
             logging.info(f"Using unblind utterance data: {p}")
             return {"mode": "unblind", "utt_df": df, "times_df": None, "paths": {"utt": p, "times": []}}
 
-    # 2) Fallback to *_Utterances.xlsx (may be multiple; concat)
+    # 2) Fallback to *Utterances.xlsx (may be multiple; concat)
     utt_files = []
     for d in search_dirs:
-        utt_files += list(d.rglob("*_Utterances.xlsx"))
+        utt_files += list(d.rglob("*Utterances.xlsx"))
     if not utt_files:
-        logging.error("No utterance files found (neither *unblindUtteranceData.xlsx nor *_Utterances.xlsx).")
+        logging.error("No utterance files found (neither *unblindUtteranceData.xlsx nor *Utterances.xlsx).")
         return None
 
     utt_frames = [df for f in utt_files if (df := _read_excel_safely(f)) is not None]
@@ -385,10 +385,10 @@ def find_corelex_inputs(input_dir: str, output_dir: str) -> dict:
     utt_df = pd.concat(utt_frames, ignore_index=True, sort=False)
     logging.info(f"Using concatenated utterances from {len(utt_files)} file(s).")
 
-    # Optional speaking times: *_SpeakingTimes.xlsx (concat)
+    # Optional speaking times: *SpeakingTimes.xlsx (concat)
     time_files = []
     for d in search_dirs:
-        time_files += list(d.rglob("*_SpeakingTimes.xlsx"))
+        time_files += list(d.rglob("*SpeakingTimes.xlsx"))
     times_df = None
     if time_files:
         time_frames = [df for f in time_files if (df := _read_excel_safely(f)) is not None]
@@ -416,7 +416,7 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
     1. Load utterance-level input:
        - If mode = "unblind" (determined with find_corelex_inputs): expects a single "unblindUtteranceData.xlsx"
          containing columns: ['sample_id','narrative','utterance','client_time','c2CU',...].
-       - Else: expects "*_Utterances.xlsx" and "*_SpeakingTimes.xlsx" files.
+       - Else: expects "*Utterances.xlsx" and "*SpeakingTimes.xlsx" files.
          * Utterances are filtered to exclude speakers in `exclude_participants`
            (e.g., {"INV"} to drop investigators).
     2. For each sample x narrative:
@@ -458,7 +458,7 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
     - Narrative values in the data must match keys available in CoreLex norms
       (e.g., "Sandwich", "BrokenWindow", "CatRescue").
     - Speaking time is required for cwpm calculations; in unblind mode this must
-      be a 'client_time' column, in fallback mode it comes from *_SpeakingTimes.xlsx.
+      be a 'client_time' column, in fallback mode it comes from *SpeakingTimes.xlsx.
     - Logs warnings if norms or percentiles cannot be computed.
     """
     exclude_participants = set(exclude_participants or [])
@@ -514,7 +514,7 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
             "sample_id": sample_col, "narrative": narr_col, "utterance": utt_col
         }.items() if c is None]
         if missing:
-            logging.error(f"Required columns missing in *_Utterances.xlsx mode: {missing}")
+            logging.error(f"Required columns missing in *Utterances.xlsx mode: {missing}")
             return
 
         # Filter by narratives in urls

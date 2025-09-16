@@ -85,8 +85,8 @@ def analyze_word_count_reliability(tiers, input_dir, output_dir):
 
     Workflow
     --------
-    1. Collect all "*_WordCounting.xlsx" (coding) and
-       "*_WordCountingReliability.xlsx" (reliability) files under `input_dir`.
+    1. Collect all "*WordCounting.xlsx" (coding) and
+       "*WordCountingReliability.xlsx" (reliability) files under `input_dir`.
     2. For each reliability file, find the coding file with matching tier labels.
     3. Read both DataFrames and clean the reliability frame to
        ['utterance_id','WCrelCom','wordCount'], dropping NaN word counts.
@@ -140,8 +140,8 @@ def analyze_word_count_reliability(tiers, input_dir, output_dir):
         return
 
     # Collect relevant files
-    coding_files = [f for f in Path(input_dir).rglob('*_WordCounting.xlsx')]
-    rel_files = [f for f in Path(input_dir).rglob('*_WordCountingReliability.xlsx')]
+    coding_files = [f for f in Path(input_dir).rglob('*WordCounting.xlsx')]
+    rel_files = [f for f in Path(input_dir).rglob('*WordCountingReliability.xlsx')]
 
     # Match word counting and reliability files
     for rel in tqdm(rel_files, desc="Analyzing word count reliability..."):
@@ -192,7 +192,8 @@ def analyze_word_count_reliability(tiers, input_dir, output_dir):
                     continue
 
                 # Write tables.
-                filename = os.path.join(output_path, '_'.join(partition_labels) + '_WordCountingReliabilityResults.xlsx')
+                lab_str = '_'.join(partition_labels) + '_' if partition_labels else ''
+                filename = os.path.join(output_path, lab_str + 'WordCountingReliabilityResults.xlsx')
                 logging.info(f"Writing word counting reliability results file: {filename}")
                 try:
                     os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -210,7 +211,7 @@ def analyze_word_count_reliability(tiers, input_dir, output_dir):
                 # Write reliability report
                 num_samples_AG = np.nansum(WCmerged['AG'])
                 perc_samples_AG = round((num_samples_AG / len(WCmerged)) * 100, 1)
-                report_path = os.path.join(output_path, f"{'_'.join(partition_labels)}_WordCountReliabilityReport.txt")
+                report_path = os.path.join(output_path, lab_str + "WordCountReliabilityReport.txt")
                 try:
                     with open(report_path, 'w') as report:
                         report.write(f"Word Count Reliability Report for {' '.join(partition_labels)}\n\n")

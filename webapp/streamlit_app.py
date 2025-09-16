@@ -170,3 +170,9 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
                 file_name=f"rascal_{func_str}_output_{timestamp}.zip",
                 mime="application/zip"
             )
+
+def main():
+    import subprocess
+    import sys
+    # Launch this file with streamlit
+    subprocess.run([sys.executable, "-m", "streamlit", "run", __file__])

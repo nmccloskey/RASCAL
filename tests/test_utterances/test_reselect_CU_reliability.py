@@ -11,7 +11,7 @@ except Exception as e:
 
 
 def _make_pair(tmp_path):
-    """Create matching *_CUCoding.xlsx and *_CUReliabilityCoding.xlsx placeholders."""
+    """Create matching *CUCoding.xlsx and *CUReliabilityCoding.xlsx placeholders."""
     input_dir = tmp_path / "input"
     input_dir.mkdir(parents=True, exist_ok=True)
     cu = input_dir / "TU_P01_CUCoding.xlsx"
@@ -94,7 +94,7 @@ def test_reselect_cu_reliability_basic(tmp_path, monkeypatch):
     )
 
     outdir = output_dir / "reselected_CU_reliability"
-    files = list(outdir.glob("*_reselected_CUReliabilityCoding.xlsx"))
+    files = list(outdir.glob("*reselected_CUReliabilityCoding.xlsx"))
     assert len(files) == 1, "Expected a single reselected reliability file."
     assert "df" in captured, "Did not capture written DataFrame."
 
@@ -159,4 +159,4 @@ def test_reselect_cu_reliability_no_available(tmp_path, monkeypatch):
     outdir = output_dir / "reselected_CU_reliability"
     # Directory exists, but no files created
     assert outdir.exists()
-    assert not any(outdir.glob("*_reselected_CUReliabilityCoding.xlsx"))
+    assert not any(outdir.glob("*reselected_CUReliabilityCoding.xlsx"))

@@ -124,5 +124,5 @@ def test_analyze_transcription_reliability_basic(tmp_path, monkeypatch):
     assert len(align_glob) == 1, "Expected a single alignment output file."
 
     # Report exists (partitioned by site)
-    report_glob = list((output_dir / "TranscriptionReliabilityAnalysis").rglob("*_TranscriptionReliabilityReport.txt"))
+    report_glob = list((output_dir / "TranscriptionReliabilityAnalysis").rglob("*TranscriptionReliabilityReport.txt"))
     assert len(report_glob) == 1, "Expected a single reliability report file."

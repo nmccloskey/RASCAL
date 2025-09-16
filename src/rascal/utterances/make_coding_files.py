@@ -82,7 +82,7 @@ def make_CU_coding_files(
     workbooks from previously generated utterance tables.
 
     This function scans both `input_dir` and `output_dir` for files named
-    `*_Utterances.xlsx`, loads each into memory, and produces two Excel files
+    `*Utterances.xlsx`, loads each into memory, and produces two Excel files
     per input (under `{output_dir}/CUCoding/<labels>/`):
 
       1) `<labels>_CUCoding.xlsx` – primary coding workbook
@@ -115,7 +115,7 @@ def make_CU_coding_files(
         (`c3ID` in the reliability file).
 
     input_dir : str or Path
-        Root directory to search (recursively) for `*_Utterances.xlsx`.
+        Root directory to search (recursively) for `*Utterances.xlsx`.
 
     output_dir : str or Path
         Root directory under which `CUCoding/` will be created and outputs
@@ -157,7 +157,7 @@ def make_CU_coding_files(
 
     Notes
     -----
-    - This function reads any `*_Utterances.xlsx` found in **either**
+    - This function reads any `*Utterances.xlsx` found in **either**
       `input_dir` or `output_dir`. This lets you pipe data from earlier steps
       without moving files around.
     - Column expectations for the input utterance table include at least:
@@ -173,7 +173,7 @@ def make_CU_coding_files(
     base_cols = ['c1ID', 'c1SV', 'c1REL', 'c1com', 'c2ID', 'c2SV', 'c2REL', 'c2com']
     CU_coding_dir = os.path.join(output_dir, 'CUCoding')
     logging.info(f"Writing CU coding files to {CU_coding_dir}")
-    utterance_files = list(Path(input_dir).rglob("*_Utterances.xlsx")) + list(Path(output_dir).rglob("*_Utterances.xlsx"))
+    utterance_files = list(Path(input_dir).rglob("*Utterances.xlsx")) + list(Path(output_dir).rglob("*Utterances.xlsx"))
 
     for file in tqdm(utterance_files, desc="Generating CU coding files"):
         logging.info(f"Processing file: {file}")
@@ -262,8 +262,10 @@ def make_CU_coding_files(
         reldf = pd.concat(rel_subsets)
         logging.info(f"Selected {len(set(reldf['sampleID']))} samples for reliability from {len(set(CUdf['sampleID']))} total samples.")
 
-        cu_filename = os.path.join(CU_coding_dir, *labels, '_'.join(labels) + '_CUCoding.xlsx')
-        rel_filename = os.path.join(CU_coding_dir, *labels, '_'.join(labels) + '_CUReliabilityCoding.xlsx')
+        lab_str = '_'.join(labels) + '_' if labels else ''
+
+        cu_filename = os.path.join(CU_coding_dir, *labels, lab_str + 'CUCoding.xlsx')
+        rel_filename = os.path.join(CU_coding_dir, *labels, lab_str + 'CUReliabilityCoding.xlsx')
 
         try:
             os.makedirs(os.path.dirname(cu_filename), exist_ok=True)
@@ -323,7 +325,7 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
 
     Workflow
     --------
-    1. Locate all "*_CUCoding_ByUtterance.xlsx" files under both `input_dir`
+    1. Locate all "*CUCoding_ByUtterance.xlsx" files under both `input_dir`
        and `output_dir`.
     2. For each file:
        - Extract partition labels from filename using `tiers`.
@@ -372,7 +374,7 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
     logging.info(f"Writing word count files to {word_count_dir}")
 
     # Convert utterance-level CU coding files to word counting files.
-    CU_files = list(Path(input_dir).rglob("*_CUCoding_ByUtterance.xlsx")) + list(Path(output_dir).rglob("*_CUCoding_ByUtterance.xlsx"))
+    CU_files = list(Path(input_dir).rglob("*CUCoding_ByUtterance.xlsx")) + list(Path(output_dir).rglob("*CUCoding_ByUtterance.xlsx"))
     for file in tqdm(CU_files, desc="Generating word count coding files"):
 
         logging.info(f"Processing file: {file}")
@@ -426,8 +428,10 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
         WCreldf = pd.concat(rel_subsets)
         logging.info(f"Selected {len(set(WCreldf['sampleID']))} samples for reliability from {len(set(WCdf['sampleID']))} total samples.")
 
+        lab_str = '_'.join(labels) + '_' if labels else ''
+
         # Save word count coding file.
-        filename = os.path.join(word_count_dir, *labels, '_'.join(labels) + '_WordCounting.xlsx')
+        filename = os.path.join(word_count_dir, *labels, lab_str + 'WordCounting.xlsx')
         logging.info(f"Writing word counting file: {filename}")
         try:
             os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -436,7 +440,7 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
             logging.error(f"Failed to write word count coding file {filename}: {e}")
 
         # Word count reliability coding file.
-        filename = os.path.join(word_count_dir, *labels, '_'.join(labels) + '_WordCountingReliability.xlsx')
+        filename = os.path.join(word_count_dir, *labels, lab_str + 'WordCountingReliability.xlsx')
         logging.info(f"Writing word count reliability coding file: {filename}")
         try:
             WCreldf.to_excel(filename, index=False)

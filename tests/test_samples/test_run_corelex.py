@@ -122,7 +122,7 @@ def test_run_corelex_unblind_mode(tmp_path, monkeypatch):
 def test_run_corelex_fallback_utterances_mode(tmp_path, monkeypatch):
     """
     End-to-end check of FALLBACK mode:
-      - Reads *_Utterances.xlsx and *_SpeakingTimes.xlsx
+      - Reads *Utterances.xlsx and *SpeakingTimes.xlsx
       - Excludes an investigator utterance
       - Merges speaking time and computes stats
       - Writes CoreLex output

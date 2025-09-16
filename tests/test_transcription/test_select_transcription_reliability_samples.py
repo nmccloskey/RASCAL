@@ -61,8 +61,8 @@ def test_select_transcription_reliability_samples_creates_files(sample_data):
     assert bu_dir.exists()
 
     # Should contain a Reliability .cha file with only header lines
-    ac_files = list(ac_dir.glob("*_Reliability.cha"))
-    bu_files = list(bu_dir.glob("*_Reliability.cha"))
+    ac_files = list(ac_dir.glob("*Reliability.cha"))
+    bu_files = list(bu_dir.glob("*Reliability.cha"))
     assert len(ac_files) == 1
     assert len(bu_files) == 1
 

@@ -4,6 +4,7 @@ from .main import main as main_core
 
 def main():
     parser = argparse.ArgumentParser(description="RASCAL CLI")
-    parser.add_argument('step', type=str, help="Which step(s) to run (e.g., 'abc', '3', or '1gk')")
+    parser.add_argument('step', type=str, help="Specify the step or function(s) (e.g., '1' or 'abc').")
+    parser.add_argument('--config', type=str, default='config.yaml', help="Path to the config file")
     args = parser.parse_args()
     main_core(args)

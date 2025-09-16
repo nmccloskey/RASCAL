@@ -13,13 +13,13 @@ def unblind_CUs(tiers, input_dir, output_dir):
     Workflow
     --------
     1) Read and vertically concat the following from `input_dir`:
-         - "*_Utterances.xlsx" (expects at least: 'utterance_id','sample_id',
+         - "*Utterances.xlsx" (expects at least: 'utterance_id','sample_id',
            'file','speaker','utterance','comment', and any tier columns by name)
-         - "*_CUCoding_ByUtterance.xlsx" (expects: 'utterance_id','sample_id',
+         - "*CUCoding_ByUtterance.xlsx" (expects: 'utterance_id','sample_id',
            'comment', and CU/coder columns to the **right** of 'comment')
-         - "*_WordCounting.xlsx" (expects: 'utterance_id','sample_id','wordCount','WCcom')
-         - "*_SpeakingTimes.xlsx" (expects: 'sample_id','client_time')
-         - "*_CUCoding_BySample.xlsx" (sample-level CU metrics; merged later)
+         - "*WordCounting.xlsx" (expects: 'utterance_id','sample_id','wordCount','WCcom')
+         - "*SpeakingTimes.xlsx" (expects: 'sample_id','client_time')
+         - "*CUCoding_BySample.xlsx" (sample-level CU metrics; merged later)
     2) Merge utterance-level tables on ['utterance_id','sample_id'] and add speaking time.
        Save as "Summaries/unblindUtteranceData.xlsx".
     3) Produce a **blinded** utterance table by:
@@ -28,7 +28,7 @@ def unblind_CUs(tiers, input_dir, output_dir):
        Save as "Summaries/blindUtteranceData.xlsx" and retain the mapping(s).
     4) Build a sample-level table:
          - From utterances, drop ['utterance_id','speaker','utterance','comment'] and dedupe,
-         - Merge with "*_CUCoding_BySample.xlsx", summed word counts per sample,
+         - Merge with "*CUCoding_BySample.xlsx", summed word counts per sample,
            and speaking time,
          - Compute words-per-minute (wpm) = wordCount / (client_time / 60).
        Save as "Summaries/unblindSampleData.xlsx".
@@ -75,19 +75,19 @@ def unblind_CUs(tiers, input_dir, output_dir):
         os.makedirs(output_dir, exist_ok=True)
 
         # Read utterance data
-        utts = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*_Utterances.xlsx')])
+        utts = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*Utterances.xlsx')])
 
         # Read CU data
-        CUbyUtts = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*_CUCoding_ByUtterance.xlsx')])
+        CUbyUtts = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*CUCoding_ByUtterance.xlsx')])
         CUbyUtts = CUbyUtts.loc[:, ['utterance_id', 'sample_id'] + list(CUbyUtts.iloc[:, CUbyUtts.columns.to_list().index('comment')+1:].columns)]
         logging.info("CU utterance data loaded successfully.")
 
         # Read word count data
-        WCs = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*_WordCounting.xlsx')])
+        WCs = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*WordCounting.xlsx')])
         WCs = WCs.loc[:, ['utterance_id', 'sample_id', 'wordCount', 'WCcom']]
 
         # Read speaking time data
-        times = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*_SpeakingTimes.xlsx')])
+        times = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*SpeakingTimes.xlsx')])
         times = times.loc[:, ['sample_id', 'client_time']]
         logging.info("Speaking time data loaded successfully.")
 
@@ -127,7 +127,7 @@ def unblind_CUs(tiers, input_dir, output_dir):
         logging.info("Utterance data loaded and preprocessed successfully.")
     
         # Load sample CU data.
-        CUbySample = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*_CUCoding_BySample.xlsx')])
+        CUbySample = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*CUCoding_BySample.xlsx')])
         
         # Sum word counts.
         WCs = WCs.groupby(['sample_id']).agg(wordCount=('wordCount', 'sum'))

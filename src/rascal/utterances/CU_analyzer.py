@@ -188,8 +188,8 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms):
 
     input_dir : str | os.PathLike
         Root directory searched (recursively) for:
-          - "*_CUCoding.xlsx" (coder 2)
-          - "*_CUReliabilityCoding.xlsx" (coder 3)
+          - "*CUCoding.xlsx" (coder 2)
+          - "*CUReliabilityCoding.xlsx" (coder 3)
     output_dir : str | os.PathLike
         Base directory where outputs are written under:
           "<output_dir>/CUReliability[/<PARADIGM>]/<partition_labels...>/"
@@ -246,8 +246,8 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms):
         logging.error(f"Failed to create directory {CUReliability_dir}: {e}")
         return
 
-    coding_files = [f for f in Path(input_dir).rglob('*_CUCoding.xlsx')]
-    rel_files = [f for f in Path(input_dir).rglob('*_CUReliabilityCoding.xlsx')]
+    coding_files = [f for f in Path(input_dir).rglob('*CUCoding.xlsx')]
+    rel_files = [f for f in Path(input_dir).rglob('*CUReliabilityCoding.xlsx')]
 
     # Match CU coding and reliability files.
     for rel in tqdm(rel_files, desc="Analyzing CU reliability coding..."):
@@ -341,7 +341,7 @@ def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=[]):
         Example partitioning: site/test/participant labels derived from filenames.
 
     input_dir : str | os.PathLike
-        Root directory searched (recursively) for "*_CUCoding.xlsx" files.
+        Root directory searched (recursively) for "*CUCoding.xlsx" files.
 
     output_dir : str | os.PathLike
         Base directory where outputs are written under:
@@ -398,7 +398,7 @@ def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=[]):
         logging.error(f"Failed to create CU analysis directory {CUanalysis_dir}: {e}")
         return
 
-    coding_files = list(Path(input_dir).rglob('*_CUCoding.xlsx'))
+    coding_files = list(Path(input_dir).rglob('*CUCoding.xlsx'))
 
     for cod in tqdm(coding_files, desc="Analyzing CU coding..."):
         try:
@@ -490,8 +490,8 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
     Reselect a new set of CU reliability samples from coder-2 CU coding tables,
     **excluding** samples already present in the corresponding coder-3 reliability files.
 
-    For each "*_CUCoding.xlsx" found under `input_dir`, this function looks for a
-    sibling reliability file named with the same stem but "*_CUReliabilityCoding.xlsx".
+    For each "*CUCoding.xlsx" found under `input_dir`, this function looks for a
+    sibling reliability file named with the same stem but "*CUReliabilityCoding.xlsx".
     It computes the set difference between all samples coded by coder-2 and the samples
     already present in coder-3's reliability table, randomly selects a fraction of the
     total unique samples, and emits a fresh reliability sheet restricted to the newly
@@ -501,7 +501,7 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
     ----------
     input_dir : str | os.PathLike
         Root directory searched (recursively) for coder-2 CU coding files named
-        "*_CUCoding.xlsx" and their paired "*_CUReliabilityCoding.xlsx".
+        "*CUCoding.xlsx" and their paired "*CUReliabilityCoding.xlsx".
 
     output_dir : str | os.PathLike
         Base directory where outputs are written under:
@@ -559,7 +559,7 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
         logging.error(f"Failed to create directory {reselected_CU_reliability_dir}: {e}")
         return
 
-    coding_files = [f for f in Path(input_dir).rglob('*_CUCoding.xlsx')]
+    coding_files = [f for f in Path(input_dir).rglob('*CUCoding.xlsx')]
 
     for cu_file in tqdm(coding_files, desc="Reselecting CU reliability samples"):
         try:
