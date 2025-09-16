@@ -233,6 +233,7 @@ flowchart TD
     linkStyle 15 stroke:red
     linkStyle 16 stroke:red
 ```
+Black arrows indicate the central analysis pipeline. Red arrows represent the path required if CU reliability coding fails to meet agreement threshold and needs redone. Blue arrows show the alternate inputs to CoreLex analysis: function **b** output is required, and **h** output is optional.
 
 ## Notes on Input Transcriptions
 
