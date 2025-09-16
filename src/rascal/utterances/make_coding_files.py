@@ -251,10 +251,10 @@ def make_CU_coding_files(
                 # Drop c1* value columns
                 relsegdf.drop(columns=['c1SV', 'c1REL'], inplace=True, errors='ignore')
 
-            # Ensure expected c3 columns exist
-            for col in ['c3SV', 'c3REL', 'c3com']:
-                if col not in relsegdf.columns:
-                    relsegdf[col] = np.nan
+                # Ensure expected c3 columns exist
+                for col in ['c3SV', 'c3REL', 'c3com']:
+                    if col not in relsegdf.columns:
+                        relsegdf[col] = np.nan
 
             relsegdf['c3ID'] = ass[2]
             rel_subsets.append(relsegdf)
