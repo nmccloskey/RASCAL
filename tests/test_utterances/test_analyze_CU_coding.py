@@ -57,8 +57,8 @@ def test_analyze_CU_coding_base_columns(tmp_path, monkeypatch, tiers):
 
     # Stub read_excel -> only base columns present
     base_df = pd.DataFrame({
-        "UtteranceID": ["U1", "U2", "U3"],
-        "sampleID":    ["S1", "S1", "S1"],
+        "utterance_id": ["U1", "U2", "U3"],
+        "sample_id":    ["S1", "S1", "S1"],
         "c2SV":  [1, 0, 1],
         "c2REL": [1, 0, 1],
         # Droppable columns (ensure harmless)
@@ -103,14 +103,14 @@ def test_analyze_CU_coding_base_columns(tmp_path, monkeypatch, tiers):
     df = captures["summary"]
     # Column names include 'None' suffix (as implemented)
     expected_cols = {
-        "sampleID",
+        "sample_id",
         "no_utt_None", "pSV_None", "mSV_None",
         "pREL_None", "mREL_None", "CU_None", "percCU_None",
     }
     assert expected_cols.issubset(df.columns), f"Summary missing expected columns: {expected_cols - set(df.columns)}"
 
     # Values: 3 utts, 2 positives, 66.667% CU
-    row = df.loc[df["sampleID"] == "S1"].iloc[0]
+    row = df.loc[df["sample_id"] == "S1"].iloc[0]
     assert row["no_utt_None"] == 3
     assert row["pSV_None"] == 2
     assert row["pREL_None"] == 2
@@ -121,7 +121,7 @@ def test_analyze_CU_coding_base_columns(tmp_path, monkeypatch, tiers):
 def test_analyze_CU_coding_multi_paradigms_introspection(tmp_path, monkeypatch, tiers):
     """
     When suffixed columns exist and CU_paradigms is None, the function should
-    introspect paradigms (e.g., 'AAE', 'SAE'), compute each, and merge on sampleID.
+    introspect paradigms (e.g., 'AAE', 'SAE'), compute each, and merge on sample_id.
     """
     input_dir = _write_coding_file(tmp_path)
     output_dir = tmp_path / "out2"
@@ -129,8 +129,8 @@ def test_analyze_CU_coding_multi_paradigms_introspection(tmp_path, monkeypatch, 
 
     # Build a DF with two paradigms that yield different CU% to verify correctness
     multi_df = pd.DataFrame({
-        "UtteranceID": ["U1", "U2", "U3"],
-        "sampleID":    ["S1", "S1", "S1"],
+        "utterance_id": ["U1", "U2", "U3"],
+        "sample_id":    ["S1", "S1", "S1"],
         # SAE -> only first utt is CU => 33.333%
         "c2SV_SAE":  [1, 0, 0],
         "c2REL_SAE": [1, 0, 0],
@@ -168,7 +168,7 @@ def test_analyze_CU_coding_multi_paradigms_introspection(tmp_path, monkeypatch, 
     # Check merged summary includes both paradigms with expected values
     df = captures["summary"]
     needed = {
-        "sampleID",
+        "sample_id",
         # AAE columns
         "no_utt_AAE", "pSV_AAE", "pREL_AAE", "CU_AAE", "percCU_AAE",
         # SAE columns
@@ -176,7 +176,7 @@ def test_analyze_CU_coding_multi_paradigms_introspection(tmp_path, monkeypatch, 
     }
     assert needed.issubset(df.columns), f"Summary missing expected columns: {needed - set(df.columns)}"
 
-    row = df.loc[df["sampleID"] == "S1"].iloc[0]
+    row = df.loc[df["sample_id"] == "S1"].iloc[0]
     # AAE
     assert row["no_utt_AAE"] == 3
     assert row["CU_AAE"] == 2

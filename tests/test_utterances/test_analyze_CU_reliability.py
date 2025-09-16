@@ -48,8 +48,8 @@ def _stub_read_excel(monkeypatch):
     Includes both base and suffixed (SAE/AAE) columns so we can reuse it across tests.
     """
     coding_df = pd.DataFrame({
-        "UtteranceID": ["U1", "U2", "U3"],
-        "sampleID":    ["S1", "S1", "S1"],
+        "utterance_id": ["U1", "U2", "U3"],
+        "sample_id":    ["S1", "S1", "S1"],
         # Base columns (used for 0/1-paradigm paths)
         "c2SV":  [1, 0, 1],
         "c2REL": [1, 0, 1],
@@ -61,7 +61,7 @@ def _stub_read_excel(monkeypatch):
     })
 
     reliability_df = pd.DataFrame({
-        "UtteranceID": ["U1", "U2", "U3"],
+        "utterance_id": ["U1", "U2", "U3"],
         # Base columns
         "c3SV":  [1, 0, 0],  # U3 disagrees with coder 2
         "c3REL": [1, 0, 0],

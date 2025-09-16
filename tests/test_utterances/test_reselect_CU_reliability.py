@@ -35,8 +35,8 @@ def test_reselect_cu_reliability_basic(tmp_path, monkeypatch):
     # --- Build synthetic CU (coder2) & REL (used samples) dataframes ---
     # All columns are ordered so that slicing up to 'comment' works.
     df_cu = pd.DataFrame({
-        "UtteranceID": ["U1","U2","U3","U4","U5","U6"],
-        "sampleID":    ["S1","S1","S2","S2","S3","S3"],
+        "utterance_id": ["U1","U2","U3","U4","U5","U6"],
+        "sample_id":    ["S1","S1","S2","S2","S3","S3"],
         "speaker":     ["PAR"]*6,
         "utterance":   ["a","b","c","d","e","f"],
         "comment":     ["","","","","",""],   # slice anchor
@@ -55,8 +55,8 @@ def test_reselect_cu_reliability_basic(tmp_path, monkeypatch):
 
     # Reliability file already used S1; S2 and S3 remain available
     df_rel = pd.DataFrame({
-        "UtteranceID": ["U1","U2"],
-        "sampleID":    ["S1","S1"],
+        "utterance_id": ["U1","U2"],
+        "sample_id":    ["S1","S1"],
         "c3SV":        [1,0],
         "c3REL":       [1,0],
     })
@@ -100,7 +100,7 @@ def test_reselect_cu_reliability_basic(tmp_path, monkeypatch):
 
     df = captured["df"]
     # Only rows for S2 should be present (two utterances)
-    assert set(df["sampleID"].unique()) == {"S2"}
+    assert set(df["sample_id"].unique()) == {"S2"}
     assert len(df) == 2
 
     # Metadata and wipes
@@ -113,7 +113,7 @@ def test_reselect_cu_reliability_basic(tmp_path, monkeypatch):
         assert df[col].isna().all(), f"{col} was not wiped to NaN"
 
     # Shared columns retained
-    assert set(["UtteranceID","sampleID","speaker","utterance","comment"]).issubset(df.columns)
+    assert set(["utterance_id","sample_id","speaker","utterance","comment"]).issubset(df.columns)
 
 
 def test_reselect_cu_reliability_no_available(tmp_path, monkeypatch):
@@ -122,8 +122,8 @@ def test_reselect_cu_reliability_no_available(tmp_path, monkeypatch):
     output_dir = tmp_path / "out2"
 
     df_cu = pd.DataFrame({
-        "UtteranceID": ["U1","U2","U3","U4"],
-        "sampleID":    ["S1","S1","S2","S2"],
+        "utterance_id": ["U1","U2","U3","U4"],
+        "sample_id":    ["S1","S1","S2","S2"],
         "speaker":     ["PAR"]*4,
         "utterance":   ["a","b","c","d"],
         "comment":     ["","","",""],
@@ -134,8 +134,8 @@ def test_reselect_cu_reliability_no_available(tmp_path, monkeypatch):
     })
     # Reliability already used S1 and S2 -> no available
     df_rel = pd.DataFrame({
-        "UtteranceID": ["U1","U2","U3","U4"],
-        "sampleID":    ["S1","S1","S2","S2"],
+        "utterance_id": ["U1","U2","U3","U4"],
+        "sample_id":    ["S1","S1","S2","S2"],
     })
 
     def fake_read_excel(path, *a, **k):

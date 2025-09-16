@@ -20,11 +20,11 @@ class FakeTier:
 
 def _mk_utt_df():
     # Minimal columns this function expects downstream
-    # Two sampleIDs, three rows (PAR + INV in S0, PAR in S1)
+    # Two sample_ids, three rows (PAR + INV in S0, PAR in S1)
     return pd.DataFrame({
         "site": ["AC", "AC", "AC"],
         "test": ["Pre", "Pre", "Pre"],
-        "sampleID": ["ACPreS0", "ACPreS0", "ACPreS1"],
+        "sample_id": ["ACPreS0", "ACPreS0", "ACPreS1"],
         "speaker": ["PAR", "INV", "PAR"],
         "utterance": ["hi", "ok", "bye"],
         "comment": [None, None, None],

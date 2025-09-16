@@ -161,7 +161,7 @@ def make_CU_coding_files(
       `input_dir` or `output_dir`. This lets you pipe data from earlier steps
       without moving files around.
     - Column expectations for the input utterance table include at least:
-      `['sampleID', 'speaker']` and any tier columns used for labeling.
+      `['sample_id', 'speaker']` and any tier columns used for labeling.
     - Randomness is used for selecting reliability subsets; seed externally or
       monkeypatch `random.sample` for deterministic tests.
     """
@@ -208,16 +208,16 @@ def make_CU_coding_files(
                         new_col = f"{prefix}{tag}_{paradigm}"
                         CUdf[new_col] = CUdf.apply(lambda row: 'NA' if row['speaker'] in exclude_participants else np.nan, axis=1)
 
-        unique_sample_ids = list(CUdf['sampleID'].drop_duplicates(keep='first'))
+        unique_sample_ids = list(CUdf['sample_id'].drop_duplicates(keep='first'))
         segments = segment(unique_sample_ids, n=len(coders))
         rel_subsets = []
 
         for seg, ass in zip(segments, assignments):
-            CUdf.loc[CUdf['sampleID'].isin(seg), 'c1ID'] = ass[0]
-            CUdf.loc[CUdf['sampleID'].isin(seg), 'c2ID'] = ass[1]
+            CUdf.loc[CUdf['sample_id'].isin(seg), 'c1ID'] = ass[0]
+            CUdf.loc[CUdf['sample_id'].isin(seg), 'c2ID'] = ass[1]
 
             rel_samples = random.sample(seg, k=max(1, round(len(seg) * frac)))
-            relsegdf = CUdf[CUdf['sampleID'].isin(rel_samples)].copy()
+            relsegdf = CUdf[CUdf['sample_id'].isin(rel_samples)].copy()
 
             relsegdf.drop(columns=['c1ID', 'c1com'], inplace=True, errors='ignore')
 
@@ -260,7 +260,7 @@ def make_CU_coding_files(
             rel_subsets.append(relsegdf)
 
         reldf = pd.concat(rel_subsets)
-        logging.info(f"Selected {len(set(reldf['sampleID']))} samples for reliability from {len(set(CUdf['sampleID']))} total samples.")
+        logging.info(f"Selected {len(set(reldf['sample_id']))} samples for reliability from {len(set(CUdf['sample_id']))} total samples.")
 
         lab_str = '_'.join(labels) + '_' if labels else ''
 
@@ -335,7 +335,7 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
        - Compute 'wordCount' for each utterance using `count_words(utterance, d)`
          if c2CU is not NaN, otherwise assign "NA".
        - Assign coders to samples via `assign_CU_coders(coders)` and
-         distribute sampleIDs across coders using `segment(...)`.
+         distribute sample_ids across coders using `segment(...)`.
        - Select a fraction (`frac`) of samples for reliability per coder pair.
          For these, rename 'c1ID'→'c2ID' and 'WCcom'→'WCrelCom',
          and assign the second coder ID.
@@ -354,7 +354,7 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
         Tier objects with `.match(filename, ...)` and `.partition` attributes.
         Used to derive subdirectories and labels for outputs.
     frac : float
-        Fraction of unique sampleIDs to include in the reliability subset
+        Fraction of unique sample_ids to include in the reliability subset
         (minimum 1 per coder assignment).
     coders : list[str]
         Coder IDs; first two are used for assignments.
@@ -412,21 +412,21 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
         assignments = assign_CU_coders(coders)
 
         # Select samples for reliability.
-        unique_sample_ids = list(WCdf['sampleID'].drop_duplicates(keep='first'))
+        unique_sample_ids = list(WCdf['sample_id'].drop_duplicates(keep='first'))
         segments = segment(unique_sample_ids, n=len(coders))
 
         # Assign coders and prep reliability file.
         rel_subsets = []
         for seg, ass in zip(segments, assignments):
-            WCdf.loc[WCdf['sampleID'].isin(seg), 'c1ID'] = ass[0]
+            WCdf.loc[WCdf['sample_id'].isin(seg), 'c1ID'] = ass[0]
             rel_samples = random.sample(seg, k=max(1, round(len(seg) * frac)))
-            relsegdf = WCdf[WCdf['sampleID'].isin(rel_samples)].copy()
+            relsegdf = WCdf[WCdf['sample_id'].isin(rel_samples)].copy()
             relsegdf.rename(columns={'c1ID': 'c2ID', 'WCcom': 'WCrelCom'}, inplace=True)
             relsegdf['c2ID'] = ass[1]
             rel_subsets.append(relsegdf)
 
         WCreldf = pd.concat(rel_subsets)
-        logging.info(f"Selected {len(set(WCreldf['sampleID']))} samples for reliability from {len(set(WCdf['sampleID']))} total samples.")
+        logging.info(f"Selected {len(set(WCreldf['sample_id']))} samples for reliability from {len(set(WCdf['sample_id']))} total samples.")
 
         lab_str = '_'.join(labels) + '_' if labels else ''
 
