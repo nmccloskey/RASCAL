@@ -228,8 +228,10 @@ flowchart TD
     C --> L[l: Reselect CU reliability]
     L --> E
 
-    linkStyle 13 & 14 stroke:blue
-    linkStyle 15 & 16 stroke:red
+    linkStyle 13 stroke:blue
+    linkStyle 14 stroke:blue
+    linkStyle 15 stroke:red
+    linkStyle 16 stroke:red
 ```
 
 ## Notes on Input Transcriptions
