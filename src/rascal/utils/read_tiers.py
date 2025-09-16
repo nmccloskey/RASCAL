@@ -4,15 +4,37 @@ from .tier import Tier
 
 def read_tiers(config_tiers: dict):
     """
-    Parses tier definitions from a config dict and returns a dict[str, Tier].
+    Parse tier definitions from a configuration dictionary into Tier objects.
 
-    Rules:
-      - If len(values) > 1: build a regex from literal values (escaped, joined).
-      - If len(values) == 1: treat that single string as a user-provided regex and compile it directly.
+    Behavior:
+      - Input must be a dictionary where each key is a tier name and each value
+        is either:
+          • A dict with keys:
+              - "values": list[str] | str (required)
+              - "partition": bool (optional, default False)
+              - "blind": bool (optional, default False)
+          • A legacy list[str] or str (shorthand for {"values": ...}).
+      - If "values" contains multiple items, each value is treated literally
+        (escaped if necessary). The Tier will match any of them.
+      - If "values" contains a single item, it is treated as a user-provided
+        regular expression. The function validates that the regex compiles.
+      - If "values" is empty or missing, a warning is logged and the Tier is
+        created with no values (it will never match).
 
     Returns:
       dict[str, Tier]
+        Mapping from tier name → Tier object with attributes:
+          - name: str
+          - values: list[str]
+          - partition: bool
+          - blind: bool
+
+    Logging:
+      - Logs warnings for tiers with no values.
+      - Logs errors if config_tiers is not a dict or regex compilation fails.
+      - Logs info for partition/blind flags and regex behavior.
     """
+
     if not isinstance(config_tiers, dict):
         logging.error("Invalid tier structure in config. Expected a dictionary.")
         return {}
