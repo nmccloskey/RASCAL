@@ -184,7 +184,7 @@ rascal f
 
 ### Pipeline Commands
 
-| Command | Step (Python function)                       | Input                                  | Output (described)                                  |
+| Command | Function (name)                       | Input                                  | Output (described)                                  |
 |---------|----------------------------------------------|----------------------------------------|-----------------------------------------------------|
 | a       | Select transcription reliability samples (*select_transcription_reliability_samples*) | Raw `.cha` files                       | Sample list + paired reliability `.cha` files        |
 | b       | Prepare utterance tables (*prepare_utterance_dfs*) | Raw `.cha` files                       | Utterance spreadsheets                              |

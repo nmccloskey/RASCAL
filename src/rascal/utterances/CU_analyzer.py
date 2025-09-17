@@ -563,7 +563,7 @@ def reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
 
     for cu_file in tqdm(coding_files, desc="Reselecting CU reliability samples"):
         try:
-            rel_file = cu_file.with_name(cu_file.name.replace('_CUCoding', '_CUReliabilityCoding'))
+            rel_file = cu_file.with_name(cu_file.name.replace('CUCoding', 'CUReliabilityCoding'))
             if not rel_file.exists():
                 logging.warning(f"No reliability file found for {cu_file.name}. Skipping.")
                 continue

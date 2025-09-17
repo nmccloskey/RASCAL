@@ -190,7 +190,6 @@ def make_CU_coding_files(
             continue
 
         CUdf = uttdf.drop(columns=[col for col in ['file'] + [t for t in tiers if t not in stim_cols] if col in uttdf.columns]).copy()
-        logging.debug("Dropped 'file', 'test', and 'participantID' columns.")
 
         # Set up base coding columns
         for col in base_cols:
