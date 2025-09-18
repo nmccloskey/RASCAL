@@ -222,7 +222,13 @@ Below is the current RASCAL pipeline, represented as a flow chart:
 
 ![RASCAL Flowchart](images/RASCAL_workflowchart.svg)
 
-Black arrows indicate the central analysis pipeline. Red arrows represent the path required if CU reliability coding fails to meet agreement threshold and needs redone. Blue arrows show the alternate inputs to CoreLex analysis: function **b** output is required, and **h** output is optional.
+Stages 2, 5, & 8 are entirely manual. Dashed arrows show the alternate inputs to function **n**: function **d** output is required, and **f** output is optional.
+
+The minimal command for batched CoreLex analysis of .cha-formatted transcripts is:
+
+```bash
+rascal dn
+```
 
 ## Notes on Input Transcriptions
 
