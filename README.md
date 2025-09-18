@@ -197,7 +197,7 @@ rascal f
 
 ### Pipeline Commands
 
-| Command | Function (name)                                   | Input                                        | Output (described)                                    |
+| Command | Function (name)                                   | Input                                        | Output                                    |
 |---------|---------------------------------------------------|----------------------------------------------|-------------------------------------------------------|
 | a       | Select transcription reliability samples (*select_transcription_reliability_samples*) | Raw `.cha` files                             | Reliability sample list + paired reliability `.cha` files |
 | b       | Analyze transcription reliability (*analyze_transcription_reliability*) | Reliability `.cha` pairs                     | Agreement metrics + alignment text reports             |
