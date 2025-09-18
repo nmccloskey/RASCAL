@@ -8,18 +8,31 @@ RASCAL is a tool designed to facilitate the analysis of speech in clinical aphas
 
 ### **BU-TU Semi-Automated Monologic Narrative Analysis Overview**
 
-1. **Step 0 (Manual):** Complete transcription for all samples.
-2. **Step 1 (RASCAL):**
+- **Stage 0 (ASR + Manual):** Complete transcription for all samples.
+- **Stage 1 (RASCAL):**
    - **Input:** Transcriptions (`.cha`)
-   - **Output:** Transcription reliability files, utterance files, CU coding and reliability files
-3. **Step 2 (Manual):** CU coding and reliability checks
-4. **Step 3 (RASCAL):**
-   - **Input:** Original & reliability transcriptions, CU coding & reliability files
-   - **Output:** Reliability reports, coding summaries, word count & reliability files, speaking time file
-5. **Step 4 (Manual):** Finalize word counts and record speaking times
-6. **Step 5 (RASCAL):**
-   - **Input:** Utterance file, utterance-level CU summary, speaking times, word counts & reliability
-   - **Output:** Blind & unblind, utterance- & sample-level CU coding summaries, word count reliability, core lexicon analysis
+   - **Output:** Transcription reliability samples
+- **Stage 2 (Manual):** Transcribe reliability samples
+- **Stage 3 (RASCAL):**
+   - **Input:** Original & reliability transcriptions
+   - **Output:** Transcription reliability reports, reselected reliability samples
+- **Stage 4 (RASCAL):**
+   - **Input:** Transcriptions (`.cha`)
+   - **Output:** Utterance tables, CU coding files, timesheets
+- **Stage 5 (Manual):** CU coding and reliability checks
+- **Stage 6 (RASCAL):**
+   - **Input:** Manually completed CU coding files
+   - **Output:** CU reliability analysis, reselected CU reliability samples
+- **Stage 7 (RASCAL):**
+   - **Input:** CU coding
+   - **Output:** CU coding summaries, word count files
+- **Stage 8 (Manual):** Word counting and reliability checks
+- **Stage 9 (RASCAL):**
+    - **Input:** Manually completed word count files
+    - **Output:** Word count reliability analysis, reselected WC reliability samples
+- **Stage 10 (RASCAL):**
+    - **Input:** CU and word count data
+    - **Output:** Blind & unblind summaries, CoreLex analysis
 ---
 
 ## Web App
@@ -184,60 +197,31 @@ rascal f
 
 ### Pipeline Commands
 
-| Command | Function (name)                       | Input                                  | Output (described)                                  |
-|---------|----------------------------------------------|----------------------------------------|-----------------------------------------------------|
-| a       | Select transcription reliability samples (*select_transcription_reliability_samples*) | Raw `.cha` files                       | Sample list + paired reliability `.cha` files        |
-| b       | Prepare utterance tables (*prepare_utterance_dfs*) | Raw `.cha` files                       | Utterance spreadsheets                              |
-| c       | Create CU coding files (*make_CU_coding_files*) | Utterance tables (from **b**)          | CU coding + reliability coding spreadsheets         |
-| d       | Analyze transcription reliability (*analyze_transcription_reliability*) | Reliability `.cha` pairs               | Agreement metrics + alignment text reports           |
-| e       | Analyze CU reliability (*analyze_CU_reliability*) | Manually completed CU coding (from **c**) | Reliability summary tables + reports                 |
-| f       | Analyze CU coding (*analyze_CU_coding*)      | Manually completed CU coding (from **c**) | Sample- and utterance-level CU summaries                           |
-| g       | Create word count files (*make_word_count_files*) | CU coding tables (from **f**)          | Word count + reliability spreadsheets               |
-| h       | Make timesheets (*make_timesheets*)          | Utterance tables (from **b**)          | Speaking time entry sheets                          |
-| i       | Analyze word count reliability (*analyze_word_count_reliability*) | Manually completed word counts (from **g**) | Reliability summaries + agreement reports            |
-| j       | Unblind samples (*unblind_CUs*)              | Utterance tables (**b**), CU coding (**c**), timesheets (**h**), word counts (**i**) | Blind + unblind utterance and sample summaries       |
-| k       | Run CoreLex analysis (*run_corelex*)         | Sample summaries (from **j**)          | CoreLex coverage and percentile metrics             |
-| l       | Reselect CU reliability (*reselect_CU_reliability*) | Manually completed CU coding (from **c**) | New reliability subsets                             |
-
-### Step mapping:
-| Step | Letters | Description                                |
-|------|----------|--------------------------------------------|
-| 1    | a, b, c  | Read CHA, select reliability, prepare utterances |
-| 3    | d–h      | Analyze transcription & CU, word counts, timesheets |
-| 5    | i, j, k  | Word count reliability, unblind CUs, CoreLex |
+| Command | Function (name)                                   | Input                                        | Output (described)                                    |
+|---------|---------------------------------------------------|----------------------------------------------|-------------------------------------------------------|
+| a       | Select transcription reliability samples (*select_transcription_reliability_samples*) | Raw `.cha` files                             | Reliability sample list + paired reliability `.cha` files |
+| b       | Analyze transcription reliability (*analyze_transcription_reliability*) | Reliability `.cha` pairs                     | Agreement metrics + alignment text reports             |
+| c       | Reselect transcription reliability (*reselect_transcription_reliability_samples*) | Original + reliability transcription files   | New reliability subsets                               |
+| d       | Prepare utterance tables (*prepare_utterance_dfs*) | Raw `.cha` files                             | Utterance spreadsheets                                |
+| e       | Make CU coding files (*make_CU_coding_files*)     | Utterance tables (from **d**)                | CU coding spreadsheets                                |
+| f       | Make timesheets (*make_timesheets*)               | Utterance tables (from **d**)                | Speaking time entry sheets                            |
+| g       | Analyze CU reliability (*analyze_CU_reliability*) | Manually completed CU coding (from **e**)    | Reliability summary tables + reports                   |
+| h       | Reselect CU reliability (*reselect_CU_reliability*) | Manually completed CU coding (from **e**)    | New reliability subsets                               |
+| i       | Analyze CU coding (*analyze_CU_coding*)           | Manually completed CU coding (from **e**)    | Sample- and utterance-level CU summaries              |
+| j       | Make word count files (*make_word_count_files*)   | CU coding tables (from **i**)                | Word count spreadsheets                               |
+| k       | Analyze word count reliability (*analyze_word_count_reliability*) | Manually completed word counts (from **j**) | Reliability summaries + agreement reports              |
+| l       | Reselect WC reliability (*reselect_WC_reliability*) | Manually completed word counts (from **j**) | New reliability subsets                               |
+| m       | Unblind samples (*unblind_CUs*)                   | CU and WC coding results                     | Blind + unblind utterance and sample summaries         |
+| n       | Run CoreLex analysis (*run_corelex*)              | CU and WC sample summaries                   | CoreLex coverage and percentile metrics                |
 
 ---
 
-## 📊 RASCAL Workflow Overview
+## 📊 RASCAL Workflow
 
-```mermaid
-flowchart TD
-    A[a: Select transcription reliability samples] --> B[b: Prepare utterance tables]
-    A --> D[d: Analyze transcription reliability]
+Below is the current RASCAL pipeline, represented as a flow chart:
 
-    B --> C[c: Create CU coding files]
+![RASCAL Flowchart](images/RASCAL_flowchart.png)
 
-    
-    C --> E[e: Analyze CU reliability]
-    C --> F[f: Analyze CU coding]
-
-    F --> G[g: Create word count files]
-    B --> H[h: Make timesheets]
-
-    G --> I[i: Analyze word count reliability]
-
-    B & F & G & H --> J[j: Unblind samples]
-
-    B & H & J --> K[k: Run CoreLex analysis]
-
-    C --> L[l: Reselect CU reliability]
-    L --> E
-
-    linkStyle 12 stroke:blue
-    linkStyle 13 stroke:blue
-    linkStyle 15 stroke:red
-    linkStyle 16 stroke:red
-```
 Black arrows indicate the central analysis pipeline. Red arrows represent the path required if CU reliability coding fails to meet agreement threshold and needs redone. Blue arrows show the alternate inputs to CoreLex analysis: function **b** output is required, and **h** output is optional.
 
 ## Notes on Input Transcriptions

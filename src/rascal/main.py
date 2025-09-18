@@ -135,7 +135,7 @@ def main(args):
     if 'f' in steps_to_run:
         run_make_timesheets(tiers, input_dir, output_dir)
 
-    # Step 6.
+    # Stage 6.
     if 'g' in steps_to_run:
         run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms)
     if 'h' in steps_to_run:
