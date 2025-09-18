@@ -84,7 +84,7 @@ def unblind_CUs(tiers, input_dir, output_dir):
 
         # Read word count data
         WCs = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*WordCounting.xlsx')])
-        WCs = WCs.loc[:, ['utterance_id', 'sample_id', 'wordCount', 'WCcom']]
+        WCs = WCs.loc[:, ['utterance_id', 'sample_id', 'word_count', 'wc_com']]
 
         # Read speaking time data
         times = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*SpeakingTimes.xlsx')])
@@ -130,7 +130,7 @@ def unblind_CUs(tiers, input_dir, output_dir):
         CUbySample = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*CUCoding_BySample.xlsx')])
         
         # Sum word counts.
-        WCs = WCs.groupby(['sample_id']).agg(wordCount=('wordCount', 'sum'))
+        WCs = WCs.groupby(['sample_id']).agg(wordCount=('word_count', 'sum'))
         logging.info("Word count data aggregated successfully.")
 
         merged_samples = utts.copy()
@@ -140,7 +140,7 @@ def unblind_CUs(tiers, input_dir, output_dir):
         logging.info("Sample data merged successfully.")
 
         # Calculate words per minute
-        merged_samples['wpm'] = merged_samples.apply(lambda row: round(row['wordCount'] / (row['client_time'] / 60), 2), axis=1)
+        merged_samples['wpm'] = merged_samples.apply(lambda row: round(row['word_count'] / (row['client_time'] / 60), 2), axis=1)
         logging.info("Words per minute calculated successfully.")
 
         # Save unblinded summary

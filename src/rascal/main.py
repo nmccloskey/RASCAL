@@ -71,9 +71,13 @@ def run_run_corelex(input_dir, output_dir, exclude_participants):
     from .samples.corelex import run_corelex
     run_corelex(input_dir=input_dir, output_dir=output_dir, exclude_participants=exclude_participants)
 
-def run_reselect_CU_reliability(input_dir, output_dir, coder3='3', frac=0.2):
-    from .utterances.CU_analyzer import reselect_CU_reliability
-    reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac)
+def run_reselect_CU_reliability(tiers, input_dir, output_dir, rel_type, frac):
+    from .utterances.make_coding_files import reselect_CU_WC_reliability
+    reselect_CU_WC_reliability(tiers, input_dir, output_dir, rel_type, frac)
+
+def run_reselect_WC_reliability(tiers, input_dir, output_dir, rel_type, frac):
+    from .utterances.make_coding_files import reselect_CU_WC_reliability
+    reselect_CU_WC_reliability(tiers, input_dir, output_dir, rel_type, frac)
 
 
 def main(args):
@@ -97,25 +101,21 @@ def main(args):
     os.makedirs(input_dir, exist_ok=True)
 
     tiers = run_read_tiers(config.get('tiers', {}))
-    
-    step_mapping = {
-        '1': 'abc',
-        '3': 'defgh',
-        '5': 'ijk'
-    }
 
-    steps_to_run = ''.join(step_mapping.get(s, s) for s in args.step)
+    steps_to_run = args.step
 
     # --- Timestamped output folder ---
     timestamp = datetime.now().strftime("%y%m%d_%H%M")
     output_dir = os.path.join(output_dir, f"rascal_{steps_to_run}_output_{timestamp}")
     os.makedirs(output_dir, exist_ok=True)
 
-    # Step 1.
+    # Stage 1.
     if 'a' in steps_to_run or 'b' in steps_to_run:
         chats = run_read_cha_files(input_dir)
     if 'a' in steps_to_run:
         run_select_transcription_reliability_samples(tiers, chats, frac, output_dir)
+
+    # Stage 3.
     if 'b' in steps_to_run:
         run_prepare_utterance_dfs(tiers, chats, output_dir)
     if 'c' in steps_to_run:
@@ -141,10 +141,11 @@ def main(args):
     if 'k' in steps_to_run:
         run_run_corelex(input_dir, output_dir, exclude_participants)
 
-    # Other: CU reliability reselection.
+    # Other: reliability reselection.
     if 'l' in steps_to_run:
-        coder3 = coders[2] or '3'
-        run_reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac)
+        run_reselect_CU_reliability(tiers, input_dir, output_dir, "CU", frac)
+    if 'm' in steps_to_run:
+        run_reselect_WC_reliability(tiers, input_dir, output_dir, "WC", frac)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process the step argument for main script.")
