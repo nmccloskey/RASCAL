@@ -454,98 +454,61 @@ def reselect_CU_WC_reliability(
     tiers,
     input_dir,
     output_dir,
-    rel_type: str = "CU",   # "CU" or "WC"
+    rel_type: str = "CU",
     frac: float = 0.2,
     rng_seed: int = 88,
 ):
     """
-    Reselect a new set of reliability samples for either CU or Word Counting (WC),
-    *excluding* samples already present across any existing reliability files
-    that match the same tier labels.
+    Reselect reliability samples for either Conversation Units (CU) or Word Counting (WC),
+    excluding any sample_id already present in existing reliability files that match the
+    same tier labels.
 
-    For each original coder-2 coding file (CU or WC) found under `input_dir`,
-    this function gathers **all** paired reliability sheets that match by tier
-    labels (so multiple failed attempts are supported), computes the set
-    difference between all coder-2 samples and samples already used in any
-    reliability sheet, randomly selects a fraction of the total unique samples,
-    and writes a fresh reliability workbook restricted to those new sample_ids.
+    Operation
+    ---------
+    - Recursively finds original coder-2 tables and their paired reliability tables under
+      `input_dir`. Matching is by tier labels derived from filenames via `tiers`
+      (tries `t.match(name)` per tier); if `tiers` is empty, falls back to a simple
+      stem-based label.
+    - Unions all `sample_id`s already present across matched reliability files, subtracts
+      them from the original table’s unique `sample_id`s, randomly selects a fraction
+      of the total (`max(1, round(len(all_ids)*frac))`), and writes a new reliability
+      workbook containing just the newly selected rows.
+    - The new sheet’s “post-comment” columns are templated from the matched reliability
+      files. If multiple reliability files disagree on columns after 'comment', the
+      intersection is used (warning logged). All missing template columns are added as NaN.
 
     Parameters
     ----------
     tiers : dict[str, Tier]
-        Mapping of tier-name -> Tier object. Each Tier must expose a method usable
-        for filename labeling. This function will try (in order): `t.match(name)`,
-        `t.extract(name)`, `t.parse(name)`, or a `t.regex` attribute. If none work,
-        `None` is used for that tier label.
-
-    input_dir : str | os.PathLike
-        Root directory searched (recursively) for coder-2 coding files and their
-        paired reliability files.
-
-    output_dir : str | os.PathLike
-        Base directory where outputs are written under:
-          "<output_dir>/reselected_<rel_type>_reliability/"
-
+        Tier objects used to derive filename labels for matching originals to reliability.
+        Only `t.match(name)` is required here.
+    input_dir, output_dir : str | os.PathLike
+        Root directory to search; base output directory. Files are written to
+        `<output_dir>/reselected_<rel_type>_reliability/`.
     rel_type : {"CU","WC"}, default "CU"
-        Which reliability type to process.
-
-        - "CU": looks for "*CUCoding.xlsx" and paired "*CUReliabilityCoding.xlsx"
-        - "WC": looks for "*WordCounting.xlsx" and paired "*WordCountingReliability.xlsx"
-
-    coder3 : str, default "3"
-        Value written to the reliability coder ID column (e.g., 'c3ID').
-
+        Determines filename patterns:
+          - CU: finds "*CUCoding.xlsx" with paired "*CUReliabilityCoding.xlsx"
+          - WC: finds "*WordCounting.xlsx" with "*WordCountingReliability.xlsx"
     frac : float in (0,1], default 0.2
-        Target fraction of **all unique samples** (from the coder-2 file) to select.
-        The number selected is `max(1, round(len(all_sample_ids) * frac))`. If fewer
-        than this number of **unused** samples are available, all available unused
-        samples are selected (with a warning).
-
+        Target fraction of *all* unique `sample_id`s to select (before excluding used).
+        If available unused samples are fewer than target, all available are used.
     rng_seed : int, default 88
-        RNG seed for reproducible selection within a run.
-
-    Behavior & Output
-    -----------------
-    - Tier-label matching allows multiple prior reliability attempts to be excluded
-      (all matched reliability files contribute to the "used sample_ids" set).
-    - Selection excludes any `sample_id` already present across *any* matched reliability file.
-    - Selection is random with a fixed seed per function call.
-    - The shape (columns) of the new reliability sheet is derived from the first matched
-      reliability file when present. If multiple matched reliability files have different
-      columns, the **intersection** after 'comment' is used (a warning is logged).
-    - Carry-forward of columns:
-        * We copy "header" columns from the original coder-2 table up to and including
-          the column named 'comment' (if present); otherwise we copy the full table then
-          trim to the reliability template if available.
-    - CU-specific niceties:
-        * If columns like 'c2SV', 'c2REL', 'c2SV_*', 'c2REL_*' exist, they are renamed
-          to 'c3SV', 'c3REL', 'c3SV_*', 'c3REL_*', respectively.
-        * All **suffixed** c3 CU columns ('c3SV_*', 'c3REL_*') are wiped to NaN so the
-          reliability coder must re-enter them. Base 'c3SV'/'c3REL' are preserved.
-        * 'c3ID' is set to `coder3`, and 'c3com' (if present) is wiped to NaN.
-
-    Files Written
-    -------------
-    One Excel file per coder-2 table:
-      "<output_dir>/reselected_<rel_type>_reliability/<base>_reselected_<RelName>.xlsx"
-
-      where:
-        - For CU: RelName = "CUReliabilityCoding"
-        - For WC: RelName = "WordCountingReliability"
+        Seed for reproducible selection.
 
     Returns
     -------
     None
+        Writes one file per original coder-2 table:
+        `<base>_reselected_{CUReliabilityCoding|WordCountingReliability}.xlsx`.
 
     Notes
     -----
-    - If *no* matched reliability file is found for a given coder-2 file, the file is
-      **skipped** (logged warning). This avoids guessing the reliability schema.
-    - This function requires a 'sample_id' column to exist in both the coder-2 file
-      and the reliability file(s). Missing 'sample_id' will be logged and that file
-      will be skipped.
-    - If no unused samples remain, the file is skipped (with warning).
+    - Requires a `sample_id` column in both original and reliability tables.
+    - Skips an original file if no matched reliability file exists (schema safety).
+    - CU branch ensures presence of `c3ID` and `c3com` columns (left as NaN unless
+      already present). Suffixed c3 fields may be wiped by downstream code if needed.
     """
+
     rel_type = (rel_type or "CU").upper().strip()
     if rel_type not in {"CU", "WC"}:
         logging.error(f"Invalid rel_type '{rel_type}'. Must be 'CU' or 'WC'.")
@@ -687,26 +650,12 @@ def reselect_CU_WC_reliability(
 
         # Post-comment columns from reliability (template)
         post_sets = []
-        # for rdf in rel_dfs:
-        if "comment" in rdf.columns:
+        if "comment" in rel_dfs[0].columns:
             start = rdf.columns.get_loc("comment") + 1
             post_cols = rdf.columns[start:]
         else:
             logging.error(f"No 'comment' column found in {rel_mates[0]}.")
-            post_sets.append(set(rdf.columns))  # fallback
-
-        # if not post_sets:
-        #     logging.warning(f"[{rel_type}] Could not determine reliability template for {org_file.name}. Skipping.")
-        #     continue
-
-        # post_cols = list(set.intersection(*post_sets)) if len(post_sets) > 1 else list(post_sets[0])
-
-        # # Warn if templates differ
-        # if len(post_sets) > 1 and any(post_cols != list(s) for s in post_sets):
-        #     logging.warning(
-        #         f"[{rel_type}] Matched reliability files for {org_file.name} "
-        #         f"have differing columns; using intersection of post-'comment' columns."
-        #     )
+            post_sets.append(rdf.columns)
 
         # Subset original coding rows for the chosen sample_ids
         sub = df_org[df_org["sample_id"].astype(str).isin(reselected_ids)].copy()
@@ -727,45 +676,20 @@ def reselect_CU_WC_reliability(
 
         # CU-specific adjustments
         if rel_type == "CU":
-            # # Rename coder-2 CU columns to coder-3 equivalents where applicable
-            # rename_map = {}
-            # for col in list(sub.columns):
-            #     if col == "c2SV":
-            #         rename_map[col] = "c3SV"
-            #     elif col == "c2REL":
-            #         rename_map[col] = "c3REL"
-            #     elif col.startswith("c2SV_"):
-            #         rename_map[col] = "c3SV_" + col.split("c2SV_", 1)[1]
-            #     elif col.startswith("c2REL_"):
-            #         rename_map[col] = "c3REL_" + col.split("c2REL_", 1)[1]
-            # if rename_map:
-            #     sub.rename(columns=rename_map, inplace=True)
-
-            # Ensure c3ID/c3com exist, then set/wipe
-            if "c3ID" not in sub.columns:
-                sub["c3ID"] = np.nan
-            if "c3com" not in sub.columns:
-                sub["c3com"] = np.nan
-            # sub["c3ID"] = coder3
-            # sub["c3com"] = np.nan
-
-            # # Wipe suffixed c3 CU columns
-            # for col in sub.columns:
-            #     if col.startswith("c3SV_") or col.startswith("c3REL_"):
-            #         sub[col] = np.nan
+            for col in ["c3ID","c3com"]:
+                if col not in sub.columns:
+                    sub[col] = np.nan
 
         else:  # "WC"
             # Ensure c3ID exists if present in template; set it to coder3
             if "c2ID" not in sub.columns:
                 sub["c2ID"] = np.nan
-
-                
-            # If a 'c3com' exists in the template, wipe it
-            if "wc_rel_com" not in sub.columns:
-                sub["wc_rel_com"] = np.nan
             # Add word count column and pull neutrality from original.
             org_sub = df_org[df_org['sample_id'].isin(reselected_ids)].copy()
             sub['word_count'] = org_sub.apply(lambda row: count_words(row['utterance'], d) if not np.isnan(row['word_count']) else 'NA', axis=1)
+            # If a 'c3com' exists in the template, wipe it
+            if "wc_rel_com" not in sub.columns:
+                sub["wc_rel_com"] = np.nan
 
         # Order columns: head-cols first (as they exist), then post-cols in template order
         ordered_cols = [c for c in head_cols if c in sub.columns] + [c for c in post_cols if c in sub.columns and c not in head_cols]

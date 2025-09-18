@@ -109,43 +109,53 @@ def main(args):
     output_dir = os.path.join(output_dir, f"rascal_{steps_to_run}_output_{timestamp}")
     os.makedirs(output_dir, exist_ok=True)
 
-    # Stage 1.
-    if 'a' in steps_to_run or 'b' in steps_to_run:
+    # Ensure .cha files read if required
+    if 'a' in steps_to_run or 'd' in steps_to_run:
         chats = run_read_cha_files(input_dir)
+
+    # Stage 1.
     if 'a' in steps_to_run:
         run_select_transcription_reliability_samples(tiers, chats, frac, output_dir)
 
     # Stage 3.
     if 'b' in steps_to_run:
-        run_prepare_utterance_dfs(tiers, chats, output_dir)
-    if 'c' in steps_to_run:
-        run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigms, exclude_participants)
-    
-    # Step 3.
-    if 'd' in steps_to_run:
         run_analyze_transcription_reliability(tiers, input_dir, output_dir, exclude_participants, strip_clan, prefer_correction, lowercase)
+    if 'c' in steps_to_run:
+        #### Reselect transcription reliability
+        ...
+
+    # Stage 4.
+    if 'd' in steps_to_run:
+        run_prepare_utterance_dfs(tiers, chats, output_dir)
     if 'e' in steps_to_run:
-        run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms)
+        run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigms, exclude_participants)
     if 'f' in steps_to_run:
-        run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms)
-    if 'g' in steps_to_run:
-        run_make_word_count_files(tiers, frac, coders, input_dir, output_dir)
-    if 'h' in steps_to_run:
         run_make_timesheets(tiers, input_dir, output_dir)
-    
-    # Step 5.
+
+    # Step 6.
+    if 'g' in steps_to_run:
+        run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms)
+    if 'h' in steps_to_run:
+        run_reselect_CU_reliability(tiers, input_dir, output_dir, "CU", frac)
+
+    # Stage 7.
     if 'i' in steps_to_run:
+        run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms)
+    if 'j' in steps_to_run:
+        run_make_word_count_files(tiers, frac, coders, input_dir, output_dir)
+
+    # Stage 9.
+    if 'k' in steps_to_run:
         run_analyze_word_count_reliability(tiers, input_dir, output_dir)
+    if 'l' in steps_to_run:
+        run_reselect_WC_reliability(tiers, input_dir, output_dir, "WC", frac)
+
+    # Stage 10.
     if 'j' in steps_to_run:
         run_unblind_CUs(tiers, input_dir, output_dir)
     if 'k' in steps_to_run:
         run_run_corelex(input_dir, output_dir, exclude_participants)
 
-    # Other: reliability reselection.
-    if 'l' in steps_to_run:
-        run_reselect_CU_reliability(tiers, input_dir, output_dir, "CU", frac)
-    if 'm' in steps_to_run:
-        run_reselect_WC_reliability(tiers, input_dir, output_dir, "WC", frac)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process the step argument for main script.")
