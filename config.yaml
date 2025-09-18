@@ -19,7 +19,7 @@ tiers:
     - AC
     - BU
     - TU
-    partition: true
+    partition: false
     blind: true
   test:
     values:

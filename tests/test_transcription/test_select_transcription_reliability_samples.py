@@ -39,7 +39,10 @@ def sample_data(tmp_path, monkeypatch):
     }
 
     # Force random.sample to pick a deterministic subset (always first element)
-    monkeypatch.setattr("rascal.transcription.transcription_reliability_selector.random.sample", lambda seq, k: seq[:k])
+    monkeypatch.setattr(
+        "rascal.transcription.transcription_reliability_selector.random.sample",
+        lambda seq, k: seq[:k],
+    )
 
     return f1, f2, chats, tiers, tmp_path
 
@@ -48,7 +51,9 @@ def test_select_transcription_reliability_samples_creates_files(sample_data):
     f1, f2, chats, tiers, tmp_path = sample_data
 
     outdir = tmp_path / "out"
-    select_transcription_reliability_samples(tiers, chats, frac=0.5, output_dir=str(outdir))
+    select_transcription_reliability_samples(
+        tiers, chats, frac=0.5, output_dir=str(outdir)
+    )
 
     # Should have created partition folders under TranscriptionReliability
     rel_dir = outdir / "TranscriptionReliability"
@@ -72,13 +77,22 @@ def test_select_transcription_reliability_samples_creates_files(sample_data):
     assert content[-1].startswith("@End")
 
     # Excel files should also be written
-    ac_xlsx = ac_dir / "AC_TranscriptionReliabilitySamples.xlsx"
-    bu_xlsx = bu_dir / "BU_TranscriptionReliabilitySamples.xlsx"
+    ac_xlsx = ac_dir / "AC.xlsx"
+    bu_xlsx = bu_dir / "BU.xlsx"
     assert ac_xlsx.exists()
     assert bu_xlsx.exists()
 
+    # Verify Excel has both sheets
+    xls = pd.ExcelFile(ac_xlsx)
+    assert set(xls.sheet_names) == {"Reliability", "AllTranscripts"}
+
     # DataFrame content should have columns = file + tier(s)
-    df = pd.read_excel(ac_xlsx)
-    assert "file" in df.columns
-    assert "site" in df.columns
-    assert df["site"].iloc[0] == "AC"
+    df_reliability = pd.read_excel(ac_xlsx, sheet_name="Reliability")
+    df_all = pd.read_excel(ac_xlsx, sheet_name="AllTranscripts")
+    assert "file" in df_reliability.columns
+    assert "site" in df_reliability.columns
+    assert df_reliability["site"].iloc[0] == "AC"
+    # AllTranscripts sheet should include both AC and BU rows
+    assert "file" in df_all.columns
+    assert "site" in df_all.columns
+    assert set(df_all["site"]) == {"AC"}  # for AC.xlsx only contains AC files
