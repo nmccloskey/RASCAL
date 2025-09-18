@@ -19,7 +19,9 @@ from rascal.main import (
     run_analyze_CU_reliability, run_analyze_CU_coding,
     run_make_word_count_files, run_make_timesheets,
     run_analyze_word_count_reliability, run_unblind_CUs,
-    run_run_corelex, run_reselect_CU_reliability
+    run_run_corelex, run_reselect_CU_reliability,
+    run_reselect_transcription_reliability_samples,
+    run_reselect_WC_reliability
 )
 
 st.title("RASCAL Web App")
@@ -74,89 +76,78 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
         for file in cha_files:
             with open(os.path.join(input_dir, file.name), "wb") as f:
                 f.write(file.read())
-
         # Read config values
         tiers = run_read_tiers(config.get("tiers", {}))
         frac = config.get("reliability_fraction", 0.2)
         coders = config.get("coders", [])
-        CU_paradigms = config.get("CU_paradigms", [])
+        CU_paradigms = config.get("CU_paradigms", []) or []
         blind_columns = config.get("blind_columns", [])
 
         exclude_participants = config.get('exclude_participants', [])
-        strip_clan =  config.get('strip_clan', True)
-        prefer_correction =  config.get('prefer_correction', True)
-        lowercase =  config.get('lowercase', True)
+        strip_clan = config.get('strip_clan', True)
+        prefer_correction = config.get('prefer_correction', True)
+        lowercase = config.get('lowercase', True)
 
-        step_mapping = {
-            "Step 1 (abc)": ['a. Select transcription reliability samples',
-                            'b. Prepare utterance tables',
-                            'c. Make CU coding files'],
-            "Step 3 (defgh)": ['d. Analyze transcription reliability',
-                            'e. Analyze CU reliability',
-                            'f. Analyze CU coding',
-                            'g. Make word count files',
-                            'h. Make timesheets'],
-            "Step 5 (ijk)": ['i. Analyze word count reliability',
-                            'j. Unblind CU samples',
-                            'k. Run CoreLex']
-        }
-
+        # --- List all functions a–n ---
         all_functions = [
             "a. Select transcription reliability samples",
-            "b. Prepare utterance tables",
-            "c. Make CU coding files",
-            "d. Analyze transcription reliability",
-            "e. Analyze CU reliability",
-            "f. Analyze CU coding",
-            "g. Make word count files",
-            "h. Make timesheets",
-            "i. Analyze word count reliability",
-            "j. Unblind CU samples",
-            "k. Run CoreLex",
-            "l. Reselect CU reliability samples"
+            "b. Analyze transcription reliability",
+            "c. Reselect transcription reliability samples",
+            "d. Prepare utterance tables",
+            "e. Make CU coding files",
+            "f. Make timesheets",
+            "g. Analyze CU reliability",
+            "h. Reselect CU reliability samples",
+            "i. Analyze CU coding",
+            "j. Make word count files",
+            "k. Analyze word count reliability",
+            "l. Reselect WC reliability samples",
+            "m. Unblind CU samples",
+            "n. Run CoreLex"
         ]
 
-        st.header("Part 3: Select steps or functions")
-
-        # --- Dropdowns ---
-        step = st.selectbox("Choose a predefined step", ["(None)"] + list(step_mapping.keys()))
-        funcs = st.multiselect("Or individually select functions to run", all_functions)
-
-        # --- Resolve full list of selected functions ---
-        selected_funcs = funcs or (step_mapping[step] if step != "(None)" else [])
+        st.header("Part 3: Select functions to run")
+        selected_funcs = st.multiselect("Select functions", all_functions)
 
         if st.button("Run selected functions"):
-            if "a. Select transcription reliability samples" in selected_funcs or \
-            "b. Prepare utterance tables" in selected_funcs:
+            # Only read chats if needed
+            if any(f[0] in ['a', 'd'] for f in selected_funcs):
                 chats = run_read_cha_files(input_dir)
             else:
                 chats = None
 
-            if "a. Select transcription reliability samples" in selected_funcs:
-                run_select_transcription_reliability_samples(tiers, chats, frac, output_dir)
-            if "b. Prepare utterance tables" in selected_funcs:
-                run_prepare_utterance_dfs(tiers, chats, output_dir)
-            if "c. Make CU coding files" in selected_funcs:
-                run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir, CU_paradigms, exclude_participants)
-            if "d. Analyze transcription reliability" in selected_funcs:
-                run_analyze_transcription_reliability(tiers, input_dir, output_dir, exclude_participants, strip_clan, prefer_correction, lowercase)
-            if "e. Analyze CU reliability" in selected_funcs:
-                run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms)
-            if "f. Analyze CU coding" in selected_funcs:
-                run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms)
-            if "g. Make word count files" in selected_funcs:
-                run_make_word_count_files(tiers, frac, coders, input_dir, output_dir)
-            if "h. Make timesheets" in selected_funcs:
-                run_make_timesheets(tiers, input_dir, output_dir)
-            if "i. Analyze word count reliability" in selected_funcs:
-                run_analyze_word_count_reliability(tiers, input_dir, output_dir)
-            if "j. Unblind CU samples" in selected_funcs:
-                run_unblind_CUs(tiers, input_dir, output_dir, blind_columns)
-            if "k. Run CoreLex" in selected_funcs:
-                run_run_corelex(input_dir, output_dir, exclude_participants)
-            if "l. Reselect CU reliability samples" in selected_funcs:
-                coder3 = coders[2] or '3'
-                run_reselect_CU_reliability(input_dir, output_dir, coder3=coder3, frac=frac)
+            for func in selected_funcs:
+                if func.startswith("a."):
+                    run_select_transcription_reliability_samples(tiers, chats, frac, output_dir)
+                elif func.startswith("b."):
+                    run_analyze_transcription_reliability(tiers, input_dir, output_dir,
+                                                         exclude_participants, strip_clan,
+                                                         prefer_correction, lowercase)
+                elif func.startswith("c."):
+                    run_reselect_transcription_reliability_samples(input_dir, output_dir, frac)
+                elif func.startswith("d."):
+                    run_prepare_utterance_dfs(tiers, chats, output_dir)
+                elif func.startswith("e."):
+                    run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir,
+                                             CU_paradigms, exclude_participants)
+                elif func.startswith("f."):
+                    run_make_timesheets(tiers, input_dir, output_dir)
+                elif func.startswith("g."):
+                    run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms)
+                elif func.startswith("h."):
+                    run_reselect_CU_reliability(tiers, input_dir, output_dir, "CU", frac)
+                elif func.startswith("i."):
+                    run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms)
+                elif func.startswith("j."):
+                    run_make_word_count_files(tiers, frac, coders, input_dir, output_dir)
+                elif func.startswith("k."):
+                    run_analyze_word_count_reliability(tiers, input_dir, output_dir)
+                elif func.startswith("l."):
+                    run_reselect_WC_reliability(tiers, input_dir, output_dir, "WC", frac)
+                elif func.startswith("m."):
+                    run_unblind_CUs(tiers, input_dir, output_dir)
+                elif func.startswith("n."):
+                    run_run_corelex(input_dir, output_dir, exclude_participants)
 
             st.success("Functions completed!")
 
@@ -170,6 +161,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
                 file_name=f"rascal_{func_str}_output_{timestamp}.zip",
                 mime="application/zip"
             )
+
 
 def main():
     import subprocess
