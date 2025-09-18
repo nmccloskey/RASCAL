@@ -31,6 +31,10 @@ def run_select_transcription_reliability_samples(tiers, chats, frac, output_dir)
     from .transcription.transcription_reliability_selector import select_transcription_reliability_samples
     select_transcription_reliability_samples(tiers=tiers, chats=chats, frac=frac, output_dir=output_dir)
 
+def run_reselect_transcription_reliability_samples(input_dir, output_dir, frac):
+    from .transcription.transcription_reliability_selector import reselect_transcription_reliability_samples
+    reselect_transcription_reliability_samples(input_dir, output_dir, frac)
+
 def run_prepare_utterance_dfs(tiers, chats, output_dir):
     from .utterances.make_utterance_tables import prepare_utterance_dfs
     return prepare_utterance_dfs(tiers=tiers, chats=chats, output_dir=output_dir)
@@ -121,8 +125,7 @@ def main(args):
     if 'b' in steps_to_run:
         run_analyze_transcription_reliability(tiers, input_dir, output_dir, exclude_participants, strip_clan, prefer_correction, lowercase)
     if 'c' in steps_to_run:
-        #### Reselect transcription reliability
-        ...
+        run_reselect_transcription_reliability_samples(input_dir, output_dir, frac)
 
     # Stage 4.
     if 'd' in steps_to_run:
@@ -151,9 +154,9 @@ def main(args):
         run_reselect_WC_reliability(tiers, input_dir, output_dir, "WC", frac)
 
     # Stage 10.
-    if 'j' in steps_to_run:
+    if 'm' in steps_to_run:
         run_unblind_CUs(tiers, input_dir, output_dir)
-    if 'k' in steps_to_run:
+    if 'n' in steps_to_run:
         run_run_corelex(input_dir, output_dir, exclude_participants)
 
 
