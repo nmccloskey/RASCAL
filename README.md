@@ -220,7 +220,7 @@ rascal f
 
 Below is the current RASCAL pipeline, represented as a flow chart:
 
-![RASCAL Flowchart](images/RASCAL_flowchart.png)
+![RASCAL Flowchart](images/RASCAL_workflowchart.png)
 
 Black arrows indicate the central analysis pipeline. Red arrows represent the path required if CU reliability coding fails to meet agreement threshold and needs redone. Blue arrows show the alternate inputs to CoreLex analysis: function **b** output is required, and **h** output is optional.
 
