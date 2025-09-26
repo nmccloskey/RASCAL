@@ -2,7 +2,7 @@ biopython>=1.84
 contractions==0.1.73
 nltk>=3.9.1
 num2words>=0.5.14
-numpy>=1.24.3
+numpy==1.26.4
 pandas>=2.0.3
 pyenchant==3.2.2
 pylangacq==0.19.1

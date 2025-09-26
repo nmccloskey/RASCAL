@@ -140,7 +140,7 @@ def make_CU_coding_files(
       dropping bookkeeping columns (e.g., 'file' and any tier columns that are
       not stimulus labels), adding coder ID/comment and coding-value columns,
       and pre-filling content fields with either `np.nan` (normal) or `"NA"`
-      (if the row's `speaker` is in `exclude_participants`).
+      (if the row's `speaker` is in `exclude_participants`). Samples are shuffled.
     - Samples are segmented (roughly evenly) across the provided coders; within
       each segment, two primary coder IDs are assigned (`c1ID`, `c2ID`).
     - A reliability subset is sampled from each segment according to `frac`.
@@ -189,7 +189,16 @@ def make_CU_coding_files(
             logging.error(f"Failed to read file {file}: {e}")
             continue
 
-        CUdf = uttdf.drop(columns=[col for col in ['file'] + [t for t in tiers if t not in stim_cols] if col in uttdf.columns]).copy()
+        # Shuffle samples
+        subdfs = []
+        for _, subdf in uttdf.groupby(by="sample_id"):
+            subdfs.append(subdf)
+        random.shuffle(subdfs)
+        shuffled_utt_df = pd.concat(subdfs, ignore_index=True)
+
+        CUdf = shuffled_utt_df.drop(columns=[
+            col for col in ['file'] + [t for t in tiers if t not in stim_cols] if col in shuffled_utt_df.columns
+            ]).copy()
 
         # Set up base coding columns
         for col in base_cols:
@@ -394,7 +403,15 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
         except Exception as e:
             logging.error(f"Failed to read file {file}: {e}")
             continue
-        WCdf = CUdf.copy()
+
+        # Shuffle samples
+        subdfs = []
+        for _, subdf in CUdf.groupby(by="sample_id"):
+            subdfs.append(subdf)
+        random.shuffle(subdfs)
+        shuffled_CUdf = pd.concat(subdfs, ignore_index=True)
+
+        WCdf = shuffled_CUdf.copy()
 
         # Add counter and word count comment column.
         empty_col = [np.nan for _ in range(len(WCdf))]
