@@ -9,19 +9,23 @@ import pandas as pd
 from tqdm import tqdm
 import num2words as n2w
 from pathlib import Path
-import nltk
-# Download only if missing
-try:
-    nltk.data.find('corpora/words')
-except LookupError:
-    nltk.download('words')
-
-from nltk.corpus import words
-valid_words = set(words.words())
-d = lambda word: word in valid_words
+from functools import lru_cache
 
 stim_cols = ["narrative", "scene", "story", "stimulus",
              "Narrative", "Scene", "Story", "Stimulus",]
+
+@lru_cache(maxsize=1)
+def get_word_checker():
+    import nltk
+
+    try:
+        nltk.data.find('corpora/words')
+    except LookupError:
+        nltk.download('words')
+
+    from nltk.corpus import words
+    valid_words = set(words.words())
+    return lambda word: word in valid_words
 
 def segment(x, n):
     """
@@ -45,7 +49,7 @@ def segment(x, n):
         segments[-1] = segments[-1] + last
     return segments
 
-def assign_CU_coders(coders):
+def assign_coders(coders):
     """
     Assign each coder to each role (coder 1, coder 2, coder 3) in different segments.
     
@@ -180,7 +184,7 @@ def make_CU_coding_files(
         labels = [t.match(file.name, return_None=True) for t in tiers.values()]
         labels = [l for l in labels if l is not None]
 
-        assignments = assign_CU_coders(coders)
+        assignments = assign_coders(coders)
 
         try:
             uttdf = pd.read_excel(str(file))
@@ -380,6 +384,7 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
     None
         Saves Excel files to disk; does not return.
     """
+    d = get_word_checker()
     
     # Make word count coding file path.
     word_count_dir = os.path.join(output_dir, 'WordCounts')
@@ -429,7 +434,7 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
         logging.debug("Dropped CU-specific columns.")
 
         # Only first two coders used in these assignments.
-        assignments = assign_CU_coders(coders)
+        assignments = assign_coders(coders)
 
         # Select samples for reliability.
         unique_sample_ids = list(WCdf['sample_id'].drop_duplicates(keep='first'))
@@ -552,6 +557,7 @@ def reselect_CU_WC_reliability(
         coding_glob = "*WordCounting.xlsx"
         rel_glob = "*WordCountingReliability.xlsx"
         out_rel_name = "WordCountingReliability"
+        d = get_word_checker()
 
     coding_files = list(input_dir.rglob(coding_glob))
     rel_files = list(input_dir.rglob(rel_glob))
