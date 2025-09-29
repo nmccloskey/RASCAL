@@ -23,9 +23,9 @@ def run_read_tiers(config_tiers):
         logging.warning("Tiers are empty or malformed.")
     return tiers
 
-def run_read_cha_files(input_dir):
+def run_read_cha_files(input_dir, shuffle=False):
     from .utils.read_cha_files import read_cha_files
-    return read_cha_files(input_dir=input_dir, shuffle=True)
+    return read_cha_files(input_dir=input_dir, shuffle=False)
 
 def run_select_transcription_reliability_samples(tiers, chats, frac, output_dir):
     from .transcription.transcription_reliability_selector import select_transcription_reliability_samples
@@ -162,7 +162,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process the step argument for main script.")
-    parser.add_argument('step', type=str, help="Specify the step or function(s) (e.g., '1' or 'abc').")
+    parser.add_argument('step', type=str, help="Specify the step or function(s) (e.g., 'dn' for minimal CoreLex or 'def' for Stage 4).")
     parser.add_argument('--config', type=str, default='config.yaml', help="Path to the config file")
     args = parser.parse_args()
     main(args)
