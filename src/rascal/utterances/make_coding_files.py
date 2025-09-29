@@ -11,8 +11,7 @@ import num2words as n2w
 from pathlib import Path
 from functools import lru_cache
 
-stim_cols = ["narrative", "scene", "story", "stimulus",
-             "Narrative", "Scene", "Story", "Stimulus",]
+stim_cols = ["narrative", "scene", "story", "stimulus"]
 
 @lru_cache(maxsize=1)
 def get_word_checker():
@@ -201,7 +200,7 @@ def make_CU_coding_files(
         shuffled_utt_df = pd.concat(subdfs, ignore_index=True)
 
         CUdf = shuffled_utt_df.drop(columns=[
-            col for col in ['file'] + [t for t in tiers if t not in stim_cols] if col in shuffled_utt_df.columns
+            col for col in ['file'] + [t for t in tiers if t.lower() not in stim_cols] if col in shuffled_utt_df.columns
             ]).copy()
 
         # Set up base coding columns
