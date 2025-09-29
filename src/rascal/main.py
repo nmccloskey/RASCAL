@@ -25,7 +25,7 @@ def run_read_tiers(config_tiers):
 
 def run_read_cha_files(input_dir, shuffle=False):
     from .utils.read_cha_files import read_cha_files
-    return read_cha_files(input_dir=input_dir, shuffle=False)
+    return read_cha_files(input_dir=input_dir, shuffle=shuffle)
 
 def run_select_transcription_reliability_samples(tiers, chats, frac, output_dir):
     from .transcription.transcription_reliability_selector import select_transcription_reliability_samples
