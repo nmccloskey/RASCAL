@@ -15,8 +15,8 @@ src/rascal.egg-info/
 
 # RASCAL-specific
 test_data/
-data/output/
-data/input/
+rascal_data/output/
+rascal_data/input/
 
 # System files
 .DS_Store
@@ -26,3 +26,26 @@ data/input/
 *.cha
 
 google_creds.json
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# Configs
+config.yaml
+*.secrets.yaml
+
+# Cache dirs (used by tools)
+.cache/
+.mypy_cache/
+.pytest_cache/
+.tox/
+.coverage
+htmlcov/
+
+# IDE/editor stuff
+.vscode/
+.idea/
+*.swp

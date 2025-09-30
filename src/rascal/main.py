@@ -87,8 +87,8 @@ def run_reselect_WC_reliability(tiers, input_dir, output_dir, rel_type, frac):
 def main(args):
     """Main function to process input arguments and execute appropriate steps."""
     config = load_config(args.config)
-    input_dir = config.get('input_dir', 'data/input')
-    output_dir = config.get('output_dir', 'data/output')
+    input_dir = config.get('input_dir', 'rascal_data/input')
+    output_dir = config.get('output_dir', 'rascal_data/output')
     
     frac = config.get('reliability_fraction', 0.2)
     coders = config.get('coders', [])

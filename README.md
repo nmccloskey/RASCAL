@@ -50,7 +50,7 @@ We recommend installing RASCAL into a dedicated virtual environment using Anacon
 ### 1. Create and activate your environment:
 
 ```bash
-conda create --name rascal_env python=3.9
+conda create --name rascal_env python=3.12
 conda activate rascal_env
 ```
 
@@ -79,7 +79,7 @@ Example structure:
 ```plaintext
 your_project/
 ├── config.yaml           # Configuration file (see below)
-└── data/
+└── rascal_data/
     └── input/            # Place your CHAT (.cha) files and/or Excel data here
                           # (RASCAL will make an output directory)
 ```
@@ -91,8 +91,8 @@ This file specifies the directories, coders, reliability settings, and tier stru
 You can download the example config file from the repo or create your own like this:
 
 ```yaml
-input_dir: data/input
-output_dir: data/output
+input_dir: rascal_data/input
+output_dir: rascal_data/output
 reliability_fraction: 0.2
 coders:
 - '1'
