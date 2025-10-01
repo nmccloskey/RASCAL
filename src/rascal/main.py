@@ -91,7 +91,7 @@ def main(args):
     output_dir = config.get('output_dir', 'rascal_data/output')
     
     frac = config.get('reliability_fraction', 0.2)
-    coders = config.get('coders', [])
+    coders = config.get('coders', []) or []
     CU_paradigms = config.get('CU_paradigms', []) or []
 
     exclude_participants = config.get('exclude_participants', []) or []
@@ -104,7 +104,7 @@ def main(args):
 
     os.makedirs(input_dir, exist_ok=True)
 
-    tiers = run_read_tiers(config.get('tiers', {}))
+    tiers = run_read_tiers(config.get('tiers', {})) or {}
 
     steps_to_run = args.step
 
