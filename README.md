@@ -50,8 +50,8 @@ We recommend installing RASCAL into a dedicated virtual environment using Anacon
 ### 1. Create and activate your environment:
 
 ```bash
-conda create --name rascal_env python=3.12
-conda activate rascal_env
+conda create --name rascal python=3.12
+conda activate rascal
 ```
 
 ### 2. Install RASCAL directly from PyPI:
@@ -199,19 +199,19 @@ rascal f
 
 | Command | Function (name)                                   | Input                                        | Output                                    |
 |---------|---------------------------------------------------|----------------------------------------------|-------------------------------------------------------|
-| a       | Select transcription reliability samples (*select_transcription_reliability_samples*) | Raw `.cha` files                             | Reliability sample list + paired reliability `.cha` files |
+| a       | Select transcription reliability samples (*select_transcription_reliability_samples*) | Raw `.cha` files                             | Reliability & full sample lists + template `.cha` files |
 | b       | Analyze transcription reliability (*analyze_transcription_reliability*) | Reliability `.cha` pairs                     | Agreement metrics + alignment text reports             |
-| c       | Reselect transcription reliability (*reselect_transcription_reliability_samples*) | Original + reliability transcription files   | New reliability subsets                               |
+| c       | Reselect transcription reliability (*reselect_transcription_reliability_samples*) | Original + reliability transcription tables (from **a**)   | New reliability subset(s)                               |
 | d       | Prepare utterance tables (*prepare_utterance_dfs*) | Raw `.cha` files                             | Utterance spreadsheets                                |
-| e       | Make CU coding files (*make_CU_coding_files*)     | Utterance tables (from **d**)                | CU coding spreadsheets                                |
+| e       | Make CU coding files (*make_CU_coding_files*)     | Utterance tables (from **d**)                | CU coding + reliability spreadsheets                                |
 | f       | Make timesheets (*make_timesheets*)               | Utterance tables (from **d**)                | Speaking time entry sheets                            |
 | g       | Analyze CU reliability (*analyze_CU_reliability*) | Manually completed CU coding (from **e**)    | Reliability summary tables + reports                   |
-| h       | Reselect CU reliability (*reselect_CU_reliability*) | Manually completed CU coding (from **e**)    | New reliability subsets                               |
-| i       | Analyze CU coding (*analyze_CU_coding*)           | Manually completed CU coding (from **e**)    | Sample- and utterance-level CU summaries              |
-| j       | Make word count files (*make_word_count_files*)   | CU coding tables (from **i**)                | Word count spreadsheets                               |
+| h       | Reselect CU reliability (*reselect_CU_reliability*) | Manually completed CU coding (from **e**)    | New reliability subset(s)                               |
+| i       | Analyze CU coding (*analyze_CU_coding*)           | Manually completed CU coding (from **e**)    | Sample- and utterance-level CU summaries             |
+| j       | Make word count files (*make_word_count_files*)   | CU coding tables (from **i**)                | Word count + reliability spreadsheets                               |
 | k       | Analyze word count reliability (*analyze_word_count_reliability*) | Manually completed word counts (from **j**) | Reliability summaries + agreement reports              |
-| l       | Reselect WC reliability (*reselect_WC_reliability*) | Manually completed word counts (from **j**) | New reliability subsets                               |
-| m       | Unblind samples (*unblind_CUs*)                   | CU and WC coding results                     | Blind + unblind utterance and sample summaries         |
+| l       | Reselect WC reliability (*reselect_WC_reliability*) | Manually completed word counts (from **j**) | New reliability subset(s)                               |
+| m       | Unblind samples (*unblind_CUs*)                   | CU and WC coding results                     | Blind + unblind utterance and sample summaries + blind codes         |
 | n       | Run CoreLex analysis (*run_corelex*)              | CU and WC sample summaries                   | CoreLex coverage and percentile metrics                |
 
 ---
