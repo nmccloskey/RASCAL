@@ -14,17 +14,7 @@ def add_src_to_sys_path():
 
 add_src_to_sys_path()
 
-from rascal.main import (
-    run_read_tiers, run_read_cha_files,
-    run_select_transcription_reliability_samples, run_prepare_utterance_dfs,
-    run_make_CU_coding_files, run_analyze_transcription_reliability,
-    run_analyze_CU_reliability, run_analyze_CU_coding,
-    run_make_word_count_files, run_make_timesheets,
-    run_analyze_word_count_reliability, run_unblind_CUs,
-    run_run_corelex, run_reselect_CU_reliability,
-    run_reselect_transcription_reliability_samples,
-    run_reselect_WC_reliability
-)
+from rascal.utils.support_funcs import *
 
 st.title("RASCAL Web App")
 
