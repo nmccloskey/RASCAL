@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-import os
 import yaml
 import argparse
 import logging
 from datetime import datetime
+from rascal.utils.support_funcs import *
 
 
 # Configure logging
@@ -99,10 +99,10 @@ def main(args):
     prefer_correction =  config.get('prefer_correction', True)
     lowercase =  config.get('lowercase', True)
 
-    input_dir = os.path.abspath(os.path.expanduser(input_dir))
-    output_dir = os.path.abspath(os.path.expanduser(output_dir))
+    input_dir = as_path(config.get('input_dir', 'rascal_data/input'))
+    output_dir = as_path(config.get('output_dir', 'rascal_data/output'))
 
-    os.makedirs(input_dir, exist_ok=True)
+    input_dir.mkdir(parents=True, exist_ok=True)
 
     tiers = run_read_tiers(config.get('tiers', {})) or {}
 
@@ -110,8 +110,8 @@ def main(args):
 
     # --- Timestamped output folder ---
     timestamp = datetime.now().strftime("%y%m%d_%H%M")
-    output_dir = os.path.join(output_dir, f"rascal_{steps_to_run}_output_{timestamp}")
-    os.makedirs(output_dir, exist_ok=True)
+    output_dir = output_dir / f"rascal_{steps_to_run}_output_{timestamp}"
+    output_dir.mkdir(parent=True, exist_ok=True)
 
     # Ensure .cha files read if required
     if 'a' in steps_to_run or 'd' in steps_to_run:

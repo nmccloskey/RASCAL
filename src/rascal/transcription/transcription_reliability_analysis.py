@@ -1,4 +1,3 @@
-import os
 import re
 import pylangacq
 from Levenshtein import distance
@@ -327,8 +326,8 @@ def analyze_transcription_reliability(
         If True, return grouped DataFrames for tests instead of None.        
     """
     # --- setup output dirs ---
-    transc_rel_dir = os.path.join(output_dir, "TranscriptionReliabilityAnalysis")
-    os.makedirs(transc_rel_dir, exist_ok=True)
+    transc_rel_dir = output_dir / "TranscriptionReliabilityAnalysis"
+    transc_rel_dir.mkdir(parents=True, exist_ok=True)
     logging.info(f"Created directory: {transc_rel_dir}")
 
     # Which tiers define partitions?
@@ -409,7 +408,7 @@ def analyze_transcription_reliability(
             # Build path components from partitions (if any)
             partition_labels = [t.match(rel_cha.name) for t in tiers.values() if getattr(t, "partition", False)]
             text_filename = f"{''.join(rel_labels)}_TranscriptionReliabilityAlignment.txt"
-            text_file_path = os.path.join(transc_rel_dir, *partition_labels, "GlobalAlignments", text_filename)
+            text_file_path = Path(transc_rel_dir, *partition_labels, "GlobalAlignments", text_filename)
 
             try:
                 _ensure_parent_dir(text_file_path)
@@ -450,10 +449,10 @@ def analyze_transcription_reliability(
             base_name = "_".join(str(x) for x in tup_vals if x is not None)
 
             df_filename = f"{base_name}_TranscriptionReliabilityAnalysis.xlsx"
-            df_path = os.path.join(transc_rel_dir, *[str(x) for x in tup_vals if x is not None], df_filename)
+            df_path = Path(transc_rel_dir, *[str(x) for x in tup_vals if x is not None], df_filename)
 
             report_filename = f"{base_name}_TranscriptionReliabilityReport.txt"
-            report_path = os.path.join(transc_rel_dir, *[str(x) for x in tup_vals if x is not None], report_filename)
+            report_path = Path(transc_rel_dir, *[str(x) for x in tup_vals if x is not None], report_filename)
 
             try:
                 _ensure_parent_dir(df_path)
@@ -471,8 +470,8 @@ def analyze_transcription_reliability(
                 results.append(subdf.copy())
     else:
         # No partitions → save one Excel + one report directly under transc_rel_dir
-        df_path = os.path.join(transc_rel_dir, "TranscriptionReliabilityAnalysis.xlsx")
-        report_path = os.path.join(transc_rel_dir, "TranscriptionReliabilityReport.txt")
+        df_path = transc_rel_dir / "TranscriptionReliabilityAnalysis.xlsx"
+        report_path = transc_rel_dir / "TranscriptionReliabilityReport.txt"
 
         try:
             transc_rel_df.to_excel(df_path, index=False)

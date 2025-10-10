@@ -1,4 +1,3 @@
-import os
 import logging
 import pandas as pd
 from pathlib import Path
@@ -71,8 +70,8 @@ def unblind_CUs(tiers, input_dir, output_dir):
     """
     try:
         # Specify subfolder and create directory
-        output_dir = os.path.join(output_dir, 'Summaries')
-        os.makedirs(output_dir, exist_ok=True)
+        output_dir = output_dir, 'Summaries'
+        output_dir.mkdir(parents=True, exist_ok=True)
 
         # Read utterance data
         utts = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*Utterances.xlsx')])
@@ -99,7 +98,7 @@ def unblind_CUs(tiers, input_dir, output_dir):
         logging.info("Utterance data merged successfully.")
 
         # Save unblinded utterances
-        unblinded_utts = os.path.join(output_dir, 'unblindUtteranceData.xlsx')
+        unblinded_utts = output_dir / 'unblindUtteranceData.xlsx'
         merged_utts.to_excel(unblinded_utts, index=False)
         logging.info(f"Unblinded utterances saved to {unblinded_utts}.")
 
@@ -118,7 +117,7 @@ def unblind_CUs(tiers, input_dir, output_dir):
         logging.info("Blinded utterance data prepared successfully.")
 
         # Save blinded utterances
-        blind_utts_file = os.path.join(output_dir, 'blindUtteranceData.xlsx')
+        blind_utts_file = output_dir / 'blindUtteranceData.xlsx'
         blind_utts.to_excel(blind_utts_file, index=False)
         logging.info(f"Blinded utterances saved to {blind_utts_file}.")
 
@@ -144,7 +143,7 @@ def unblind_CUs(tiers, input_dir, output_dir):
         logging.info("Words per minute calculated successfully.")
 
         # Save unblinded summary
-        unblinded_sample_path = os.path.join(output_dir, 'unblindSampleData.xlsx')
+        unblinded_sample_path = output_dir / 'unblindSampleData.xlsx'
         merged_samples.to_excel(unblinded_sample_path, index=False)
         logging.info(f"Unblinded summary saved to {unblinded_sample_path}.")
 
@@ -159,12 +158,12 @@ def unblind_CUs(tiers, input_dir, output_dir):
         logging.info("Blinded utterance data prepared successfully.")
 
         # Save blinded summary
-        blinded_samples_path = os.path.join(output_dir, 'blindSampleData.xlsx')
+        blinded_samples_path = output_dir / 'blindSampleData.xlsx'
         blind_samples.to_excel(blinded_samples_path, index=False)
         logging.info(f"Blinded summary saved to {blinded_samples_path}.")
 
         # Save blind codes separately
-        blind_codes_file = os.path.join(output_dir, 'blindCodes.xlsx')
+        blind_codes_file = output_dir / 'blindCodes.xlsx'
         pd.DataFrame(blind_codes_output).to_excel(blind_codes_file, index=True)
         logging.info(f"Blind codes saved to {blind_codes_file}.")
     

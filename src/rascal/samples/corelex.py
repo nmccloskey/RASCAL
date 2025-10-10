@@ -1,4 +1,3 @@
-import os
 import re
 import logging
 import numpy as np
@@ -465,8 +464,8 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
     logging.info("Starting CoreLex processing.")
     timestamp = datetime.now().strftime('%y%m%d_%H%M')
 
-    corelex_dir = os.path.join(output_dir, 'CoreLex')
-    os.makedirs(corelex_dir, exist_ok=True)
+    corelex_dir = output_dir / 'CoreLex'
+    corelex_dir.mkdir(parents=True, exist_ok=True)
     logging.info(f"Output directory created: {corelex_dir}")
 
     # ---- Find inputs (logic gates) ----
@@ -621,7 +620,7 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
 
     corelexdf = pd.DataFrame(rows, columns=all_columns)
 
-    output_file = os.path.join(corelex_dir, f'CoreLexData_{timestamp}.xlsx')
+    output_file = corelex_dir / f'CoreLexData_{timestamp}.xlsx'
     corelexdf.to_excel(output_file, index=False)
     logging.info(f"Saved: {output_file}")
     logging.info("CoreLex processing complete.")

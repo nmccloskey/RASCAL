@@ -1,4 +1,3 @@
-import os
 import logging
 import numpy as np
 import pandas as pd
@@ -55,7 +54,7 @@ def make_timesheets(tiers, input_dir, output_dir):
     """
     
     # Make timesheet file path.
-    timesheet_dir = os.path.join(output_dir, 'TimeSheets')
+    timesheet_dir = output_dir / 'TimeSheets'
     logging.info(f"Writing time sheet files to {timesheet_dir}")
 
     utterance_files = list(Path(input_dir).rglob("*Utterances.xlsx")) + list(Path(output_dir).rglob("*Utterances.xlsx"))
@@ -89,10 +88,10 @@ def make_timesheets(tiers, input_dir, output_dir):
         time_df.sort_values(by=list(tiers.keys()), inplace=True)
 
         # Write file.
-        filename = os.path.join(timesheet_dir, *labels, '_'.join(labels) + '_SpeakingTimes.xlsx')
+        filename = Path(timesheet_dir, *labels, '_'.join(labels) + '_SpeakingTimes.xlsx')
         logging.info(f"Writing speaking times file: {filename}")
         try:
-            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            filename.parent.mkdir(parents=True, exist_ok=True)
             time_df.to_excel(filename, index=False)
         except Exception as e:
             logging.error(f"Failed to write speaking times file {filename}: {e}")

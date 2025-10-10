@@ -1,21 +1,9 @@
 from __future__ import annotations
-
-import os
 import logging
 from typing import Dict, List, Tuple
 import pandas as pd
 from tqdm import tqdm
-
-
-# Expected Tier API:
-#   .name: str
-#   .partition: bool
-#   .match(filename: str) -> str
-#
-# Expected Chat API (from pylangacq.read_chat):
-#   .utterances() -> iterable of Utterance, each with:
-#       .participant: str
-#       .tiers: Dict[str, str]  (e.g., {"PAR": "...", "%com": "..."})
+from pathlib import Path
 
 
 def _build_utterance_df(
@@ -55,16 +43,17 @@ def _write_utterance_tables(
 ) -> List[str]:
     """Side effects only: writes Excel files; returns list of filepaths written."""
     written: List[str] = []
-    os.makedirs(utterance_dir, exist_ok=True)
-    logging.info(f"Created directory: {utterance_dir}")
+    utterance_path = Path(utterance_dir)
+    utterance_path.mkdir(parents=True, exist_ok=True)
+    logging.info(f"Created directory: {utterance_path}")
 
     if not partition_tiers:
         df = df.copy()
         df.insert(0, "utterance_id", "U" + df.reset_index(drop=True).index.astype(str))
-        filename = os.path.join(utterance_dir, "Utterances.xlsx")
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        filename = utterance_path / "Utterances.xlsx"
+        filename.parent.mkdir(parents=True, exist_ok=True)
         df.to_excel(filename, index=False)
-        written.append(filename)
+        written.append(str(filename))
         return written
 
     # Partitioned files
@@ -79,11 +68,11 @@ def _write_utterance_tables(
         )
 
         # Nest only if >1 partition tier
-        output_path_parts = [utterance_dir] + (list(map(str, tup)) if len(partition_tiers) > 1 else [])
-        os.makedirs(os.path.join(*output_path_parts), exist_ok=True)
-        filename = os.path.join(*output_path_parts, "_".join(map(str, tup)) + "_Utterances.xlsx")
+        output_path = utterance_path.joinpath(*map(str, tup)) if len(partition_tiers) > 1 else utterance_path
+        output_path.mkdir(parents=True, exist_ok=True)
+        filename = output_path / f"{'_'.join(map(str, tup))}_Utterances.xlsx"
         subdf.to_excel(filename, index=False)
-        written.append(filename)
+        written.append(str(filename))
 
     return written
 
@@ -98,6 +87,6 @@ def prepare_utterance_dfs(
     Writes Excel files under {output_dir}/Utterances by partition and
     returns the list of file paths written.
     """
-    utterance_dir = os.path.join(output_dir, "Utterances")
+    utterance_dir = output_dir / "Utterances"
     df, partition_tiers = _build_utterance_df(tiers, chats)
     return _write_utterance_tables(df, utterance_dir, partition_tiers)

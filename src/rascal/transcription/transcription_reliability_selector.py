@@ -1,4 +1,3 @@
-import os
 import random
 import logging
 import pandas as pd
@@ -72,18 +71,18 @@ def select_transcription_reliability_samples(tiers, chats, frac, output_dir):
         partitions.setdefault(partition_key, []).append(cha_file)
 
     # Create output directory
-    transc_rel_dir = os.path.join(output_dir, 'TranscriptionReliability')
-    os.makedirs(transc_rel_dir, exist_ok=True)
+    transc_rel_dir = output_dir / 'TranscriptionReliability'
+    transc_rel_dir.mkdir(parents=True, exist_ok=True)
 
     columns = ['file'] + list(tiers.keys())
 
     for partition_tiers, cha_files in tqdm(partitions.items(), desc="Selecting reliability subsets"):
         rows_all = []
         rows_subset = []
-
+                
         # Directory for this partition
-        partition_path = os.path.join(transc_rel_dir, *partition_tiers) if partition_tiers else transc_rel_dir
-        os.makedirs(partition_path, exist_ok=True)
+        partition_path = Path(transc_rel_dir, *partition_tiers) if partition_tiers else Path(transc_rel_dir)
+        partition_path.mkdir(parents=True, exist_ok=True)
 
         # Select subset
         subset_size = max(1, round(frac * len(cha_files)))
@@ -102,12 +101,16 @@ def select_transcription_reliability_samples(tiers, chats, frac, output_dir):
                     chat_data = chats[cha_file]
                     strs = next(chat_data.to_strs())
                     strs = ['@Begin'] + strs.split('\n') + ['@End']
-                    new_filename = os.path.basename(cha_file).replace('.cha', '_Reliability.cha')
-                    filepath = os.path.join(partition_path, new_filename)
-                    with open(filepath, 'w') as f:
+
+                    cha_path = Path(cha_file)
+                    new_filename = cha_path.stem + '_Reliability.cha'
+                    filepath = partition_path / new_filename
+
+                    with filepath.open('w') as f:
                         for line in strs:
                             if line.startswith('@'):
                                 f.write(line + '\n')
+
                     logging.info(f"Written blank CHAT file with header: {filepath}")
                 except Exception as e:
                     logging.error(f"Failed to write blank CHAT file for {cha_file}: {e}")
@@ -117,7 +120,7 @@ def select_transcription_reliability_samples(tiers, chats, frac, output_dir):
             df_all = pd.DataFrame(rows_all, columns=columns)
             df_subset = pd.DataFrame(rows_subset, columns=columns)
             suffix = '_'.join(partition_tiers) if partition_tiers else 'TranscriptionReliabilitySamples'
-            df_filepath = os.path.join(partition_path, f"{suffix}.xlsx")
+            df_filepath = partition_path / f"{suffix}.xlsx"
 
             with pd.ExcelWriter(df_filepath) as writer:
                 df_subset.to_excel(writer, sheet_name="Reliability", index=False)
@@ -157,7 +160,7 @@ def reselect_transcription_reliability_samples(input_dir, output_dir, frac):
     input_dir = Path(input_dir)
     output_dir = Path(output_dir)
     reselect_dir = output_dir / "reselected_TranscriptionReliability"
-    os.makedirs(reselect_dir, exist_ok=True)
+    reselect_dir.mkdir(parents=True, exist_ok=True)
 
     transc_sel_files = list(input_dir.rglob("*TranscriptionReliabilitySamples.xlsx"))
     if not transc_sel_files:

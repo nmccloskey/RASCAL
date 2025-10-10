@@ -1,4 +1,3 @@
-import os
 import logging
 import numpy as np
 import pandas as pd
@@ -237,9 +236,9 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms):
     """
     
     # Make CU Reliability folder.
-    CUReliability_dir = os.path.join(output_dir, 'CUReliability')
+    CUReliability_dir = output_dir / 'CUReliability'
     try:
-        os.makedirs(CUReliability_dir, exist_ok=True)
+        CUReliability_dir.mkdir(parents=True, exist_ok=True)
         logging.info(f"Created directory: {CUReliability_dir}")
     except Exception as e:
         logging.error(f"Failed to create directory {CUReliability_dir}: {e}")
@@ -275,7 +274,7 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms):
                     # --- Column selection ---
                     if paradigm:
                         sv2, rel2, sv3, rel3 = f'c2SV_{paradigm}', f'c2REL_{paradigm}', f'c3SV_{paradigm}', f'c3REL_{paradigm}'
-                        out_subdir = os.path.join(CUReliability_dir, paradigm)
+                        out_subdir = CUReliability_dir / paradigm
                     else:
                         sv2, rel2, sv3, rel3 = 'c2SV', 'c2REL', 'c3SV', 'c3REL'
                         out_subdir = CUReliability_dir
@@ -304,25 +303,25 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms):
 
                     # Partition subfolder path
                     partition_labels = [t.match(rel.name) for t in tiers.values() if t.partition]
-                    output_path = os.path.join(out_subdir, *partition_labels)
+                    output_path = Path(out_subdir, *partition_labels)
 
                     try:
-                        os.makedirs(output_path, exist_ok=True)
+                        output_path.mkdir(parents=True, exist_ok=True)
                     except Exception as e:
                         logging.error(f"Failed to make output folder {output_path}: {e}")
                         continue
 
                     # Save utterance-level results
                     paradigm_str = f"_{paradigm}" if paradigm else ""
-                    utterance_path = os.path.join(output_path, f"{'_'.join(partition_labels)}{paradigm_str}_CUReliabilityCoding_ByUtterance.xlsx")
+                    utterance_path = Path(output_path, f"{'_'.join(partition_labels)}{paradigm_str}_CUReliabilityCoding_ByUtterance.xlsx")
                     CUrelcod.to_excel(utterance_path, index=False)
 
                     # Summary + report + save (unchanged)
                     # Just use CUrelcod and column names as they are
                     CUrelsum = summarize_CU_reliability(CUrelcod, sv2, rel2, sv3, rel3)
-                    report_path = os.path.join(output_path, f"{'_'.join(partition_labels)}{paradigm_str}_CUReliabilityCodingReport.txt")
+                    report_path = Path(output_path, f"{'_'.join(partition_labels)}{paradigm_str}_CUReliabilityCodingReport.txt")
                     write_reliability_report(CUrelsum, report_path)
-                    summary_path = os.path.join(output_path, f"{'_'.join(partition_labels)}{paradigm_str}_CUReliabilityCoding_BySample.xlsx")
+                    summary_path = Path(output_path, f"{'_'.join(partition_labels)}{paradigm_str}_CUReliabilityCoding_BySample.xlsx")
                     CUrelsum.to_excel(summary_path, index=False)
                     
 
@@ -389,9 +388,9 @@ def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=[]):
     - If a paradigm’s required columns are missing in a file, that paradigm is skipped with a warning.
     - Summary percentages are rounded to 3 decimals.
     """
-    CUanalysis_dir = os.path.join(output_dir, 'CUCodingAnalysis')
+    CUanalysis_dir = output_dir / 'CUCodingAnalysis'
     try:
-        os.makedirs(CUanalysis_dir, exist_ok=True)
+        CUanalysis_dir.mkdir(parents=True, exist_ok=True)
         logging.info(f"Created directory: {CUanalysis_dir}")
     except Exception as e:
         logging.error(f"Failed to create CU analysis directory {CUanalysis_dir}: {e}")
@@ -454,15 +453,15 @@ def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=[]):
 
         # Save full utterance-level file
         partition_labels = [t.match(cod.name) for t in tiers.values() if t.partition]
-        out_dir = os.path.join(CUanalysis_dir, *partition_labels)
+        out_dir = Path(CUanalysis_dir, *partition_labels)
 
         try:
-            os.makedirs(out_dir, exist_ok=True)
+            out_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             logging.error(f"Failed to create output directory {out_dir}: {e}")
             continue
 
-        utterance_path = os.path.join(out_dir, f"{'_'.join(partition_labels)}_CUCoding_ByUtterance.xlsx")
+        utterance_path = Path(out_dir, f"{'_'.join(partition_labels)}_CUCoding_ByUtterance.xlsx")
         try:
             CUcod.to_excel(utterance_path, index=False)
             logging.info(f"Saved utterance-level CU analysis: {utterance_path}")
@@ -476,7 +475,7 @@ def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=[]):
                 for df in summary_list[1:]:
                     CUcodsum_all = pd.merge(CUcodsum_all, df, on='sample_id', how='outer')
 
-                summary_path = os.path.join(out_dir, f"{'_'.join(partition_labels)}_CUCoding_BySample.xlsx")
+                summary_path = Path(out_dir, f"{'_'.join(partition_labels)}_CUCoding_BySample.xlsx")
                 CUcodsum_all.to_excel(summary_path, index=False)
                 logging.info(f"Saved combined CU summary: {summary_path}")
 

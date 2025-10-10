@@ -1,4 +1,3 @@
-import os
 import logging
 import numpy as np
 import pandas as pd
@@ -131,9 +130,9 @@ def analyze_word_count_reliability(tiers, input_dir, output_dir):
     """
 
     # Make Word Count Reliability folder
-    WordCountReliability_dir = os.path.join(output_dir, 'WordCountReliability')
+    WordCountReliability_dir = output_dir / 'WordCountReliability'
     try:
-        os.makedirs(WordCountReliability_dir, exist_ok=True)
+        WordCountReliability_dir.mkdir(parents=True, exist_ok=True)
         logging.info(f"Created directory: {WordCountReliability_dir}")
     except Exception as e:
         logging.error(f"Failed to create directory {WordCountReliability_dir}: {e}")
@@ -183,9 +182,9 @@ def analyze_word_count_reliability(tiers, input_dir, output_dir):
 
                 # Create output directory
                 partition_labels = [t.match(rel.name) for t in tiers.values() if t.partition]
-                output_path = os.path.join(WordCountReliability_dir, *partition_labels)
+                output_path = Path(WordCountReliability_dir, *partition_labels)
                 try:
-                    os.makedirs(output_path, exist_ok=True)
+                    output_path.mkdir(parents=True, exist_ok=True)
                     logging.info(f"Created partition directory: {output_path}")
                 except Exception as e:
                     logging.error(f"Failed to create partition directory {output_path}: {e}")
@@ -193,10 +192,10 @@ def analyze_word_count_reliability(tiers, input_dir, output_dir):
 
                 # Write tables.
                 lab_str = '_'.join(partition_labels) + '_' if partition_labels else ''
-                filename = os.path.join(output_path, lab_str + 'WordCountingReliabilityResults.xlsx')
+                filename = Path(output_path, lab_str + 'WordCountingReliabilityResults.xlsx')
                 logging.info(f"Writing word counting reliability results file: {filename}")
                 try:
-                    os.makedirs(os.path.dirname(filename), exist_ok=True)
+                    filename.parent.mkdir(parents=True, exist_ok=True)
                     WCmerged.to_excel(filename, index=False)
                 except Exception as e:
                     logging.error(f"Failed to write word count reliability results file {filename}: {e}")
@@ -211,7 +210,7 @@ def analyze_word_count_reliability(tiers, input_dir, output_dir):
                 # Write reliability report
                 num_samples_AG = np.nansum(WCmerged['AG'])
                 perc_samples_AG = round((num_samples_AG / len(WCmerged)) * 100, 1)
-                report_path = os.path.join(output_path, lab_str + "WordCountReliabilityReport.txt")
+                report_path = Path(output_path, lab_str + "WordCountReliabilityReport.txt")
                 try:
                     with open(report_path, 'w') as report:
                         report.write(f"Word Count Reliability Report for {' '.join(partition_labels)}\n\n")

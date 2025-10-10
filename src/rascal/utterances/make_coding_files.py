@@ -1,4 +1,3 @@
-import os
 import re
 import random
 import logging
@@ -174,7 +173,7 @@ def make_CU_coding_files(
         coders = ['1', '2', '3']
 
     base_cols = ['c1ID', 'c1SV', 'c1REL', 'c1com', 'c2ID', 'c2SV', 'c2REL', 'c2com']
-    CU_coding_dir = os.path.join(output_dir, 'CUCoding')
+    CU_coding_dir = output_dir / 'CUCoding'
     logging.info(f"Writing CU coding files to {CU_coding_dir}")
     utterance_files = list(Path(input_dir).rglob("*Utterances.xlsx")) + list(Path(output_dir).rglob("*Utterances.xlsx"))
 
@@ -279,11 +278,11 @@ def make_CU_coding_files(
 
         lab_str = '_'.join(labels) + '_' if labels else ''
 
-        cu_filename = os.path.join(CU_coding_dir, *labels, lab_str + 'CUCoding.xlsx')
-        rel_filename = os.path.join(CU_coding_dir, *labels, lab_str + 'CUReliabilityCoding.xlsx')
+        cu_filename = Path(CU_coding_dir, *labels, lab_str + 'CUCoding.xlsx')
+        rel_filename = Path(CU_coding_dir, *labels, lab_str + 'CUReliabilityCoding.xlsx')
 
         try:
-            os.makedirs(os.path.dirname(cu_filename), exist_ok=True)
+            cu_filename.parent.mkdir(parents=True, exist_ok=True)
             CUdf.to_excel(cu_filename, index=False)
             logging.info(f"Successfully wrote CU coding file: {cu_filename}")
         except Exception as e:
@@ -386,7 +385,7 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
     d = get_word_checker()
     
     # Make word count coding file path.
-    word_count_dir = os.path.join(output_dir, 'WordCounts')
+    word_count_dir = output_dir / 'WordCounts'
     logging.info(f"Writing word count files to {word_count_dir}")
 
     # Convert utterance-level CU coding files to word counting files.
@@ -455,16 +454,16 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
         lab_str = '_'.join(labels) + '_' if labels else ''
 
         # Save word count coding file.
-        filename = os.path.join(word_count_dir, *labels, lab_str + 'WordCounting.xlsx')
+        filename = Path(word_count_dir, *labels, lab_str + 'WordCounting.xlsx')
         logging.info(f"Writing word counting file: {filename}")
         try:
-            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            filename.parent.mkdir(parents=True, exist_ok=True)
             WCdf.to_excel(filename, index=False)
         except Exception as e:
             logging.error(f"Failed to write word count coding file {filename}: {e}")
 
         # Word count reliability coding file.
-        filename = os.path.join(word_count_dir, *labels, lab_str + 'WordCountingReliability.xlsx')
+        filename = Path(word_count_dir, *labels, lab_str + 'WordCountingReliability.xlsx')
         logging.info(f"Writing word count reliability coding file: {filename}")
         try:
             WCreldf.to_excel(filename, index=False)
