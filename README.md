@@ -54,16 +54,14 @@ conda create --name rascal python=3.12
 conda activate rascal
 ```
 
-### 2. Install RASCAL directly from PyPI:
+### 2. Download RASCAL:
 ```bash
+# directly from PyPI
 pip install rascal-speech
-```
 
-### ...or from GitHub:
-```bash
+# or from GitHub
 pip install git+https://github.com/nmccloskey/rascal.git@main
 ```
-
 ---
 
 ## Setup
@@ -186,13 +184,20 @@ Tabularization:
 Once installed, RASCAL can be run from any directory using the command-line interface:
 
 ```bash
-rascal <step or function>
+rascal <function(s)>
 ```
 
-For example, to run the CU coding analysis function:
+Examples:
 
 ```bash
-rascal f
+# Reselect transcription reliability:
+rascal c
+
+# Prepare utterance tables & CU coding files from chat transcripts:
+rascal de
+
+# Unblind samples and specify config (default 'config.yaml'):
+rascal m --config other_config.yaml
 ```
 
 ### Pipeline Commands
@@ -256,10 +261,6 @@ Run a specific test file:
 pytest tests/test_samples/test_run_corelex.py
 ```
 
-### Notes
-- Tests stub out heavy dependencies (e.g., `openpyxl`, external web requests) to keep them fast and reproducible.
-- Many tests use temporary directories (`tmp_path`) to simulate file I/O without affecting your real data.
-
 ## Status and Contact
 
 I warmly welcome feedback, feature suggestions, or bug reports. Feel free to reach out by:
@@ -280,11 +281,11 @@ If using RASCAL in your research, please cite:
 
 RASCAL builds on and integrates functionality from two excellent open-source tools which I highly recommend to researchers and clinicians working with language data:
 
-- [**batchalign2**](https://github.com/TalkBank/batchalign2) – Developed by the TalkBank team, batchalign provides a robust backend for automatic speech recognition. RASCAL was designed to function downstream of this system, leveraging its debulletized `.cha` files as input. This integration allows researchers to significantly expedite batch transcription, which without an ASR springboard might bottleneck discourse analysis.
+- [**batchalign2**](https://github.com/TalkBank/batchalign2) – Developed by the TalkBank team, Batchalign provides a robust backend for automatic speech recognition (ASR). RASCAL was designed to function downstream of this system, leveraging its debulletized `.cha` files as input. This integration allows researchers to significantly expedite batch transcription, which without an ASR springboard might bottleneck discourse analysis.
 
 > Liu H, MacWhinney B, Fromm D, Lanzi A. *Automation of Language Sample Analysis*. J Speech Lang Hear Res. 2023 Jul 12;66(7):2421-2433. doi: 10.1044/2023_JSLHR-22-00642. Epub 2023 Jun 22. PMID: 37348510; PMCID: PMC10555460.
 
-- [**coreLexicon**](https://github.com/rbcavanaugh/coreLexicon) – A web-based interface for Core Lexicon analysis developed by Rob Cavanaugh, et al. RASCAL implements its own Core Lexicon analysis that has high reliability with this web app: ICC(2) values (two-way random, absolute agreement) on primary metrics were 0.9627 for accuracy (number of core words) and 0.9689 for efficiency (core words per minute) - measured on 402 narratives (Brokem Window, Cat Rescue, and Refused Umbrella) from our conversation treatment study. RASCAL does not use the webapp but accesses the normative data associated with this repository (using Google sheet IDs) to calculate percentiles. 
+- [**coreLexicon**](https://github.com/rbcavanaugh/coreLexicon) – A web-based interface for Core Lexicon analysis developed by Rob Cavanaugh, et al (2021). RASCAL implements its own Core Lexicon analysis that has high reliability with this web app: ICC(2) values (two-way random, absolute agreement) on primary metrics were 0.9627 for accuracy (number of core words) and 0.9689 for efficiency (core words per minute) - measured on 402 narratives (Brokem Window, Cat Rescue, and Refused Umbrella) from our conversation treatment study. RASCAL does not use the webapp but accesses the normative data associated with this repository (using Google sheet IDs) to calculate percentiles.
 
   - **Inspiration & overlap:** RASCAL’s output table design was directly inspired by the original web app, with many of the same fields (accuracy, efficiency, percentiles, CoreLex tokens produced).
   - **Enhancements:** RASCAL extends this model by (a) supporting batch analysis of uploaded/input tabular data (rather than manual entry through a web interface), and (b) including some new metrics, particularly a normalized lexicon coverage, which enables aggregate comparisons across narratives.

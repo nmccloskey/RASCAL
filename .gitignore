@@ -34,7 +34,7 @@ google_creds.json
 *.log
 
 # Configs
-config.yaml
+# config.yaml
 *.secrets.yaml
 
 # Cache dirs (used by tools)
