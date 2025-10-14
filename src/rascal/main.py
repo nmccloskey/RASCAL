@@ -35,7 +35,7 @@ def main(args):
     # --- Timestamped output folder ---
     timestamp = datetime.now().strftime("%y%m%d_%H%M")
     output_dir = output_dir / f"rascal_{steps_to_run}_output_{timestamp}"
-    output_dir.mkdir(parent=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # Ensure .cha files read if required
     if 'a' in steps_to_run or 'd' in steps_to_run:
