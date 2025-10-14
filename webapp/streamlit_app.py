@@ -17,6 +17,7 @@ add_src_to_sys_path()
 from rascal.utils.support_funcs import *
 
 st.title("RASCAL Web App")
+st.caption("Resources for Analyzing Speech in Clinical Aphasiology Labs")
 
 if "confirmed_config" not in st.session_state:
     st.session_state.confirmed_config = False
