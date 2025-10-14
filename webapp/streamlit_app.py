@@ -65,9 +65,6 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
         input_dir.mkdir(exist_ok=True)
         output_dir.mkdir(exist_ok=True)
 
-        config["input_dir"] = str(input_dir)
-        config["output_dir"] = str(output_dir)
-
         # Save uploaded input files
         for file in cha_files:
             file_path = input_dir / file.name
@@ -108,43 +105,43 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
         if st.button("Run selected functions"):
             # Only read chats if needed
             if any(f[0] in ["a", "d"] for f in selected_funcs):
-                chats = run_read_cha_files(str(input_dir))
+                chats = run_read_cha_files(input_dir)
             else:
                 chats = None
 
             for func in selected_funcs:
                 if func.startswith("a."):
-                    run_select_transcription_reliability_samples(tiers, chats, frac, str(output_dir))
+                    run_select_transcription_reliability_samples(tiers, chats, frac, output_dir)
                 elif func.startswith("b."):
                     run_analyze_transcription_reliability(
-                        tiers, str(input_dir), str(output_dir),
+                        tiers, input_dir, output_dir,
                         exclude_participants, strip_clan, prefer_correction, lowercase
                     )
                 elif func.startswith("c."):
-                    run_reselect_transcription_reliability_samples(str(input_dir), str(output_dir), frac)
+                    run_reselect_transcription_reliability_samples(input_dir, output_dir, frac)
                 elif func.startswith("d."):
-                    run_prepare_utterance_dfs(tiers, chats, str(output_dir))
+                    run_prepare_utterance_dfs(tiers, chats, output_dir)
                 elif func.startswith("e."):
-                    run_make_CU_coding_files(tiers, frac, coders, str(input_dir), str(output_dir),
+                    run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir,
                                              CU_paradigms, exclude_participants)
                 elif func.startswith("f."):
-                    run_make_timesheets(tiers, str(input_dir), str(output_dir))
+                    run_make_timesheets(tiers, input_dir, output_dir)
                 elif func.startswith("g."):
-                    run_analyze_CU_reliability(tiers, str(input_dir), str(output_dir), CU_paradigms)
+                    run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms)
                 elif func.startswith("h."):
-                    run_reselect_CU_reliability(tiers, str(input_dir), str(output_dir), "CU", frac)
+                    run_reselect_CU_reliability(tiers, input_dir, output_dir, "CU", frac)
                 elif func.startswith("i."):
-                    run_analyze_CU_coding(tiers, str(input_dir), str(output_dir), CU_paradigms)
+                    run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms)
                 elif func.startswith("j."):
-                    run_make_word_count_files(tiers, frac, coders, str(input_dir), str(output_dir))
+                    run_make_word_count_files(tiers, frac, coders, input_dir, output_dir)
                 elif func.startswith("k."):
-                    run_analyze_word_count_reliability(tiers, str(input_dir), str(output_dir))
+                    run_analyze_word_count_reliability(tiers, input_dir, output_dir)
                 elif func.startswith("l."):
-                    run_reselect_WC_reliability(tiers, str(input_dir), str(output_dir), "WC", frac)
+                    run_reselect_WC_reliability(tiers, input_dir, output_dir, "WC", frac)
                 elif func.startswith("m."):
-                    run_unblind_CUs(tiers, str(input_dir), str(output_dir))
+                    run_unblind_CUs(tiers, input_dir, output_dir)
                 elif func.startswith("n."):
-                    run_run_corelex(str(input_dir), str(output_dir), exclude_participants)
+                    run_run_corelex(input_dir, output_dir, exclude_participants)
 
             st.success("Functions completed!")
 
