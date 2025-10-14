@@ -1,5 +1,4 @@
 import streamlit as st
-import yaml
 from pathlib import Path
 import tempfile
 import zipfile
@@ -14,7 +13,18 @@ def add_src_to_sys_path():
 
 add_src_to_sys_path()
 
-from rascal.utils.support_funcs import *
+from rascal.utils.support_funcs import as_path, load_config
+from rascal.run_wrappers import (
+    run_read_tiers, run_read_cha_files,
+    run_select_transcription_reliability_samples,
+    run_reselect_transcription_reliability_samples,
+    run_analyze_transcription_reliability,
+    run_prepare_utterance_dfs, run_make_CU_coding_files,
+    run_make_timesheets, run_analyze_CU_reliability,
+    run_analyze_CU_coding, run_reselect_CU_reliability,
+    run_make_word_count_files, run_analyze_word_count_reliability,
+    run_reselect_WC_reliability, run_unblind_CUs, run_run_corelex
+)
 
 st.title("RASCAL Web App")
 st.caption("Resources for Analyzing Speech in Clinical Aphasiology Labs")
@@ -44,7 +54,7 @@ config = None
 
 if config_file:
     st.session_state.confirmed_config = False  # reset if new file uploaded
-    config = yaml.safe_load(config_file)
+    config = load_config(config_file)
     st.success("✅ Config file uploaded")
 else:
     with st.expander("No config uploaded? Build one here"):
@@ -60,7 +70,7 @@ cha_files = st.file_uploader("Upload input files", type=["cha", ".xlsx"], accept
 
 if (config_file or st.session_state.confirmed_config) and cha_files:
     with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_path = Path(tmpdir)
+        tmp_path = as_path(tmpdir)
         input_dir = tmp_path / "input"
         output_dir = tmp_path / "output"
         input_dir.mkdir(exist_ok=True)
