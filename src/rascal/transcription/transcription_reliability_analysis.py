@@ -20,51 +20,43 @@ def percent_difference(a, b):
 
 def _clean_clan_for_reliability(text: str) -> str:
     """
-    Strip CLAN markup while preserving speech content crucial for reliability.
-    - Keep fillers/disfluencies: '&um' -> 'um', '&uh' -> 'uh'
-    - Remove structural markers: retracings [/], [//], [///], events <...>, comments ((...)), paralinguistic {...}
-    - Remove bracket content [ ... ] *after* corrections handled, but preserve word-like content if any.
-    - Drop tokens that are pure markup (e.g., =laughs), but keep speech hidden behind & or + if letter-like.
+    Clean CLAN-formatted text while keeping only speech-relevant material.
 
-    This is intentionally milder than CoreLex reformatting: no contraction expansion, no digit->word, no stopword/filler removal.
+    Rules
+    -----
+    - Keep common disfluencies like &um, &uh, &h (→ 'um', 'uh', 'h')
+    - Remove gesture and non-speech codes (e.g., &=points:leg, =laughs, <...>, ((...)), {...}, [/], [//])
+    - Remove any remaining bracketed or symbolic markup
+    - Preserve ordinary words, punctuation (.!?), and apostrophes
+
+    Example
+    -------
+    Input : "but &-um &-uh &+h hurt &=points:leg oh well"
+    Output: "but um uh h hurt oh well"
     """
-    # --- remove containers that never carry client words ---
-    # Remove events <...>, comments ((...)), paralinguistic {...}
-    text = re.sub(r"<[^>]+>", " ", text)
-    text = re.sub(r"\(\([^)]*\)\)", " ", text)
-    text = re.sub(r"\{[^}]+\}", " ", text)
 
-    # Retracing markers and similar bracket codes (after correction handling):
-    # [/], [//], [///], [?], [=! ...], [% ...], [& ...], etc.
-    # If bracket content is purely non-letters, drop entirely.
-    text = re.sub(r"\[\/*\]", " ", text)  # [/], [//], [///] variants
-    text = re.sub(r"\[\s*[?%!=&][^\]]*\]", " ", text)
+    # --- normalize common &fillers ---
+    text = re.sub(r"(?<!\S)&[-+]?([a-zA-Z]+)\b", r"\1", text)  # &um, &-uh, &+h → um, uh, h
 
-    # Any remaining bracketed spans (e.g., [x 2]) that aren't words → drop
-    text = re.sub(r"\[\s*[^\w\]]+\s*\]", " ", text)
+    # --- remove any other tokens starting with '&' (non-speech codes like &=points:leg) ---
+    text = re.sub(r"(?<!\S)&\S+", " ", text)
 
-    # Remove standalone [*] (if any survived)
-    text = re.sub(r"\[\*\]", " ", text)
+    # --- remove structural / paralinguistic markup ---
+    text = re.sub(r"<[^>]+>", " ", text)       # events <...>
+    text = re.sub(r"\(\([^)]*\)\)", " ", text) # comments ((...))
+    text = re.sub(r"\{[^}]+\}", " ", text)     # paralinguistic {...}
+    text = re.sub(r"\[\/*\]", " ", text)       # retracing markers [/], [//], [///]
+    text = re.sub(r"\[[^]]*\]", " ", text)     # any remaining [ ... ]
 
-    # --- convert speech-like tokens encoded as CLAN codes ---
-    # &um, &uh, &erm -> um, uh, erm
-    text = re.sub(r"(?<!\S)&([a-zA-Z]+)\b", r"\1", text)
+    # --- remove =codes like =laughs or &=draws:a:cat ---
+    text = re.sub(r"(?<!\S)=[^\s]+", " ", text)
 
-    # +... variants sometimes mark pauses/continuations; if they prefix letters, keep letters.
-    text = re.sub(r"(?<!\S)\++([a-zA-Z']+)\b", r"\1", text)
-
-    # &=draws:a:cat or =laughs etc.  If token starts with non-word chars and then letters,
-    # keep the tail letters; otherwise drop. (Conservative keep for speech-like tails)
-    text = re.sub(r"(?<!\S)[^a-zA-Z'\s]+([a-zA-Z']+)\b", r"\1", text)
-
-    # After the above, many pure markup tokens will reduce to nothing but punctuation; remove leftover [] explicitly
-    text = re.sub(r"\[[^\]]+\]", " ", text)
-
-    # Strip non-speech symbols but keep apostrophes and sentence punctuation .!?
+    # --- remove leftover non-speech symbols but keep apostrophes and sentence punctuation ---
     text = re.sub(r"[^\w\s'!.?]", " ", text)
 
-    # Collapse multiple punctuation spaces like " ."
+    # --- collapse redundant spaces and tidy punctuation spacing ---
     text = re.sub(r"\s+(?=[.!?])", "", text)
+    text = re.sub(r"\s{2,}", " ", text).strip()
 
     return text
 
