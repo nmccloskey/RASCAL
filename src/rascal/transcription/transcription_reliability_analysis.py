@@ -6,6 +6,7 @@ from tqdm import tqdm
 from pathlib import Path
 from Bio.Align import PairwiseAligner
 import logging
+from typing import Union, List
 
 
 def percent_difference(a, b):
@@ -18,12 +19,10 @@ def percent_difference(a, b):
     except Exception:
         return float("nan")
 
-def _clean_clan_for_reliability(text: str) -> str:
+def scrub_clan(text: str) -> str:
     """
-    Clean CLAN-formatted text while keeping only speech-relevant material.
+    Remove CLAN markup while keeping only speech-relevant material.
 
-    Rules
-    -----
     - Keep common disfluencies like &um, &uh, &h (→ 'um', 'uh', 'h')
     - Remove gesture and non-speech codes (e.g., &=points:leg, =laughs, <...>, ((...)), {...}, [/], [//])
     - Remove any remaining bracketed or symbolic markup
@@ -34,99 +33,145 @@ def _clean_clan_for_reliability(text: str) -> str:
     Input : "but &-um &-uh &+h hurt &=points:leg oh well"
     Output: "but um uh h hurt oh well"
     """
-
-    # --- normalize common &fillers ---
-    text = re.sub(r"(?<!\S)&[-+]?([a-zA-Z]+)\b", r"\1", text)  # &um, &-uh, &+h → um, uh, h
-
-    # --- remove any other tokens starting with '&' (non-speech codes like &=points:leg) ---
+    # normalize speech-like tokens (&um, &-uh, &+h → um, uh, h)
+    text = re.sub(r"(?<!\S)&[-+]?([a-zA-Z]+)\b", r"\1", text)
+    # remove all other &-prefixed tokens
     text = re.sub(r"(?<!\S)&\S+", " ", text)
 
-    # --- remove structural / paralinguistic markup ---
-    text = re.sub(r"<[^>]+>", " ", text)       # events <...>
-    text = re.sub(r"\(\([^)]*\)\)", " ", text) # comments ((...))
-    text = re.sub(r"\{[^}]+\}", " ", text)     # paralinguistic {...}
-    text = re.sub(r"\[\/*\]", " ", text)       # retracing markers [/], [//], [///]
-    text = re.sub(r"\[[^]]*\]", " ", text)     # any remaining [ ... ]
+    # remove structural / paralinguistic markup
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\(\([^)]*\)\)", " ", text)
+    text = re.sub(r"\{[^}]+\}", " ", text)
+    text = re.sub(r"\[\/*\]", " ", text)
+    text = re.sub(r"\[[^]]*\]", " ", text)
 
-    # --- remove =codes like =laughs or &=draws:a:cat ---
+    # remove =codes (e.g., =laughs)
     text = re.sub(r"(?<!\S)=[^\s]+", " ", text)
 
-    # --- remove leftover non-speech symbols but keep apostrophes and sentence punctuation ---
+    # remove non-speech symbols except .!? and apostrophes
     text = re.sub(r"[^\w\s'!.?]", " ", text)
 
-    # --- collapse redundant spaces and tidy punctuation spacing ---
+    # tidy whitespace
     text = re.sub(r"\s+(?=[.!?])", "", text)
     text = re.sub(r"\s{2,}", " ", text).strip()
 
     return text
 
-def extract_cha_text(
-    chat_data,
-    *,
-    exclude_participants=[],  
-    strip_clan=True,                # keep raw CLAN if False
-    prefer_correction=True,          # True => keep [: correction ] [*]; False => keep target
-    lowercase=True
-) -> str:
+def process_corrections(text: str, prefer_correction: bool = True) -> str:
     """
-    Extract a single comparison string from CHAT data for transcription reliability.
-
-    - Minimal normalization when strip_clan=False (verbatim CLAN kept).
-    - When strip_clan=True, CLAN markup is removed *but* speech-like content is preserved,
-      including filled pauses (e.g., '&um' -> 'um') and disfluencies.
+    Handle CLAN correction notation ([: correction] [*]) according to preference.
 
     Parameters
     ----------
-    chat_data : pylangacq.Reader or compatible
-        Must provide .utterances() yielding objects with .participant and .tiers[participant]
-    exclude_participants : tuple[str]
-        Participant codes to exclude (e.g., clinician 'INV').
-    strip_clan : bool
-        If True, return a speech-only surface (no CLAN codes). If False, keep CLAN.
+    text : str
+        Utterance text possibly containing corrections.
     prefer_correction : bool
-        Policy for accepted corrections '[: x] [*]': True keeps x, False keeps original token(s).
-    lowercase : bool
-        Lowercase final string for case-insensitive Levenshtein.
+        - True → keep the correction (birthday)
+        - False → keep original (birbday)
     """
+    if prefer_correction:
+        text = re.sub(r"\[:\s*([^\]]+?)\s*\]\s*\[\*\]", r"\1", text)
+        text = re.sub(r"\[\*\]", "", text)
+    else:
+        text = re.sub(r"\s*\[:\s*[^\]]+?\s*\]\s*\[\*\]", "", text)
+    return text
+
+def extract_cha_text(
+    source: Union[str, pylangacq.Reader],
+    exclude_participants: List[str] = None,
+) -> str:
+    """
+    Extract utterance text only when a pylangacq.Reader is provided.
+
+    For RASCAL: accepts a Reader and returns concatenated utterances.
+    For DIAAD: if input is already a text string, it is returned unchanged
+    (no pylangacq parsing).
+
+    Parameters
+    ----------
+    source : str or pylangacq.Reader
+        - pylangacq.Reader → extract utterances
+        - str → returned unchanged (already plain text)
+    exclude_participants : list[str], optional
+        Participant codes to exclude (e.g., ['INV']).
+    """
+    exclude_participants = exclude_participants or []
+
     try:
-        # 1) Collect utterances
-        parts = []
-        for line in chat_data.utterances():
-            if line.participant in exclude_participants:
-                continue
-            utt = line.tiers.get(line.participant, "")
-            # tighten spaces before . ! ?
-            utt = re.sub(r"\s+(?=[.!?])", "", utt)
-            parts.append(utt)
-        text = " ".join(parts).strip()
+        if isinstance(source, pylangacq.Reader):
+            parts = []
+            for line in source.utterances():
+                if line.participant in exclude_participants:
+                    continue
+                utt = line.tiers.get(line.participant, "")
+                utt = re.sub(r"\s+(?=[.!?])", "", utt)
+                parts.append(utt)
+            return " ".join(parts).strip()
 
-        # 2) Normalize accepted corrections per policy
-        # Patterns like: "... birbday [: birthday] [*] ..."
-        if prefer_correction:
-            # Keep the correction content, drop the target.
-            # Also handle multiword corrections.
-            text = re.sub(r"\[:\s*([^\]]+?)\s*\]\s*\[\*\]", r"\1", text)
-            # Remove any stray [*] that appear without '[: ...]'
-            text = re.sub(r"\[\*\]", "", text)
+        elif isinstance(source, str):
+            # Return string unchanged — already text
+            return source.strip()
+
         else:
-            # Remove the correction block but keep original token(s)
-            text = re.sub(r"\s*\[:\s*[^\]]+?\s*\]\s*\[\*\]", "", text)
-
-        if strip_clan:
-            text = _clean_clan_for_reliability(text)
-        else:
-            # Keep CLAN; just normalize whitespace lightly
-            text = re.sub(r"[ \t]+", " ", text)
-
-        # 3) Final touches: standardize whitespace/case but keep sentence punctuation and apostrophes
-        text = re.sub(r"\s+", " ", text).strip()
-        if lowercase:
-            text = text.lower()
-        return text
+            raise TypeError(
+                f"Unsupported input type for extract_cha_text: {type(source)}"
+            )
 
     except Exception as e:
-        logging.error("extract_cha_text failed: %s", e)
+        logging.error(f"extract_cha_text failed: {e}")
         return ""
+
+def process_utterances(
+    chat_data: Union[str, pylangacq.Reader],
+    *,
+    exclude_participants: List[str] = None,
+    strip_clan: bool = True,
+    prefer_correction: bool = True,
+    lowercase: bool = True,
+) -> str:
+    """
+    Unified utterance-processing pipeline for both RASCAL (Reader input)
+    and DIAAD (plain text input).
+
+    Behavior
+    --------
+    - If `chat_data` is a pylangacq.Reader, extract and process utterances.
+    - If `chat_data` is already a string, skip pylangacq and process directly.
+    - Optionally remove CLAN markup and/or apply correction preferences.
+
+    Parameters
+    ----------
+    chat_data : str or pylangacq.Reader
+        CHAT text (string) or Reader object.
+    exclude_participants : list[str], optional
+        Participants to omit (used only for Reader input).
+    strip_clan : bool
+        If True, scrub CLAN markup.
+    prefer_correction : bool
+        Policy for handling [: correction] [*].
+    lowercase : bool
+        Lowercase final output.
+    """
+    # 1. Extract text (Reader → concatenated utterances; str → unchanged)
+    text = extract_cha_text(chat_data, exclude_participants)
+    if not text:
+        return ""
+
+    # 2. Handle corrections
+    text = process_corrections(text, prefer_correction)
+
+    # 3. Optionally strip CLAN markup
+    if strip_clan:
+        text = scrub_clan(text)
+    else:
+        text = re.sub(r"[ \t]+", " ", text)
+
+    # 4. Final normalization
+    text = re.sub(r"\s+", " ", text).strip()
+    if lowercase:
+        text = text.lower()
+
+    return text
 
 # Helper function to wrap lines at approximately 80 characters or based on delimiters
 def _wrap_text(text, width=80):
@@ -376,14 +421,14 @@ def analyze_transcription_reliability(
             continue
 
         try:
-            org_text = extract_cha_text(
+            org_text = process_utterances(
                 org_chat_data,
                 exclude_participants=exclude_participants,
                 strip_clan=strip_clan,
                 prefer_correction=prefer_correction,
                 lowercase=lowercase,
             )
-            rel_text = extract_cha_text(
+            rel_text = process_utterances(
                 rel_chat_data,
                 exclude_participants=exclude_participants,
                 strip_clan=strip_clan,
