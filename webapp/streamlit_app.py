@@ -1,10 +1,12 @@
+import yaml
+import zipfile
+import tempfile
+from io import BytesIO
 import streamlit as st
 from pathlib import Path
-import tempfile
-import zipfile
-from io import BytesIO
 from datetime import datetime
 from config_builder import build_config_ui
+
 
 def add_src_to_sys_path():
     import sys
@@ -13,7 +15,7 @@ def add_src_to_sys_path():
 
 add_src_to_sys_path()
 
-from rascal.utils.support_funcs import as_path, load_config
+from rascal.utils.support_funcs import as_path
 from rascal.run_wrappers import (
     run_read_tiers, run_read_cha_files,
     run_select_transcription_reliability_samples,
@@ -54,7 +56,7 @@ config = None
 
 if config_file:
     st.session_state.confirmed_config = False  # reset if new file uploaded
-    config = load_config(config_file)
+    config = yaml.safe_load(config_file)
     st.success("✅ Config file uploaded")
 else:
     with st.expander("No config uploaded? Build one here"):
