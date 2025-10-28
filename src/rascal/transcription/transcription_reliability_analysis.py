@@ -61,19 +61,18 @@ def process_corrections(text: str, prefer_correction: bool = True) -> str:
     """
     Handle CLAN correction notation ([: correction] [*]) according to preference.
 
-    Parameters
-    ----------
-    text : str
-        Utterance text possibly containing corrections.
-    prefer_correction : bool
-        - True → keep the correction (birthday)
-        - False → keep original (birbday)
+    prefer_correction=True  -> replace with correction
+    prefer_correction=False -> keep original (remove correction markup)
     """
     if prefer_correction:
-        text = re.sub(r"\[:\s*([^\]]+?)\s*\]\s*\[\*\]", r"\1", text)
-        text = re.sub(r"\[\*\]", "", text)
+        # Replace "orig [: corr] [*]" with "corr"
+        text = re.sub(r"(\S+)\s*\[:\s*([^\]]+?)\s*\]\s*\[\*\]", r"\2", text)
     else:
-        text = re.sub(r"\s*\[:\s*[^\]]+?\s*\]\s*\[\*\]", "", text)
+        # Replace "orig [: corr] [*]" with "orig"
+        text = re.sub(r"(\S+)\s*\[:\s*([^\]]+?)\s*\]\s*\[\*\]", r"\1", text)
+
+    # Clean up spacing
+    text = re.sub(r"\s{2,}", " ", text).strip()
     return text
 
 def extract_cha_text(
