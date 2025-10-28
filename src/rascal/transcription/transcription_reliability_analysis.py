@@ -39,7 +39,6 @@ def scrub_clan(text: str) -> str:
     text = re.sub(r"(?<!\S)&\S+", " ", text)
 
     # remove structural / paralinguistic markup
-    text = re.sub(r"<[^>]+>", " ", text)
     text = re.sub(r"\(\([^)]*\)\)", " ", text)
     text = re.sub(r"\{[^}]+\}", " ", text)
     text = re.sub(r"\[\/*\]", " ", text)
