@@ -48,6 +48,49 @@ COMMAND_MAP = {
 }
 
 # -------------------------------------------------------------
+# CLI setup utilities
+# -------------------------------------------------------------
+def build_arg_parser():
+    """Construct and return the argument parser used by both main.py and cli.py."""
+    parser = argparse.ArgumentParser(
+        description=(
+            "RASCAL command-line interface.\n\n"
+            "Examples:\n"
+            "  rascal 3b\n"
+            "  rascal transcripts reselect\n"
+            "  rascal 4\n"
+            "  rascal 4a,4b,4c\n"
+            "  rascal utterances make, cus make, timesheets make\n"
+        ),
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+
+    parser.add_argument(
+        "command",
+        nargs="+",
+        help="Command(s) to run (comma-separated or space-separated)."
+    )
+
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="config.yaml",
+        help="Path to the configuration file (default: config.yaml)"
+    )
+
+    # ---- Help text for expansions ----
+    help_lines = ["\nAvailable Commands:\n"]
+    for short, long in COMMAND_MAP.items():
+        help_lines.append(f"  {short:<4}  →  {long}")
+    help_lines.append("\nOmnibus Commands:\n")
+    for omni, subs in OMNIBUS_MAP.items():
+        expansions = [f"{s} ({COMMAND_MAP[s]})" for s in subs]
+        help_lines.append(f"  {omni:<4}  →  {', '.join(expansions)}")
+    parser.epilog = "\n".join(help_lines)
+
+    return parser
+
+# -------------------------------------------------------------
 # Main
 # -------------------------------------------------------------
 def main(args):
@@ -151,51 +194,6 @@ def main(args):
 
     if executed:
         logging.info(f"Completed: {', '.join(executed)}")
-
-
-# -------------------------------------------------------------
-# CLI setup utilities
-# -------------------------------------------------------------
-def build_arg_parser():
-    """Construct and return the argument parser used by both main.py and cli.py."""
-    parser = argparse.ArgumentParser(
-        description=(
-            "RASCAL command-line interface.\n\n"
-            "Examples:\n"
-            "  rascal 3b\n"
-            "  rascal transcripts reselect\n"
-            "  rascal 4\n"
-            "  rascal 4a,4b,4c\n"
-            "  rascal utterances make, cus make, timesheets make\n"
-        ),
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-
-    parser.add_argument(
-        "command",
-        nargs="+",
-        help="Command(s) to run (comma-separated or space-separated)."
-    )
-
-    parser.add_argument(
-        "--config",
-        type=str,
-        default="config.yaml",
-        help="Path to the configuration file (default: config.yaml)"
-    )
-
-    # ---- Help text for expansions ----
-    help_lines = ["\nAvailable Commands:\n"]
-    for short, long in COMMAND_MAP.items():
-        help_lines.append(f"  {short:<4}  →  {long}")
-    help_lines.append("\nOmnibus Commands:\n")
-    for omni, subs in OMNIBUS_MAP.items():
-        expansions = [f"{s} ({COMMAND_MAP[s]})" for s in subs]
-        help_lines.append(f"  {omni:<4}  →  {', '.join(expansions)}")
-    parser.epilog = "\n".join(help_lines)
-
-    return parser
-
 
 # -------------------------------------------------------------
 # Direct execution
