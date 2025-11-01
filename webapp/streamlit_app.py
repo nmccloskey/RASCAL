@@ -15,7 +15,7 @@ def add_src_to_sys_path():
 
 add_src_to_sys_path()
 
-from rascal.utils.support_funcs import as_path
+from rascal.utils.support_funcs import as_path, find_utt_files
 from rascal.run_wrappers import (
     run_read_tiers, run_read_cha_files,
     run_select_transcription_reliability_samples,
@@ -48,14 +48,16 @@ def zip_folder(folder_path: Path) -> BytesIO:
     return zip_buffer
 
 
+# ---------------------------------------------------------------
+# PART 1: CONFIG
+# ---------------------------------------------------------------
 st.header("Part 1: Create or upload config file")
 
-# Upload config or build it
 config_file = st.file_uploader("Upload your config.yaml", type=["yaml", "yml"])
 config = None
 
 if config_file:
-    st.session_state.confirmed_config = False  # reset if new file uploaded
+    st.session_state.confirmed_config = False
     config = yaml.safe_load(config_file)
     st.success("✅ Config file uploaded")
 else:
@@ -65,10 +67,13 @@ else:
             st.session_state.confirmed_config = True
             st.success("Built config confirmed.")
 
+
+# ---------------------------------------------------------------
+# PART 2: INPUT FILES
+# ---------------------------------------------------------------
 st.header("Part 2: Upload input files")
 
-# Upload .cha or .xlsx files
-cha_files = st.file_uploader("Upload input files", type=["cha", ".xlsx"], accept_multiple_files=True)
+cha_files = st.file_uploader("Upload input files", type=["cha", "xlsx"], accept_multiple_files=True)
 
 if (config_file or st.session_state.confirmed_config) and cha_files:
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -94,76 +99,95 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
         prefer_correction = config.get("prefer_correction", True)
         lowercase = config.get("lowercase", True)
 
-        # --- Available functions ---
+        # ---------------------------------------------------------------
+        # PART 3: FUNCTION SELECTION
+        # ---------------------------------------------------------------
+        st.header("Part 3: Select functions to run")
+
         all_functions = [
-            "a. Select transcription reliability samples",
-            "b. Analyze transcription reliability",
-            "c. Reselect transcription reliability samples",
-            "d. Prepare utterance tables",
-            "e. Make CU coding files",
-            "f. Make timesheets",
-            "g. Analyze CU reliability",
-            "h. Reselect CU reliability samples",
-            "i. Analyze CU coding",
-            "j. Make word count files",
-            "k. Analyze word count reliability",
-            "l. Reselect WC reliability samples",
-            "m. Unblind CU samples",
-            "n. Run CoreLex"
+            "1a. Select transcription reliability samples",
+            "3a. Analyze transcription reliability",
+            "3b. Reselect transcription reliability samples",
+            "4a. Prepare utterance tables",
+            "4b. Make CU coding files",
+            "4c. Make timesheets",
+            "6a. Analyze CU reliability",
+            "6b. Reselect CU reliability samples",
+            "7a. Analyze CU coding",
+            "7b. Make word count files",
+            "9a. Analyze word count reliability",
+            "9b. Reselect WC reliability samples",
+            "10a. Unblind CU samples",
+            "10b. Run CoreLex analysis"
         ]
 
-        st.header("Part 3: Select functions to run")
         selected_funcs = st.multiselect("Select functions", all_functions)
 
         if st.button("Run selected functions"):
-            # Only read chats if needed
-            if any(f[0] in ["a", "d"] for f in selected_funcs):
+            if not selected_funcs:
+                st.warning("Please select at least one function.")
+                st.stop()
+
+            # --- Read .cha if needed ---
+            if any(f.startswith(("1a", "4a")) for f in selected_funcs):
                 chats = run_read_cha_files(input_dir)
             else:
                 chats = None
 
+            # --- Prepare utterance files if needed ---
+            needs_utt = any(f.startswith(x) for x in ("4b", "4c", "7b", "10b") for f in selected_funcs)
+            if needs_utt and not any(f.startswith("4a") for f in selected_funcs):
+                utt_files = find_utt_files(input_dir, output_dir)
+                if not utt_files:
+                    st.info("No utterance files detected — creating automatically.")
+                    chats = chats or run_read_cha_files(input_dir)
+                    run_prepare_utterance_dfs(tiers, chats, output_dir)
+
+            # --- Execute selected functions ---
             for func in selected_funcs:
-                if func.startswith("a."):
+                if func.startswith("1a."):
                     run_select_transcription_reliability_samples(tiers, chats, frac, output_dir)
-                elif func.startswith("b."):
+                elif func.startswith("3a."):
                     run_analyze_transcription_reliability(
                         tiers, input_dir, output_dir,
                         exclude_participants, strip_clan, prefer_correction, lowercase
                     )
-                elif func.startswith("c."):
+                elif func.startswith("3b."):
                     run_reselect_transcription_reliability_samples(input_dir, output_dir, frac)
-                elif func.startswith("d."):
+                elif func.startswith("4a."):
                     run_prepare_utterance_dfs(tiers, chats, output_dir)
-                elif func.startswith("e."):
-                    run_make_CU_coding_files(tiers, frac, coders, input_dir, output_dir,
-                                             CU_paradigms, exclude_participants)
-                elif func.startswith("f."):
+                elif func.startswith("4b."):
+                    run_make_CU_coding_files(
+                        tiers, frac, coders, input_dir, output_dir,
+                        CU_paradigms, exclude_participants
+                    )
+                elif func.startswith("4c."):
                     run_make_timesheets(tiers, input_dir, output_dir)
-                elif func.startswith("g."):
+                elif func.startswith("6a."):
                     run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms)
-                elif func.startswith("h."):
+                elif func.startswith("6b."):
                     run_reselect_CU_reliability(tiers, input_dir, output_dir, "CU", frac)
-                elif func.startswith("i."):
+                elif func.startswith("7a."):
                     run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms)
-                elif func.startswith("j."):
+                elif func.startswith("7b."):
                     run_make_word_count_files(tiers, frac, coders, input_dir, output_dir)
-                elif func.startswith("k."):
+                elif func.startswith("9a."):
                     run_analyze_word_count_reliability(tiers, input_dir, output_dir)
-                elif func.startswith("l."):
+                elif func.startswith("9b."):
                     run_reselect_WC_reliability(tiers, input_dir, output_dir, "WC", frac)
-                elif func.startswith("m."):
+                elif func.startswith("10a."):
                     run_unblind_CUs(tiers, input_dir, output_dir)
-                elif func.startswith("n."):
+                elif func.startswith("10b."):
                     run_run_corelex(input_dir, output_dir, exclude_participants)
 
-            st.success("Functions completed!")
+            st.success("✅ All selected functions completed successfully!")
 
             # --- Create timestamped ZIP for download ---
             timestamp = datetime.now().strftime("%y%m%d_%H%M")
-            func_str = "".join([f[0] for f in selected_funcs])
+            func_str = "_".join([f.split(".")[0] for f in selected_funcs])
             zip_buffer = zip_folder(output_dir)
             st.download_button(
-                label="Download Results ZIP",
+                label="⬇️ Download Results ZIP",
                 data=zip_buffer,
                 file_name=f"rascal_{func_str}_output_{timestamp}.zip",
                 mime="application/zip"
