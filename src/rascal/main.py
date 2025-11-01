@@ -69,6 +69,8 @@ def main(args):
     # ---------------------------------------------------------
     # Expand omnibus & comma-separated commands
     # ---------------------------------------------------------
+    if isinstance(args.command, list):
+        args.command = " ".join(args.command)
     raw_commands = [c.strip() for c in args.command.split(",") if c.strip()]
 
     # Standardize to succinct abbreviations
@@ -171,8 +173,8 @@ def build_arg_parser():
 
     parser.add_argument(
         "command",
-        type=str,
-        help="Command(s) to run (comma-separated). See help below for mappings."
+        nargs="+",
+        help="Command(s) to run (comma-separated or space-separated)."
     )
 
     parser.add_argument(
