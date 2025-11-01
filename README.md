@@ -187,37 +187,52 @@ Once installed, RASCAL can be run from any directory using the command-line inte
 rascal <function(s)>
 ```
 
-Examples:
+Examples (see below tables for details):
 
 ```bash
 # Reselect transcription reliability:
-rascal c
+rascal 3b
+# or
+rascal transcripts reselect
 
-# Prepare utterance tables & CU coding files from chat transcripts:
-rascal de
+# Prepare utterance tables, CU coding & reliability files, and timesheets from chat transcripts:
+rascal 4
+# or
+rascal 4a,4b,4c
+# or
+rascal utterances make, cus make, timesheets make
 
-# Unblind samples and specify config (default 'config.yaml'):
-rascal m --config other_config.yaml
+# Summarize CUs and specify config (default 'config.yaml'):
+rascal 10a --config other_config.yaml
 ```
 
-### Pipeline Commands
+## RASCAL Pipeline Commands
 
-| Command | Function (name)                                   | Input                                        | Output                                    |
-|---------|---------------------------------------------------|----------------------------------------------|-------------------------------------------------------|
-| a       | Select transcription reliability samples (*select_transcription_reliability_samples*) | Raw `.cha` files                             | Reliability & full sample lists + template `.cha` files |
-| b       | Analyze transcription reliability (*analyze_transcription_reliability*) | Reliability `.cha` pairs                     | Agreement metrics + alignment text reports             |
-| c       | Reselect transcription reliability (*reselect_transcription_reliability_samples*) | Original + reliability transcription tables (from **a**)   | New reliability subset(s)                               |
-| d       | Prepare utterance tables (*prepare_utterance_dfs*) | Raw `.cha` files                             | Utterance spreadsheets                                |
-| e       | Make CU coding files (*make_CU_coding_files*)     | Utterance tables (from **d**)                | CU coding + reliability spreadsheets                                |
-| f       | Make timesheets (*make_timesheets*)               | Utterance tables (from **d**)                | Speaking time entry sheets                            |
-| g       | Analyze CU reliability (*analyze_CU_reliability*) | Manually completed CU coding (from **e**)    | Reliability summary tables + reports                   |
-| h       | Reselect CU reliability (*reselect_CU_reliability*) | Manually completed CU coding (from **e**)    | New reliability subset(s)                               |
-| i       | Analyze CU coding (*analyze_CU_coding*)           | Manually completed CU coding (from **e**)    | Sample- and utterance-level CU summaries             |
-| j       | Make word count files (*make_word_count_files*)   | CU coding tables (from **i**)                | Word count + reliability spreadsheets                               |
-| k       | Analyze word count reliability (*analyze_word_count_reliability*) | Manually completed word counts (from **j**) | Reliability summaries + agreement reports              |
-| l       | Reselect WC reliability (*reselect_WC_reliability*) | Manually completed word counts (from **j**) | New reliability subset(s)                               |
-| m       | Unblind samples (*unblind_CUs*)                   | CU and WC coding results                     | Blind + unblind utterance and sample summaries + blind codes         |
-| n       | Run CoreLex analysis (*run_corelex*)              | CU and WC sample summaries                   | CoreLex coverage and percentile metrics                |
+| Stage (succinct command) | Expanded command | Description | Function name | Input | Output |
+|---------------------------|------------------|--------------|----------------|--------|---------|
+| 1a | transcripts select | Select transcription reliability samples | `select_transcription_reliability_samples` | Raw `.cha` files | Reliability & full sample lists + template `.cha` files |
+| 3a | transcripts evaluate | Evaluate transcription reliability | `analyze_transcription_reliability` | Reliability `.cha` pairs | Agreement metrics + alignment text reports |
+| 3b | transcripts reselect | Reselect transcription reliability samples | `reselect_transcription_reliability_samples` | Original + reliability transcription tables (from **1a**) | New reliability subset(s) |
+| 4a | utterances make | Prepare utterance tables | `prepare_utterance_dfs` | Raw `.cha` files | Utterance spreadsheets |
+| 4b | cus make | Make CU coding & reliability files | `make_CU_coding_files` | Utterance tables (from **4a**) | CU coding + reliability spreadsheets |
+| 4c | timesheets make | Make timesheets | `make_timesheets` | Utterance tables (from **4a**) | Speaking time entry sheets |
+| 6a | cus evaluate | Analyze CU reliability | `analyze_CU_reliability` | Manually completed CU coding (from **4b**) | Reliability summary tables + reports |
+| 6b | cus reselect | Reselect CU reliability samples | `reselect_CU_reliability` | Manually completed CU coding (from **4b**) | New reliability subset(s) |
+| 7a | cus analyze | Analyze CU coding | `analyze_CU_coding` | Manually completed CU coding (from **4b**) | Sample- and utterance-level CU summaries |
+| 7b | words make | Make word count & reliability files | `make_word_count_files` | CU coding tables (from **7a**) | Word count + reliability spreadsheets |
+| 9a | words evaluate | Evaluate word count reliability | `analyze_word_count_reliability` | Manually completed word counts (from **7b**) | Reliability summaries + agreement reports |
+| 9b | words reselect | Reselect word count reliability samples | `reselect_WC_reliability` | Manually completed word counts (from **7b**) | New reliability subset(s) |
+| 10a | cus summarize | Summarize CU coding & word counts | `unblind_CUs` | CU and WC coding results | Blind + unblind utterance and sample summaries + blind codes |
+| 10b | corelex analyze | Run CoreLex analysis | `run_corelex` | CU and WC sample summaries | CoreLex coverage and percentile metrics |
+
+---
+## Command Mappings
+| Omnibus command | Succinct command | Expanded command |
+|--|--|--|
+| 1 | 1a | transcripts select |
+| 4 | 4a, 4b, 4c | utterances make, cus make, timesheets make |
+| 7 | 7a, 7b | cus analyze, words make |
+| 10 | 10a, 10b | cus summarize, corelex analyze
 
 ---
 
@@ -227,12 +242,13 @@ Below is the current RASCAL pipeline, represented as a flow chart:
 
 ![RASCAL Flowchart](images/RASCAL_workflowchart.svg)
 
-Stages 2, 5, & 8 are entirely manual. Dashed arrows show the alternate inputs to function **n**: function **d** output is required, and **f** output is optional.
-
-The minimal command for batched CoreLex analysis of .cha-formatted transcripts is:
+Stages 2, 5, & 8 are entirely manual. Dashed arrows show the alternate inputs to function **10b**: function **4a** output is required, and **4c** output is optional.
 
 ```bash
-rascal dn
+# Minimal command for batched CoreLex analysis of .cha-formatted transcripts:
+rascal 4a,10b
+# or
+rascal utterances make, corelex analyze
 ```
 
 ## Notes on Input Transcriptions
