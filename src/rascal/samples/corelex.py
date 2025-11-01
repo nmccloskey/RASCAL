@@ -135,7 +135,7 @@ lemma_dict = {
     "puts": "put", "putting": "put",  # 'put' is same for present/past
 
     # Copula contractions (useful if splitting fails elsewhere)
-    "'m": "be", "'re": "be", "'s": "be",  # context-dependent, but may help
+    "'m": "be", "'re": "be",  # context-dependent, but may help
 
     # More noun plurals
     "slippers": "slipper", "daughters": "daughter", "sons": "son",
@@ -150,8 +150,8 @@ lemma_dict = {
     "hasnt": "have", "hadnt": "have", "dont": "do", "doesnt": "do", "didnt": "do",
     "did": "do", "does": "do", "doing": "do",
 
-    # Determiners and articles (in case spoken strangely)
-    "th": "the", "da": "the", "uh": "a", "an": "a",
+    # Articles
+    "da": "the", "an": "a",
 
     # Spoken reductions
     "lemme": "let", "gimme": "give", "cmon": "come", "outta": "out",
