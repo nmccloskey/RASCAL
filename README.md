@@ -1,7 +1,6 @@
 # RASCAL - Resources for Analyzing Speech in Clinical Aphasiology Labs
 
-RASCAL is a tool designed to facilitate the analysis of speech in clinical aphasiology research. It processes CHAT-formatted (.cha) transcriptions, organizes data into structured tiers, and automates key analytical steps in transcription reliability, CU coding, word counting, and core lexicon analysis.
-
+RASCAL is designed to facilitate monologic discourse analysis in clinical aphasiology. It processes CHAT-formatted (.cha) transcriptions, organizes data into structured tiers, and automates key analytical steps in transcription reliability, complete utterance (CU) coding, and core lexicon analysis.
 ---
 
 ## Analysis Pipeline
@@ -24,14 +23,14 @@ RASCAL is a tool designed to facilitate the analysis of speech in clinical aphas
    - **Input:** Manually completed CU coding files
    - **Output:** CU reliability analysis, reselected CU reliability samples
 - **Stage 7 (RASCAL):**
-   - **Input:** CU coding
+   - **Input:** CU coding files
    - **Output:** CU coding summaries, word count files
 - **Stage 8 (Manual):** Word counting and reliability checks
 - **Stage 9 (RASCAL):**
     - **Input:** Manually completed word count files
-    - **Output:** Word count reliability analysis, reselected WC reliability samples
+    - **Output:** Word count reliability analysis, reselected reliability samples
 - **Stage 10 (RASCAL):**
-    - **Input:** CU and word count data
+    - **Input:** Utterance files, CU Coding, speaking time, and word count data
     - **Output:** Blind & unblind summaries, CoreLex analysis
 ---
 
@@ -181,13 +180,13 @@ Tabularization:
 
 ## Running the Program
 
-Once installed, RASCAL can be run from any directory using the command-line interface:
+Once installed, RASCAL can be run from any directory using the command-line interface. Commands can be entered in succinct, expanded, or omnibus form (see below tables).
 
 ```bash
-rascal <function(s)>
+rascal [-h] [--config CONFIG] command [command ...]
 ```
 
-Examples (see below tables for details):
+Examples:
 
 ```bash
 # Reselect transcription reliability:
@@ -246,9 +245,9 @@ Stages 2, 5, & 8 are entirely manual. Dashed arrows show the alternate inputs to
 
 ```bash
 # Minimal command for batched CoreLex analysis of .cha-formatted transcripts:
-rascal 4a,10b
+rascal 10b
 # or
-rascal utterances make, corelex analyze
+rascal corelex analyze
 ```
 
 ## Notes on Input Transcriptions
