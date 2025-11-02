@@ -71,229 +71,131 @@ def assign_coders(coders):
     random.shuffle(assignments)
     return assignments
 
+def _assign_coding_columns(df, base_cols, cu_paradigms, exclude_participants):
+    """Add empty coder columns, NA-prefilled for excluded participants."""
+    for col in base_cols:
+        df[col] = np.where(df['speaker'].isin(exclude_participants), 'NA', "")
+
+    if len(cu_paradigms) < 2:
+        return
+
+    for prefix in ['c1', 'c2']:
+        for tag in ['sv', 'rel']:
+            base_col = f"{prefix}_{tag}"
+            df.drop(columns=[base_col], inplace=True, errors='ignore')
+            for paradigm in cu_paradigms:
+                new_col = f"{prefix}_{tag}_{paradigm}"
+                df[new_col] = np.where(df['speaker'].isin(exclude_participants), 'NA', "")
+
+def _prepare_reliability_subset(cu_df, seg, ass, frac, cu_paradigms):
+    """Generate the reliability subset dataframe for a given coder assignment."""
+    rel_samples = random.sample(seg, k=max(1, round(len(seg) * frac)))
+    relsegdf = cu_df[cu_df['sample_id'].isin(rel_samples)].copy()
+    relsegdf.drop(columns=['c1_id', 'c1_comment'], inplace=True, errors='ignore')
+
+    if len(cu_paradigms) >= 2:
+        for tag in ['sv', 'rel']:
+            for paradigm in cu_paradigms:
+                old, new = f'c2_{tag}_{paradigm}', f'c3_{tag}_{paradigm}'
+                if old in relsegdf:
+                    relsegdf.rename(columns={old: new}, inplace=True)
+                relsegdf.drop(columns=[f'c1_{tag}_{paradigm}'], inplace=True, errors='ignore')
+        relsegdf.rename(columns={'c2_comment': 'c3_comment'}, inplace=True)
+    else:
+        renames = {'c2_sv': 'c3_sv', 'c2_rel': 'c3_rel', 'c2_comment': 'c3_comment'}
+        relsegdf.rename(columns={k: v for k, v in renames.items() if k in relsegdf}, inplace=True)
+        relsegdf.drop(columns=['c1_sv', 'c1_rel'], inplace=True, errors='ignore')
+        for col in ['c3_sv', 'c3_rel', 'c3_comment']:
+            if col not in relsegdf:
+                relsegdf[col] = ""
+
+    relsegdf.drop(columns=['c2_id'], inplace=True, errors='ignore')
+    relsegdf.insert(relsegdf.columns.get_loc('c3_comment'), 'c3ID', ass[2])
+    return relsegdf
+
 def make_cu_coding_files(
     tiers,
     frac,
     coders,
     input_dir,
     output_dir,
-    CU_paradigms,
+    cu_paradigms,
     exclude_participants,
 ):
     """
-    Build and write Complete Utterance (CU) coding workbooks and reliability
-    workbooks from previously generated utterance tables.
+    Build Complete Utterance (CU) coding and reliability workbooks from
+    utterance tables in `input_dir` or `output_dir`.
 
-    This function scans both `input_dir` and `output_dir` for files named
-    `*Utterances.xlsx`, loads each into memory, and produces two Excel files
-    per input (under `{output_dir}/cu_coding/<labels>/`):
+    Two Excel files are created per input:
+      1) *_cu_coding.xlsx – main coding workbook
+      2) *_cu_reliability_coding.xlsx – reliability subset
 
-      1) `<labels>_cu_coding.xlsx` – primary coding workbook
-      2) `<labels>_cu_reliability_coding.xlsx` – third-coder reliability workbook
-
-    Where `<labels>` is derived from the provided `tiers` by calling
-    `t.match(file.name, return_None=True)` for each tier and joining all
-    non-None results with underscores (e.g., `AC_Pre`).
+    Behavior:
+    - Loads all *Utterances.xlsx files, labels them by tiers.
+    - Adds coder ID/comment/value columns (or paradigm variants).
+    - Prefills excluded participants with 'NA'.
+    - Randomly segments samples across coders and selects reliability subsets.
+    - Writes outputs under {output_dir}/cu_coding/<labels>.
 
     Parameters
     ----------
-    tiers : Mapping[str, Tier]
-        A dict-like of tier objects used to extract label text from the
-        utterance filename. Each tier must implement:
-          - .name : str
-          - .match(filename: str, return_None: bool = False) -> Optional[str]
-        Only the returned *strings* are used here to construct label folders
-        and filenames; `.partition` is not used by this function.
-
-    frac : float
-        Fraction (0–1) of samples, **within each coder segment**, to include
-        in the reliability subset. The actual number per segment is
-        `max(1, round(frac * len(segment)))`.
-
-    coders : list[str]
-        A list of coder identifiers. If fewer than three are provided, the
-        function logs a warning and falls back to `['1', '2', '3']`.
-        Internally, coders are assigned to segments such that each segment
-        gets two primary coders (`c1_id`, `c2_id`) and a third reliability coder
-        (`c3ID` in the reliability file).
-
-    input_dir : str or Path
-        Root directory to search (recursively) for `*Utterances.xlsx`.
-
-    output_dir : str or Path
-        Root directory under which `cu_coding/` will be created and outputs
-        written.
-
+    tiers : dict[str, Tier]
+    frac : float (0–1)
+    coders : list[str] (≥3 recommended)
+    input_dir, output_dir : Path or str
     cu_paradigms : list[str]
-        If length >= 2, the primary coding workbook will drop the base columns
-        (`c1_sv`, `c1_rel`, `c2_sv`, `c2_rel`) and instead create suffixed variants
-        per paradigm (e.g., `c1_sv_SAE`, `c1_sv_AAE`, ...). The reliability file
-        mirrors this structure and uses `c3` prefixes for the third coder.
-        If length == 1, base columns are kept (no suffixed variants).
-
     exclude_participants : list[str]
-        Speaker codes (e.g., `['INV']`) for which coding *values* should be
-        prefilled with `"NA"` (e.g., `c1_sv`, `c2_rel`, etc.). ID columns
-        (`c1_id`, `c2_id`, and `c3ID`) are still assigned to maintain workflow
-        consistency, but content fields remain `"NA"` for excluded speakers.
-
-    Behavior
-    --------
-    - For each input workbook, the function constructs a CU coding DataFrame by
-      dropping bookkeeping columns (e.g., 'file' and any tier columns that are
-      not stimulus labels), adding coder ID/comment and coding-value columns,
-      and pre-filling content fields with either `np.nan` (normal) or `"NA"`
-      (if the row's `speaker` is in `exclude_participants`). Samples are shuffled.
-    - Samples are segmented (roughly evenly) across the provided coders; within
-      each segment, two primary coder IDs are assigned (`c1_id`, `c2_id`).
-    - A reliability subset is sampled from each segment according to `frac`.
-      For those rows, a **reliability** DataFrame is built by removing the
-      second coder's columns and introducing third-coder columns (`c3*`).
-    - Two Excel files are written per input, under:
-        {output_dir}/cu_coding/<label1>/<label2>/.../<labels>_cu_coding.xlsx
-        {output_dir}/cu_coding/<label1>/<label2>/.../<labels>_cu_reliability_coding.xlsx
-
-    Returns
-    -------
-    None
-        Outputs are written to disk.
-
-    Notes
-    -----
-    - This function reads any `*Utterances.xlsx` found in **either**
-      `input_dir` or `output_dir`. This lets you pipe data from earlier steps
-      without moving files around.
-    - Column expectations for the input utterance table include at least:
-      `['sample_id', 'speaker']` and any tier columns used for labeling.
-    - Randomness is used for selecting reliability subsets; seed externally or
-      monkeypatch `random.sample` for deterministic tests.
     """
-
     if len(coders) < 3:
-        logging.warning(f"Coders entered: {coders} do not meet minimum of 3. Using default 1, 2, 3.")
+        logging.warning(f"Only {len(coders)} coders given; using default ['1','2','3'].")
         coders = ['1', '2', '3']
 
-    base_cols = ['c1_id', 'c1_sv', 'c1_rel', 'c1_comment', 'c2_id', 'c2_sv', 'c2_rel', 'c2_comment']
-    cu_coding_dir = output_dir / 'cu_coding'
-    logging.info(f"Writing CU coding files to {cu_coding_dir}")
+    base_cols = ['c1_id', 'c1_sv', 'c1_rel', 'c1_comment',
+                 'c2_id', 'c2_sv', 'c2_rel', 'c2_comment']
+    cu_coding_dir = Path(output_dir) / "cu_coding"
+    cu_coding_dir.mkdir(parents=True, exist_ok=True)
+
     transcript_tables = find_transcript_tables(input_dir, output_dir)
+    utt_dfs = [extract_transcript_data(tt) for tt in transcript_tables]
 
-    for file in tqdm(transcript_tables, desc="Generating CU coding files"):
-        logging.info(f"Processing file: {file}")
-        labels = [t.match(file.name, return_None=True) for t in tiers.values()]
-        labels = [l for l in labels if l is not None]
-
-        assignments = assign_coders(coders)
-
+    for file, uttdf in tqdm(zip(transcript_tables, utt_dfs), desc="Generating CU coding files"):
         try:
-            uttdf = extract_transcript_data(file)
-            logging.info(f"Successfully read file: {file}")
+            labels = [t.match(file.name, return_None=True) for t in tiers.values()]
+            labels = [l for l in labels if l]
+            label_path = Path(cu_coding_dir, *labels)
+            label_path.mkdir(parents=True, exist_ok=True)
+            lab_str = "_".join(labels) + "_" if labels else ""
+
+            # Shuffle samples
+            subdfs = []
+            for _, subdf in uttdf.groupby(by="sample_id"): 
+              subdfs.append(subdf)
+            random.shuffle(subdfs)
+            shuffled_utt_df = pd.concat(subdfs, ignore_index=True)
+            drop_cols = [ col for col in ['file', 'speaking_time'] \
+                         + [t for t in tiers if t.lower() not in stim_cols] if col in shuffled_utt_df.columns ]
+            cu_df = shuffled_utt_df.drop(columns=drop_cols).copy()
+
+            _assign_coding_columns(cu_df, base_cols, cu_paradigms, exclude_participants)
+
+            unique_ids = list(cu_df['sample_id'].drop_duplicates())
+            segments = segment(unique_ids, n=len(coders))
+            assignments = assign_coders(coders)
+            rel_subsets = []
+
+            for seg, ass in zip(segments, assignments):
+                cu_df.loc[cu_df['sample_id'].isin(seg), ['c1_id', 'c2_id']] = ass[:2]
+                rel_subsets.append(_prepare_reliability_subset(cu_df, seg, ass, frac, cu_paradigms))
+
+            reldf = pd.concat(rel_subsets)
+            logging.info(f"{file.name}: reliability={len(set(reldf['sample_id']))} / total={len(unique_ids)}")
+
+            # Write outputs
+            cu_df.to_excel(label_path / f"{lab_str}cu_coding.xlsx", index=False)
+            reldf.to_excel(label_path / f"{lab_str}cu_reliability_coding.xlsx", index=False)
+
         except Exception as e:
-            logging.error(f"Failed to read file {file}: {e}")
-            continue
-
-        # Shuffle samples
-        subdfs = []
-        for _, subdf in uttdf.groupby(by="sample_id"):
-            subdfs.append(subdf)
-        random.shuffle(subdfs)
-        shuffled_utt_df = pd.concat(subdfs, ignore_index=True)
-
-        cu_df = shuffled_utt_df.drop(columns=[
-            col for col in ['file'] + [t for t in tiers if t.lower() not in stim_cols] if col in shuffled_utt_df.columns
-            ]).copy()
-
-        # Set up base coding columns
-        for col in base_cols:
-            cu_df[col] = cu_df.apply(lambda row: 'NA' if row['speaker'] in exclude_participants else np.nan, axis=1)
-
-        # Dynamically add multiple paradigms if length >= 2
-        if len(CU_paradigms) >= 2:
-
-            for prefix in ['c1', 'c2']:
-                for tag in ['sv', 'rel']:
-                    base_col = f'{prefix}{tag}'
-                    cu_df.drop(columns=[base_col], inplace=True, errors='ignore')  # remove original
-
-                    for paradigm in CU_paradigms:
-                        new_col = f"{prefix}{tag}_{paradigm}"
-                        cu_df[new_col] = cu_df.apply(lambda row: 'NA' if row['speaker'] in exclude_participants else np.nan, axis=1)
-
-        unique_sample_ids = list(cu_df['sample_id'].drop_duplicates(keep='first'))
-        segments = segment(unique_sample_ids, n=len(coders))
-        rel_subsets = []
-
-        for seg, ass in zip(segments, assignments):
-            cu_df.loc[cu_df['sample_id'].isin(seg), 'c1_id'] = ass[0]
-            cu_df.loc[cu_df['sample_id'].isin(seg), 'c2_id'] = ass[1]
-
-            rel_samples = random.sample(seg, k=max(1, round(len(seg) * frac)))
-            relsegdf = cu_df[cu_df['sample_id'].isin(rel_samples)].copy()
-
-            relsegdf.drop(columns=['c1_id', 'c1_comment'], inplace=True, errors='ignore')
-
-            if len(CU_paradigms) >= 2:
-                # Multi-paradigm: rename c2*_{paradigm} -> c3*_{paradigm}, then drop remaining c1*_{paradigm}
-                for tag in ['sv', 'rel']:
-                    for paradigm in CU_paradigms:
-                        old = f'c2{tag}_{paradigm}'
-                        new = f'c3{tag}_{paradigm}'
-                        if old in relsegdf.columns:
-                            relsegdf.rename(columns={old: new}, inplace=True)
-                # Optional comment column for coder 3
-                if 'c2_comment' in relsegdf.columns:
-                    relsegdf.rename(columns={'c2_comment': 'c3_comment'}, inplace=True)
-                # Remove c2_id; c3ID is set explicitly below
-                relsegdf.drop(columns=['c2_id'], inplace=True, errors='ignore')
-                # Drop c1* coding-value columns (we don’t need them in reliability)
-                for tag in ['sv', 'rel']:
-                    for paradigm in CU_paradigms:
-                        relsegdf.drop(columns=[f'c1{tag}_{paradigm}'], inplace=True, errors='ignore')
-
-            else:
-                # Single or zero paradigm: use base columns
-                # Rename c2* -> c3* before dropping any remaining c2*
-                renames = {'c2_sv': 'c3_sv', 'c2_rel': 'c3_rel', 'c2_comment': 'c3_comment'}
-                to_rename = {k: v for k, v in renames.items() if k in relsegdf.columns}
-                if to_rename:
-                    relsegdf.rename(columns=to_rename, inplace=True)
-                # Remove c2_id; c3ID is set explicitly below
-                relsegdf.drop(columns=['c2_id'], inplace=True, errors='ignore')
-                # Drop c1* value columns
-                relsegdf.drop(columns=['c1_sv', 'c1_rel'], inplace=True, errors='ignore')
-
-                # Ensure expected c3 columns exist
-                for col in ['c3_sv', 'c3_rel', 'c3_comment']:
-                    if col not in relsegdf.columns:
-                        relsegdf[col] = np.nan
-
-            try:
-                idx_c3id = relsegdf.columns.tolist().index('c3_comment')
-            except:
-                tdx_c3id = len(relsegdf)
-            relsegdf.insert(idx_c3id, 'c3ID', ass[2])
-            rel_subsets.append(relsegdf)
-
-        reldf = pd.concat(rel_subsets)
-        logging.info(f"Selected {len(set(reldf['sample_id']))} samples for reliability from {len(set(cu_df['sample_id']))} total samples.")
-
-        lab_str = '_'.join(labels) + '_' if labels else ''
-
-        cu_filename = Path(cu_coding_dir, *labels, lab_str + 'cu_coding.xlsx')
-        rel_filename = Path(cu_coding_dir, *labels, lab_str + 'cu_reliability_coding.xlsx')
-
-        try:
-            cu_filename.parent.mkdir(parents=True, exist_ok=True)
-            cu_df.to_excel(cu_filename, index=False)
-            logging.info(f"Successfully wrote CU coding file: {cu_filename}")
-        except Exception as e:
-            logging.error(f"Failed to write CU coding file {cu_filename}: {e}")
-
-        try:
-            reldf.to_excel(rel_filename, index=False)
-            logging.info(f"Successfully wrote CU reliability coding file: {rel_filename}")
-        except Exception as e:
-            logging.error(f"Failed to write CU reliability coding file {rel_filename}: {e}")
+            logging.error(f"Failed processing {file}: {e}")
 
 
 def count_words(text, d):
@@ -418,7 +320,7 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
         wc_df = shuffled_cu_df.copy()
 
         # Add counter and word count comment column.
-        empty_col = [np.nan for _ in range(len(wc_df))]
+        empty_col = ["" for _ in range(len(wc_df))]
         wc_df = wc_df.assign(**{'c1_id': empty_col})
         # Set to string type explicitly to avoid warning in the .isin part.
         wc_df['c1_id'] = wc_df['c1_id'].astype('string')
@@ -694,24 +596,24 @@ def reselect_cu_wc_reliability(
         # Add post-'comment' reliability columns (NaN by default)
         for col in post_cols:
             if col not in sub.columns:
-                sub[col] = np.nan
+                sub[col] = ""
 
         # CU-specific adjustments
         if rel_type == "CU":
             for col in ["c3ID","c3_comment"]:
                 if col not in sub.columns:
-                    sub[col] = np.nan
+                    sub[col] = ""
 
         else:  # "WC"
             # Ensure c3ID exists if present in template; set it to coder3
             if "c2_id" not in sub.columns:
-                sub["c2_id"] = np.nan
+                sub["c2_id"] = ""
             # Add word count column and pull neutrality from original.
             org_sub = df_org[df_org['sample_id'].isin(reselected_ids)].copy()
             sub['word_count'] = org_sub.apply(lambda row: count_words(row['utterance'], d) if not np.isnan(row['word_count']) else 'NA', axis=1)
             # If a 'c3_comment' exists in the template, wipe it
             if "wc_rel_com" not in sub.columns:
-                sub["wc_rel_com"] = np.nan
+                sub["wc_rel_com"] = ""
 
         # Order columns: head-cols first (as they exist), then post-cols in template order
         ordered_cols = [c for c in head_cols if c in sub.columns] + [c for c in post_cols if c in sub.columns and c not in head_cols]

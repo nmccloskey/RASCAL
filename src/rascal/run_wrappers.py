@@ -26,8 +26,8 @@ def run_make_transcript_tables(tiers, chats, output_dir):
     return make_transcript_tables(tiers=tiers, chats=chats, output_dir=output_dir)
 
 def run_make_cu_coding_files(tiers, frac, coders, input_dir, output_dir, cu_paradigms, exclude_participants):
-    from rascal.coding.make_coding_files import make_CU_coding_files
-    make_CU_coding_files(tiers=tiers, frac=frac, coders=coders, input_dir=input_dir, output_dir=output_dir, cu_paradigms=cu_paradigms, exclude_participants=exclude_participants)
+    from rascal.coding.make_coding_files import make_cu_coding_files
+    make_cu_coding_files(tiers=tiers, frac=frac, coders=coders, input_dir=input_dir, output_dir=output_dir, cu_paradigms=cu_paradigms, exclude_participants=exclude_participants)
 
 def run_analyze_transcription_reliability(tiers, input_dir, output_dir, exclude_participants, strip_clan, prefer_correction, lowercase):
     from rascal.transcripts.transcription_reliability_analysis import analyze_transcription_reliability
