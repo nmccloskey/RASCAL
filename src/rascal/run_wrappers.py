@@ -34,8 +34,8 @@ def run_analyze_transcription_reliability(tiers, input_dir, output_dir, exclude_
     analyze_transcription_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, exclude_participants=exclude_participants, strip_clan=strip_clan, prefer_correction=prefer_correction, lowercase=lowercase)
 
 def run_analyze_cu_reliability(tiers, input_dir, output_dir, cu_paradigms):
-    from rascal.coding.cu_analyzer import analyze_CU_reliability
-    analyze_CU_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, cu_paradigms=cu_paradigms)
+    from rascal.coding.cu_analyzer import analyze_cu_reliability
+    analyze_cu_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir, cu_paradigms=cu_paradigms)
 
 def run_analyze_cu_coding(tiers, input_dir, output_dir, cu_paradigms):
     from rascal.coding.cu_analyzer import analyze_cu_coding

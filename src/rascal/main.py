@@ -99,7 +99,7 @@ def main(args):
     output_dir = as_path(config.get("output_dir", "rascal_data/output"))
     frac = config.get("reliability_fraction", 0.2)
     coders = config.get("coders", []) or []
-    cu_paradigms = config.get("CU_paradigms", []) or []
+    cu_paradigms = config.get("cu_paradigms", []) or []
     exclude_participants = config.get("exclude_participants", []) or []
     strip_clan = config.get("strip_clan", True)
     prefer_correction = config.get("prefer_correction", True)
