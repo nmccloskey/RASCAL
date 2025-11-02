@@ -332,6 +332,64 @@ def _format_alignment_output(alignment, best_score: float, normalized_score: flo
 def _ensure_parent_dir(path: str | Path):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
 
+def _convert_cha_names(input_dir: str | Path) -> dict[str, list[Path]]:
+    """
+    Detect a 'reliability' subdirectory under `input_dir` and create renamed copies
+    of its .cha files (appending '_reliability' before the extension).
+    The renamed files are written to a separate 'reliability/renamed' directory.
+
+    Returns
+    -------
+    dict[str, list[Path]]
+        {
+          "renamed": [list of new .cha paths],
+          "originals": [list of corresponding original paths]
+        }
+
+    Notes
+    -----
+    - Original filenames (and casing) are preserved except for appending
+      '_reliability' before the extension.
+    - Non-destructive: original files remain untouched.
+    - Intended so the main function can exclude originals and include only the
+      renamed copies when collecting .cha files.
+    """
+    input_dir = Path(input_dir).expanduser().resolve()
+    rel_dir = input_dir / "reliability"
+
+    if not rel_dir.exists():
+        logging.info("No 'reliability' subdirectory found; skipping _convert_cha_names.")
+        return {"renamed": [], "originals": []}
+
+    renamed_dir = rel_dir / "renamed"
+    renamed_dir.mkdir(parents=True, exist_ok=True)
+
+    renamed, originals = [], []
+    for cha in rel_dir.rglob("*.cha"):
+        try:
+            new_name = f"{cha.stem}_reliability.cha"
+            new_path = renamed_dir / new_name
+
+            if new_path.exists():
+                logging.warning("Renamed file already exists, skipping: %s", new_path)
+                continue
+
+            new_path.write_bytes(cha.read_bytes())
+            renamed.append(new_path)
+            originals.append(cha)
+            logging.info("Created renamed reliability copy: %s → %s", cha.name, new_name)
+
+        except Exception as e:
+            logging.error("Failed to process reliability file %s: %s", cha, e)
+
+    logging.info(
+        "Reliability rename complete. %d file(s) copied to '%s'.",
+        len(renamed),
+        renamed_dir,
+    )
+    return {"renamed": renamed, "originals": originals}
+
+
 # ---------- main analysis ----------
 
 def analyze_transcription_reliability(
@@ -368,12 +426,19 @@ def analyze_transcription_reliability(
     # Which tiers define partitions?
     partition_tiers = [t.name for t in tiers.values() if getattr(t, "partition", False)]
 
-    # --- collect files and index originals by labels for O(1) match lookup ---
-    cha_files = list(Path(input_dir).rglob("*.cha"))
+    # --- preprocess reliability subdir if present ---
+    converted = _convert_cha_names(input_dir)
+    original_reliability_files = converted["originals"]
+
+    # --- collect all other .cha files excluding reliability originals ---
+    cha_files = [
+        p for p in Path(input_dir).rglob("*.cha")
+        if p not in original_reliability_files
+    ]
     logging.info(f"Found {len(cha_files)} .cha files in the input directory.")
 
-    rel_chats = [p for p in cha_files if "Reliability" in p.name]
-    org_chats = [p for p in cha_files if "Reliability" not in p.name]
+    rel_chats = [p for p in cha_files if "reliability" in p.name]
+    org_chats = [p for p in cha_files if "reliability" not in p.name]
 
     def _labels_for(path: Path):
         return tuple(t.match(path.name) for t in tiers.values())
