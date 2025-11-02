@@ -6,7 +6,7 @@ import pytest
 
 # Import target module
 try:
-    from rascal.samples import corelex as clx
+    from rascal.coding import corelex as clx
 except Exception as e:
     pytest.skip(f"Could not import rascal.samples.corelex: {e}", allow_module_level=True)
 

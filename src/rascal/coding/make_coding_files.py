@@ -71,7 +71,7 @@ def assign_coders(coders):
     random.shuffle(assignments)
     return assignments
 
-def make_CU_coding_files(
+def make_cu_coding_files(
     tiers,
     frac,
     coders,
@@ -124,7 +124,7 @@ def make_CU_coding_files(
         Root directory under which `CUCoding/` will be created and outputs
         written.
 
-    CU_paradigms : list[str]
+    cu_paradigms : list[str]
         If length >= 2, the primary coding workbook will drop the base columns
         (`c1SV`, `c1REL`, `c2SV`, `c2REL`) and instead create suffixed variants
         per paradigm (e.g., `c1SV_SAE`, `c1SV_AAE`, ...). The reliability file
@@ -148,7 +148,7 @@ def make_CU_coding_files(
       each segment, two primary coder IDs are assigned (`c1ID`, `c2ID`).
     - A reliability subset is sampled from each segment according to `frac`.
       For those rows, a **reliability** DataFrame is built by removing the
-      second coder’s columns and introducing third-coder columns (`c3*`).
+      second coder's columns and introducing third-coder columns (`c3*`).
     - Two Excel files are written per input, under:
         {output_dir}/CUCoding/<label1>/<label2>/.../<labels>_CUCoding.xlsx
         {output_dir}/CUCoding/<label1>/<label2>/.../<labels>_CUReliabilityCoding.xlsx
@@ -174,8 +174,8 @@ def make_CU_coding_files(
         coders = ['1', '2', '3']
 
     base_cols = ['c1ID', 'c1SV', 'c1REL', 'c1com', 'c2ID', 'c2SV', 'c2REL', 'c2com']
-    CU_coding_dir = output_dir / 'CUCoding'
-    logging.info(f"Writing CU coding files to {CU_coding_dir}")
+    cu_coding_dir = output_dir / 'CUCoding'
+    logging.info(f"Writing CU coding files to {cu_coding_dir}")
     transcript_tables = find_transcript_tables(input_dir, output_dir)
 
     for file in tqdm(transcript_tables, desc="Generating CU coding files"):
@@ -279,8 +279,8 @@ def make_CU_coding_files(
 
         lab_str = '_'.join(labels) + '_' if labels else ''
 
-        cu_filename = Path(CU_coding_dir, *labels, lab_str + 'CUCoding.xlsx')
-        rel_filename = Path(CU_coding_dir, *labels, lab_str + 'CUReliabilityCoding.xlsx')
+        cu_filename = Path(cu_coding_dir, *labels, lab_str + 'CUCoding.xlsx')
+        rel_filename = Path(cu_coding_dir, *labels, lab_str + 'CUReliabilityCoding.xlsx')
 
         try:
             cu_filename.parent.mkdir(parents=True, exist_ok=True)
@@ -471,7 +471,7 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
         except Exception as e:
             logging.error(f"Failed to write word count reliability coding file {filename}: {e}")
 
-def reselect_CU_WC_reliability(
+def reselect_cu_wc_reliability(
     tiers,
     input_dir,
     output_dir,

@@ -7,7 +7,7 @@ import pytest
 
 # Import target; skip cleanly if module isn't on path
 try:
-    from rascal.samples import summarize_cus as ub
+    from rascal.coding import summarize_cus as ub
 except Exception as e:
     pytest.skip(f"Could not import rascal.samples.unblind_CUs: {e}", allow_module_level=True)
 
@@ -111,7 +111,7 @@ def test_unblind_CUs_end_to_end(tmp_path, monkeypatch):
     }
 
     # ---------- Run ----------
-    ub.unblind_CUs(
+    ub.summarize_cus(
         tiers=tiers,
         input_dir=str(input_dir),
         output_dir=str(output_dir),

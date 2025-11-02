@@ -8,11 +8,11 @@ from rascal.run_wrappers import (
     run_select_transcription_reliability_samples,
     run_reselect_transcription_reliability_samples,
     run_analyze_transcription_reliability,
-    run_make_transcript_tables, run_make_CU_coding_files,
-    run_make_timesheets, run_analyze_CU_reliability,
-    run_analyze_CU_coding, run_reselect_CU_reliability,
+    run_make_transcript_tables, run_make_cu_coding_files,
+    run_make_timesheets, run_analyze_cu_reliability,
+    run_analyze_cu_coding, run_reselect_cu_reliability,
     run_make_word_count_files, run_analyze_word_count_reliability,
-    run_reselect_WC_reliability, run_unblind_CUs, run_run_corelex
+    run_reselect_wc_reliability, run_summarize_cus, run_run_corelex
 )
 
 # -------------------------------------------------------------
@@ -100,7 +100,7 @@ def main(args):
     output_dir = as_path(config.get("output_dir", "rascal_data/output"))
     frac = config.get("reliability_fraction", 0.2)
     coders = config.get("coders", []) or []
-    CU_paradigms = config.get("CU_paradigms", []) or []
+    cu_paradigms = config.get("CU_paradigms", []) or []
     exclude_participants = config.get("exclude_participants", []) or []
     strip_clan = config.get("strip_clan", True)
     prefer_correction = config.get("prefer_correction", True)
@@ -166,17 +166,17 @@ def main(args):
         ),
         "3b": lambda: run_reselect_transcription_reliability_samples(input_dir, out_dir, frac),
         "4a": lambda: run_make_transcript_tables(tiers, chats, out_dir),
-        "4b": lambda: run_make_CU_coding_files(
-            tiers, frac, coders, input_dir, out_dir, CU_paradigms, exclude_participants
+        "4b": lambda: run_make_cu_coding_files(
+            tiers, frac, coders, input_dir, out_dir, cu_paradigms, exclude_participants
         ),
         "4c": lambda: run_make_timesheets(tiers, input_dir, out_dir),
-        "6a": lambda: run_analyze_CU_reliability(tiers, input_dir, out_dir, CU_paradigms),
-        "6b": lambda: run_reselect_CU_reliability(tiers, input_dir, out_dir, "CU", frac),
-        "7a": lambda: run_analyze_CU_coding(tiers, input_dir, out_dir, CU_paradigms),
+        "6a": lambda: run_analyze_cu_reliability(tiers, input_dir, out_dir, cu_paradigms),
+        "6b": lambda: run_reselect_cu_reliability(tiers, input_dir, out_dir, "CU", frac),
+        "7a": lambda: run_analyze_cu_coding(tiers, input_dir, out_dir, cu_paradigms),
         "7b": lambda: run_make_word_count_files(tiers, frac, coders, input_dir, out_dir),
         "9a": lambda: run_analyze_word_count_reliability(tiers, input_dir, out_dir),
-        "9b": lambda: run_reselect_WC_reliability(tiers, input_dir, out_dir, "WC", frac),
-        "10a": lambda: run_unblind_CUs(tiers, input_dir, out_dir),
+        "9b": lambda: run_reselect_wc_reliability(tiers, input_dir, out_dir, "WC", frac),
+        "10a": lambda: run_summarize_cus(tiers, input_dir, out_dir),
         "10b": lambda: run_run_corelex(input_dir, out_dir, exclude_participants),
     }
 

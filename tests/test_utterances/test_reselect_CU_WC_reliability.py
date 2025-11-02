@@ -114,7 +114,7 @@ def test_reselect_cu_reliability_basic(tmp_path, monkeypatch):
     monkeypatch.setattr(mk.random, "sample", fake_sample, raising=True)
 
     # all_sample_ids = {S1,S2,S3}; frac=0.2 -> round(3*0.2)=1 => pick one (S2 via fake_sample)
-    mk.reselect_CU_WC_reliability(
+    mk.reselect_cu_wc_reliability(
         tiers=tiers,
         input_dir=str(input_dir),
         output_dir=str(output_dir),
@@ -184,7 +184,7 @@ def test_reselect_cu_reliability_no_available(tmp_path, monkeypatch):
     monkeypatch.setattr(pd, "read_excel", fake_read_excel, raising=True)
     monkeypatch.setattr(pd.DataFrame, "to_excel", fake_to_excel, raising=True)
 
-    mk.reselect_CU_WC_reliability(
+    mk.reselect_cu_wc_reliability(
         tiers=tiers,
         input_dir=str(input_dir),
         output_dir=str(output_dir),
@@ -248,7 +248,7 @@ def test_reselect_wc_reliability_basic(tmp_path, monkeypatch):
     monkeypatch.setattr(pd.DataFrame, "to_excel", fake_to_excel, raising=True)
     monkeypatch.setattr(mk.random, "sample", fake_sample, raising=True)
 
-    mk.reselect_CU_WC_reliability(
+    mk.reselect_cu_wc_reliability(
         tiers=tiers,
         input_dir=str(input_dir),
         output_dir=str(output_dir),

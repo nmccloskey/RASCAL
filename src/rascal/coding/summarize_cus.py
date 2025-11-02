@@ -4,7 +4,7 @@ from pathlib import Path
 from rascal.utils.support_funcs import find_transcript_tables, extract_transcript_data
 
 
-def unblind_CUs(tiers, input_dir, output_dir):
+def summarize_cus(tiers, input_dir, output_dir):
     """
     Build unblinded and blinded summaries by merging utterances, CU coding,
     word counts, and speaking-time data; then export both utterance-level and

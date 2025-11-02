@@ -26,7 +26,7 @@ def ag_check(x):
     else:
         return np.nan
 
-def compute_CU_column(row):
+def compute_cu_column(row):
     """
     Compute a single coder's CU value from paired SV/REL fields.
 
@@ -59,7 +59,7 @@ def compute_CU_column(row):
     else:
         return 0
 
-def summarize_CU_reliability(CUrelcod, sv2, rel2, sv3, rel3):
+def summarize_cu_reliability(CUrelcod, sv2, rel2, sv3, rel3):
     """
     Aggregate utterance-level CU reliability to the sample level.
 
@@ -171,7 +171,7 @@ def write_reliability_report(CUrelsum, report_path, partition_labels=None):
     except Exception as e:
         logging.error(f"Failed to write reliability report to {report_path}: {e}")
 
-def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms):
+def analyze_cu_reliability(tiers, input_dir, output_dir, CU_paradigms):
     """
     Analyze Complete Utterance (CU) reliability by pairing coder-2 coding with coder-3
     reliability coding, computing utterance-level agreement, and summarizing by sample.
@@ -293,8 +293,8 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms):
                         logging.error(f"Length mismatch for {paradigm or 'default'}: {rel.name}")
 
                     # --- CU computation ---
-                    CUrelcod['c2CU'] = CUrelcod[[sv2, rel2]].apply(compute_CU_column, axis=1)
-                    CUrelcod['c3CU'] = CUrelcod[[sv3, rel3]].apply(compute_CU_column, axis=1)
+                    CUrelcod['c2CU'] = CUrelcod[[sv2, rel2]].apply(compute_cu_column, axis=1)
+                    CUrelcod['c3CU'] = CUrelcod[[sv3, rel3]].apply(compute_cu_column, axis=1)
 
                     # Calculate agreement columns: 1 if same value or both NA, else 0.
                     CUrelcod['AGSV'] = CUrelcod.apply(lambda row: int((row[sv2] == row[sv3]) or (pd.isna(row[sv2]) and pd.isna(row[sv3]))), axis=1)
@@ -318,14 +318,14 @@ def analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms):
 
                     # Summary + report + save (unchanged)
                     # Just use CUrelcod and column names as they are
-                    CUrelsum = summarize_CU_reliability(CUrelcod, sv2, rel2, sv3, rel3)
+                    CUrelsum = summarize_cu_reliability(CUrelcod, sv2, rel2, sv3, rel3)
                     report_path = Path(output_path, f"{'_'.join(partition_labels)}{paradigm_str}_CUReliabilityCodingReport.txt")
                     write_reliability_report(CUrelsum, report_path)
                     summary_path = Path(output_path, f"{'_'.join(partition_labels)}{paradigm_str}_CUReliabilityCoding_BySample.xlsx")
                     CUrelsum.to_excel(summary_path, index=False)
                     
 
-def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=[]):
+def analyze_cu_coding(tiers, input_dir, output_dir, CU_paradigms=[]):
     """
     Summarize coder-2 Complete Utterance (CU) coding at the sample level, optionally
     across multiple CU paradigms, and write both utterance-level and sample-level outputs.
@@ -428,7 +428,7 @@ def analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms=[]):
                 continue
 
             # Compute CU column
-            CUcod[cu_col] = CUcod[[sv_col, rel_col]].apply(compute_CU_column, axis=1)
+            CUcod[cu_col] = CUcod[[sv_col, rel_col]].apply(compute_cu_column, axis=1)
 
             # Create summary stats
             agg_df = CUcod[['sample_id', sv_col, rel_col, cu_col]].copy()
