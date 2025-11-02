@@ -9,6 +9,7 @@ from tqdm import tqdm
 import num2words as n2w
 from pathlib import Path
 from functools import lru_cache
+from rascal.utils.support_funcs import find_transcript_tables, extract_transcript_data
 
 stim_cols = ["narrative", "scene", "story", "stimulus"]
 
@@ -175,7 +176,7 @@ def make_CU_coding_files(
     base_cols = ['c1ID', 'c1SV', 'c1REL', 'c1com', 'c2ID', 'c2SV', 'c2REL', 'c2com']
     CU_coding_dir = output_dir / 'CUCoding'
     logging.info(f"Writing CU coding files to {CU_coding_dir}")
-    transcript_tables = list(Path(input_dir).rglob("*Utterances.xlsx")) + list(Path(output_dir).rglob("*Utterances.xlsx"))
+    transcript_tables = find_transcript_tables(input_dir, output_dir)
 
     for file in tqdm(transcript_tables, desc="Generating CU coding files"):
         logging.info(f"Processing file: {file}")
@@ -185,7 +186,7 @@ def make_CU_coding_files(
         assignments = assign_coders(coders)
 
         try:
-            uttdf = pd.read_excel(str(file))
+            uttdf = extract_transcript_data(file)
             logging.info(f"Successfully read file: {file}")
         except Exception as e:
             logging.error(f"Failed to read file {file}: {e}")
