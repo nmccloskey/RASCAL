@@ -57,9 +57,9 @@ def run_summarize_cus(tiers, input_dir, output_dir):
     from rascal.coding.summarize_cus import summarize_cus
     summarize_cus(tiers=tiers, input_dir=input_dir, output_dir=output_dir)
 
-def run_run_corelex(input_dir, output_dir, exclude_participants):
+def run_run_corelex(tiers, input_dir, output_dir, exclude_participants):
     from rascal.coding.corelex import run_corelex
-    run_corelex(input_dir=input_dir, output_dir=output_dir, exclude_participants=exclude_participants)
+    run_corelex(tiers=tiers, input_dir=input_dir, output_dir=output_dir, exclude_participants=exclude_participants)
 
 def run_reselect_cu_reliability(tiers, input_dir, output_dir, rel_type, frac):
     from rascal.coding.make_coding_files import reselect_cu_wc_reliability

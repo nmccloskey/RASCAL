@@ -178,7 +178,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
                 elif func.startswith("10a."):
                     run_unblind_CUs(tiers, input_dir, output_dir)
                 elif func.startswith("10b."):
-                    run_run_corelex(input_dir, output_dir, exclude_participants)
+                    run_run_corelex(tiers, input_dir, output_dir, exclude_participants)
 
             st.success("✅ All selected functions completed successfully!")
 
