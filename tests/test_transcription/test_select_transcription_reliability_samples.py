@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from pathlib import Path
 
-from rascal.transcription.transcription_reliability_selector import select_transcription_reliability_samples
+from rascal.transcripts.transcription_reliability_selector import select_transcription_reliability_samples
 
 
 # ---------- Fakes ----------

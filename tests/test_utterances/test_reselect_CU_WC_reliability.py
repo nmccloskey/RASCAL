@@ -6,7 +6,7 @@ import pytest
 
 # Import target; skip cleanly if package isn't on path
 try:
-    from rascal.utterances import make_coding_files as mk
+    from rascal.coding import make_coding_files as mk
 except Exception as e:
     pytest.skip(f"Could not import rascal.utterances.make_coding_files: {e}", allow_module_level=True)
 

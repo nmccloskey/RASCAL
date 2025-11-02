@@ -4,9 +4,9 @@ from unittest.mock import MagicMock
 import pytest
 from pathlib import Path
 
-from rascal.utterances.make_utterance_tables import (
-    _build_utterance_df,
-    _write_utterance_tables,
+from rascal.transcripts.transcript_tables import (
+    _build_transcript_dfs,
+    _write_transcript_tables,
     prepare_utterance_dfs,
 )
 
@@ -54,7 +54,7 @@ def test_build_df_no_partition(sample_fixtures):
         ("site", FakeTier("site", False, {f1: "AC", f2: "BU"})),
         ("test", FakeTier("test", False, {f1: "Pre", f2: "Post"})),
     ])
-    df, partition_tiers = _build_utterance_df(tiers, chats)
+    df, partition_tiers = _build_transcript_dfs(tiers, chats)
     assert partition_tiers == []
     assert list(df.columns) == ["file", "site", "test", "sample_id", "speaker", "utterance", "comment"]
     assert len(df) == 3
@@ -68,7 +68,7 @@ def test_build_df_with_single_partition(sample_fixtures):
         ("site", FakeTier("site", True,  {f1: "AC", f2: "BU"})),
         ("test", FakeTier("test", False, {f1: "Pre", f2: "Post"})),
     ])
-    df, partition_tiers = _build_utterance_df(tiers, chats)
+    df, partition_tiers = _build_transcript_dfs(tiers, chats)
     assert partition_tiers == ["site"]
     # Ensure labels are there
     assert set(df["site"].unique()) == {"AC", "BU"}
@@ -79,7 +79,7 @@ def test_write_tables_no_partition(monkeypatch, tmp_path, sample_fixtures):
         ("site", FakeTier("site", False, {f1: "AC", f2: "BU"})),
         ("test", FakeTier("test", False, {f1: "Pre", f2: "Post"})),
     ])
-    df, pts = _build_utterance_df(tiers, chats)
+    df, pts = _build_transcript_dfs(tiers, chats)
 
     # Stub to_excel to avoid openpyxl dependency
     calls = []
@@ -89,7 +89,7 @@ def test_write_tables_no_partition(monkeypatch, tmp_path, sample_fixtures):
     monkeypatch.setattr(pd.DataFrame, "to_excel", fake_to_excel, raising=False)
 
     outdir = tmp_path / "out"
-    written = _write_utterance_tables(df, str(outdir), pts)
+    written = _write_transcript_tables(df, str(outdir), pts)
     assert len(written) == 1
     assert written[0].endswith("Utterances.xlsx")
 
@@ -99,7 +99,7 @@ def test_write_tables_multi_partition(monkeypatch, tmp_path, sample_fixtures):
         ("site", FakeTier("site", True, {f1: "AC", f2: "BU"})),
         ("test", FakeTier("test", True, {f1: "Pre", f2: "Post"})),
     ])
-    df, pts = _build_utterance_df(tiers, chats)
+    df, pts = _build_transcript_dfs(tiers, chats)
 
     calls = []
     def fake_to_excel(self, path, index=False):
@@ -107,7 +107,7 @@ def test_write_tables_multi_partition(monkeypatch, tmp_path, sample_fixtures):
     monkeypatch.setattr(pd.DataFrame, "to_excel", fake_to_excel, raising=False)
 
     outdir = tmp_path / "out"
-    written = _write_utterance_tables(df, str(outdir), pts)
+    written = _write_transcript_tables(df, str(outdir), pts)
     assert len(written) == 2
     assert any(norm(p).endswith("AC/Pre/AC_Pre_Utterances.xlsx") for p in written)
     assert any(norm(p).endswith("BU/Post/BU_Post_Utterances.xlsx") for p in written)

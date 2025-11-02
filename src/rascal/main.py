@@ -8,7 +8,7 @@ from rascal.run_wrappers import (
     run_select_transcription_reliability_samples,
     run_reselect_transcription_reliability_samples,
     run_analyze_transcription_reliability,
-    run_prepare_utterance_dfs, run_make_CU_coding_files,
+    run_make_transcript_tables, run_make_CU_coding_files,
     run_make_timesheets, run_analyze_CU_reliability,
     run_analyze_CU_coding, run_reselect_CU_reliability,
     run_make_word_count_files, run_analyze_word_count_reliability,
@@ -154,7 +154,7 @@ def main(args):
         if not utt_files:
             logging.info("No input utterance files detected — creating them automatically.")
             chats = chats or run_read_cha_files(input_dir)
-            run_prepare_utterance_dfs(tiers, chats, out_dir)
+            run_make_transcript_tables(tiers, chats, out_dir)
 
     # ---------------------------------------------------------
     # Dispatch dictionary
@@ -165,7 +165,7 @@ def main(args):
             tiers, input_dir, out_dir, exclude_participants, strip_clan, prefer_correction, lowercase
         ),
         "3b": lambda: run_reselect_transcription_reliability_samples(input_dir, out_dir, frac),
-        "4a": lambda: run_prepare_utterance_dfs(tiers, chats, out_dir),
+        "4a": lambda: run_make_transcript_tables(tiers, chats, out_dir),
         "4b": lambda: run_make_CU_coding_files(
             tiers, frac, coders, input_dir, out_dir, CU_paradigms, exclude_participants
         ),

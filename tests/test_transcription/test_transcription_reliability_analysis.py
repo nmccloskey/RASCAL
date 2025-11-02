@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 try:
-    import rascal.transcription.transcription_reliability_analysis as tra
+    import rascal.transcripts.transcription_reliability_analysis as tra
 except Exception as e:
     pytest.skip(f"Could not import transcription_reliability_analysis: {e}", allow_module_level=True)
 

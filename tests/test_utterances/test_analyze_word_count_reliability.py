@@ -5,7 +5,7 @@ import pytest
 
 # Import target
 try:
-    from rascal.utterances import word_count_reliability_analyzer as wcra
+    from rascal.coding import word_count_reliability_analyzer as wcra
 except Exception as e:
     pytest.skip(f"Could not import rascal.utterances.word_count_reliability_analyzer: {e}", allow_module_level=True)
 

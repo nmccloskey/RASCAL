@@ -6,7 +6,7 @@ import pytest
 
 # Try to import the target module; skip cleanly if the package path isn't available.
 try:
-    from rascal.utterances import CU_analyzer as cua
+    from rascal.coding import CU_analyzer as cua
 except Exception as e:
     pytest.skip(f"Could not import rascal.utterances.CU_analyzer: {e}", allow_module_level=True)
 

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from rascal.utterances.make_coding_files import make_CU_coding_files
+from rascal.coding.make_coding_files import make_CU_coding_files
 
 
 class FakeTier:
@@ -47,7 +47,7 @@ def io_tree(tmp_path, monkeypatch):
     monkeypatch.setattr(pd, "read_excel", lambda *a, **k: _mk_utt_df(), raising=False)
 
     # Make random.sample deterministic: always pick first k
-    import rascal.utterances.make_coding_files as mod
+    import rascal.coding.make_coding_files as mod
     monkeypatch.setattr(mod.random, "sample", lambda seq, k: list(seq)[:k])
 
     return input_dir, output_dir, fname
