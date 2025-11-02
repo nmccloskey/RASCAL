@@ -2,7 +2,7 @@
 import argparse
 import logging
 from datetime import datetime
-from rascal.utils.support_funcs import as_path, load_config, find_utt_files
+from rascal.utils.support_funcs import as_path, load_config, find_transcript_tables
 from rascal.run_wrappers import (
     run_read_tiers, run_read_cha_files,
     run_select_transcription_reliability_samples,
@@ -150,9 +150,9 @@ def main(args):
 
     # Prepare utterance files if needed
     if "4a" not in converted and any(c in ["4b", "4c", "7b", "10b"] for c in converted):
-        utt_files = find_utt_files(input_dir, out_dir)
-        if not utt_files:
-            logging.info("No input utterance files detected — creating them automatically.")
+        transcript_tables = find_transcript_tables(input_dir, out_dir)
+        if not transcript_tables:
+            logging.info("No input transcript tables detected — creating them automatically.")
             chats = chats or run_read_cha_files(input_dir)
             run_make_transcript_tables(tiers, chats, out_dir)
 

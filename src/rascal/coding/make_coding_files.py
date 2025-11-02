@@ -175,9 +175,9 @@ def make_CU_coding_files(
     base_cols = ['c1ID', 'c1SV', 'c1REL', 'c1com', 'c2ID', 'c2SV', 'c2REL', 'c2com']
     CU_coding_dir = output_dir / 'CUCoding'
     logging.info(f"Writing CU coding files to {CU_coding_dir}")
-    utterance_files = list(Path(input_dir).rglob("*Utterances.xlsx")) + list(Path(output_dir).rglob("*Utterances.xlsx"))
+    transcript_tables = list(Path(input_dir).rglob("*Utterances.xlsx")) + list(Path(output_dir).rglob("*Utterances.xlsx"))
 
-    for file in tqdm(utterance_files, desc="Generating CU coding files"):
+    for file in tqdm(transcript_tables, desc="Generating CU coding files"):
         logging.info(f"Processing file: {file}")
         labels = [t.match(file.name, return_None=True) for t in tiers.values()]
         labels = [l for l in labels if l is not None]
