@@ -110,7 +110,7 @@ def _prepare_reliability_subset(cu_df, seg, ass, frac, cu_paradigms):
                 relsegdf[col] = ""
 
     relsegdf.drop(columns=['c2_id'], inplace=True, errors='ignore')
-    relsegdf.insert(relsegdf.columns.get_loc('c3_comment'), 'c3ID', ass[2])
+    relsegdf.insert(relsegdf.columns.get_loc('c3_comment'), 'c3_id', ass[2])
     return relsegdf
 
 def make_cu_coding_files(
@@ -331,7 +331,7 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
             _write_wc_outputs(wc_df, wc_rel_df, word_count_dir, labels)
         except Exception as e:
             logging.error(f"Failed processing {file}: {e}")
-            
+
 
 def reselect_cu_wc_reliability(
     tiers,
@@ -388,7 +388,7 @@ def reselect_cu_wc_reliability(
     -----
     - Requires a `sample_id` column in both original and reliability tables.
     - Skips an original file if no matched reliability file exists (schema safety).
-    - CU branch ensures presence of `c3ID` and `c3_comment` columns (left as NaN unless
+    - CU branch ensures presence of `c3_id` and `c3_comment` columns (left as NaN unless
       already present). Suffixed c3 fields may be wiped by downstream code if needed.
     """
 
@@ -560,12 +560,12 @@ def reselect_cu_wc_reliability(
 
         # CU-specific adjustments
         if rel_type == "CU":
-            for col in ["c3ID","c3_comment"]:
+            for col in ["c3_id","c3_comment"]:
                 if col not in sub.columns:
                     sub[col] = ""
 
         else:  # "WC"
-            # Ensure c3ID exists if present in template; set it to coder3
+            # Ensure c3_id exists if present in template; set it to coder3
             if "c2_id" not in sub.columns:
                 sub["c2_id"] = ""
             # Add word count column and pull neutrality from original.
