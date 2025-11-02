@@ -235,143 +235,103 @@ def count_words(text, d):
     tokens = [word for word in text.split() if d(word)]
     return len(tokens)
 
+def _read_cu_file(file: Path) -> pd.DataFrame:
+    """Read and shuffle CU coding file by sample_id."""
+    cu_df = pd.read_excel(file)
+    subdfs = [g for _, g in cu_df.groupby("sample_id")]
+    random.shuffle(subdfs)
+    shuffled = pd.concat(subdfs, ignore_index=True)
+    logging.info(f"Read and shuffled {file.name}")
+    return shuffled
+
+def _prepare_wc_df(df: pd.DataFrame, d) -> pd.DataFrame:
+    """Add coder and word_count columns; drop CU-specific ones."""
+    df = df.copy()
+    df["c1_id"] = ""
+    df["wc_comment"] = ""
+    df["word_count"] = df.apply(
+        lambda r: count_words(r["utterance"], d) if not pd.isna(r.get("c2_cu")) else "NA",
+        axis=1
+    )
+    drop_cols = [c for c in df if c.startswith(("c2_sv", "c2_rel", "c2_cu", "c2_comment", "agreement"))]
+    df.drop(columns=drop_cols, inplace=True, errors="ignore")
+    return df
+
+def _assign_wc_coders(df: pd.DataFrame, coders: list[str], frac: float):
+    """Assign coders and build reliability subset."""
+    assignments = assign_coders(coders)
+    unique_ids = list(df["sample_id"].drop_duplicates())
+    segments = segment(unique_ids, n=len(coders))
+
+    rel_subsets = []
+    for seg, ass in zip(segments, assignments):
+        df.loc[df["sample_id"].isin(seg), "c1_id"] = ass[0]
+        rel_samples = random.sample(seg, k=max(1, round(len(seg) * frac)))
+        relsegdf = df[df["sample_id"].isin(rel_samples)].copy()
+        relsegdf.rename(columns={"c1_id": "c2_id", "wc_comment": "wc_rel_com"}, inplace=True)
+        relsegdf["c2_id"] = ass[1]
+        rel_subsets.append(relsegdf)
+
+    wc_rel_df = pd.concat(rel_subsets)
+    logging.info(f"Reliability subset: {len(wc_rel_df)} utterances")
+    return df, wc_rel_df
+
+def _write_wc_outputs(wc_df, wc_rel_df, word_count_dir, labels):
+    """Write word count and reliability files to disk."""
+    lab_str = "_".join(labels) + "_" if labels else ""
+    out_dir = Path(word_count_dir, *labels)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    files = {
+        f"{lab_str}word_counting.xlsx": wc_df,
+        f"{lab_str}word_counting_reliability.xlsx": wc_rel_df,
+    }
+    for fname, df in files.items():
+        fpath = out_dir / fname
+        try:
+            df.to_excel(fpath, index=False)
+            logging.info(f"Wrote {fpath}")
+        except Exception as e:
+            logging.error(f"Failed to write {fpath}: {e}")
+
 def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
     """
-    Generate utterance-level word count coding files and reliability subsets
-    from existing CU coding outputs.
+    Create word-count coding and reliability workbooks from CU utterance tables.
 
-    Workflow
-    --------
-    1. Locate all "*cu_coding_by_utterance*.xlsx" files under both `input_dir`
-       and `output_dir`.
-    2. For each file:
-       - Extract partition labels from filename using `tiers`.
-       - Read CU coding DataFrame.
-       - Drop CU-specific columns (c2_sv*, c2_rel*, c2_cu*, c2_comment*, agreement*).
-       - Add empty coder-1 assignment column ('c1_id') and comment ('wc_com').
-       - Compute 'wordCount' for each utterance using `count_words(utterance, d)`
-         if c2_cu is not NaN, otherwise assign "NA".
-       - Assign coders to samples via `assign_CU_coders(coders)` and
-         distribute sample_ids across coders using `segment(...)`.
-       - Select a fraction (`frac`) of samples for reliability per coder pair.
-         For these, rename 'c1_id'→'c2_id' and 'wc_com'→'wc_rel_com',
-         and assign the second coder ID.
+    Each input *cu_coding_by_utterance*.xlsx produces:
+      - *_word_counting.xlsx* → all samples
+      - *_word_counting_reliability.xlsx* → subset (~frac) for reliability
 
-    Outputs
-    -------
-    Under "<output_dir>/word_counts[/<partition_labels...>]":
-      - "<labels>_word_counting.xlsx"
-        Full utterance-level coding frame with 'wordCount', 'c1_id', 'wc_com'.
-      - "<labels>_word_counting_reliability.xlsx"
-        Subset of samples (≈ frac of total) for reliability, with 'c2_id' and 'wc_rel_com'.
+    Steps:
+      1. Locate CU coding files in `input_dir` and `output_dir`.
+      2. Read each file, shuffle samples, drop CU-specific columns.
+      3. Compute `word_count` per utterance using `count_words`.
+      4. Assign coders and sample reliability subsets.
+      5. Write outputs under `{output_dir}/word_counts/<labels>/`.
 
     Parameters
     ----------
-    tiers : dict[str, Any]
-        Tier objects with `.match(filename, ...)` and `.partition` attributes.
-        Used to derive subdirectories and labels for outputs.
+    tiers : dict[str, Tier]
     frac : float
-        Fraction of unique sample_ids to include in the reliability subset
-        (minimum 1 per coder assignment).
     coders : list[str]
-        Coder IDs; first two are used for assignments.
-    input_dir : str | os.PathLike
-        Directory containing CU coding utterance-level Excel files.
-    output_dir : str | os.PathLike
-        Directory to save word count outputs.
-
-    Returns
-    -------
-    None
-        Saves Excel files to disk; does not return.
+    input_dir, output_dir : Path or str
     """
+    word_count_dir = Path(output_dir) / "word_counts"
+    word_count_dir.mkdir(parents=True, exist_ok=True)
     d = get_word_checker()
-    
-    # Make word count coding file path.
-    word_count_dir = output_dir / 'word_counts'
-    logging.info(f"Writing word count files to {word_count_dir}")
+    cu_files = list(Path(input_dir).rglob("*cu_coding_by_utterance*.xlsx")) + \
+               list(Path(output_dir).rglob("*cu_coding_by_utterance*.xlsx"))
 
-    # Convert utterance-level CU coding files to word counting files.
-    CU_files = list(Path(input_dir).rglob("*cu_coding_by_utterance*.xlsx")) + list(Path(output_dir).rglob("*cu_coding_by_utterance*.xlsx"))
-    for file in tqdm(CU_files, desc="Generating word count coding files"):
-
-        logging.info(f"Processing file: {file}")
-        
-        # Extract partition tier info from file name.
-        labels = [t.match(file.name, return_None=True) for t in tiers.values()]
-        labels = [l for l in labels if l is not None]
-        logging.debug(f"Extracted labels: {labels}")
-
-        # Read and copy CU df.
+    for file in tqdm(cu_files, desc="Generating word count files"):
         try:
-            cu_df = pd.read_excel(str(file))
-            logging.info(f"Successfully read file: {file}")
+            wc_df = _read_cu_file(file)
+            labels = [t.match(file.name, return_None=True) for t in tiers.values() if t.match(file.name, return_None=True)]
+            wc_df = _prepare_wc_df(wc_df, d)
+            wc_df, wc_rel_df = _assign_wc_coders(wc_df, coders, frac)
+            _write_wc_outputs(wc_df, wc_rel_df, word_count_dir, labels)
         except Exception as e:
-            logging.error(f"Failed to read file {file}: {e}")
-            continue
-
-        # Shuffle samples
-        subdfs = []
-        for _, subdf in cu_df.groupby(by="sample_id"):
-            subdfs.append(subdf)
-        random.shuffle(subdfs)
-        shuffled_cu_df = pd.concat(subdfs, ignore_index=True)
-
-        wc_df = shuffled_cu_df.copy()
-
-        # Add counter and word count comment column.
-        empty_col = ["" for _ in range(len(wc_df))]
-        wc_df = wc_df.assign(**{'c1_id': empty_col})
-        # Set to string type explicitly to avoid warning in the .isin part.
-        wc_df['c1_id'] = wc_df['c1_id'].astype('string')
-        wc_df = wc_df.assign(**{'wc_comment': empty_col})
-
-        # Add word count column and pull neutrality from CU2.
-        wc_df['word_count'] = wc_df.apply(lambda row: count_words(row['utterance'], d) if not np.isnan(row['c2_cu']) else 'NA', axis=1)
-
-        # Winnow columns.
-        drop_cols = [c for c in wc_df.columns if c.startswith(('c2_sv', 'c2_rel', 'c2_cu', 'c2_comment', 'agreement'))]
-        wc_df = wc_df.drop(columns=drop_cols)
-        logging.debug("Dropped CU-specific columns.")
-
-        # Only first two coders used in these assignments.
-        assignments = assign_coders(coders)
-
-        # Select samples for reliability.
-        unique_sample_ids = list(wc_df['sample_id'].drop_duplicates(keep='first'))
-        segments = segment(unique_sample_ids, n=len(coders))
-
-        # Assign coders and prep reliability file.
-        rel_subsets = []
-        for seg, ass in zip(segments, assignments):
-            wc_df.loc[wc_df['sample_id'].isin(seg), 'c1_id'] = ass[0]
-            rel_samples = random.sample(seg, k=max(1, round(len(seg) * frac)))
-            relsegdf = wc_df[wc_df['sample_id'].isin(rel_samples)].copy()
-            relsegdf.rename(columns={'c1_id': 'c2_id', 'wc_com': 'wc_rel_com'}, inplace=True)
-            relsegdf['c2_id'] = ass[1]
-            rel_subsets.append(relsegdf)
-
-        WCreldf = pd.concat(rel_subsets)
-        logging.info(f"Selected {len(set(WCreldf['sample_id']))} samples for reliability from {len(set(wc_df['sample_id']))} total samples.")
-
-        lab_str = '_'.join(labels) + '_' if labels else ''
-
-        # Save word count coding file.
-        filename = Path(word_count_dir, *labels, lab_str + 'word_counting.xlsx')
-        logging.info(f"Writing word counting file: {filename}")
-        try:
-            filename.parent.mkdir(parents=True, exist_ok=True)
-            wc_df.to_excel(filename, index=False)
-        except Exception as e:
-            logging.error(f"Failed to write word count coding file {filename}: {e}")
-
-        # Word count reliability coding file.
-        filename = Path(word_count_dir, *labels, lab_str + 'word_counting_reliability.xlsx')
-        logging.info(f"Writing word count reliability coding file: {filename}")
-        try:
-            WCreldf.to_excel(filename, index=False)
-        except Exception as e:
-            logging.error(f"Failed to write word count reliability coding file {filename}: {e}")
+            logging.error(f"Failed processing {file}: {e}")
+            
 
 def reselect_cu_wc_reliability(
     tiers,
