@@ -8,6 +8,7 @@ import num2words as n2w
 from pathlib import Path
 from datetime import datetime
 from scipy.stats import percentileofscore
+from rascal.coding.make_coding_files import stim_cols
 from rascal.utils.support_funcs import find_transcript_tables, extract_transcript_data
 
 
@@ -474,7 +475,7 @@ def _prepare_corelex_inputs(input_dir, output_dir, exclude_participants):
             return None, None
 
         if mode == "unblind":
-            narr_col = _col(utt_df, ["narrative", "scene", "story", "stimulus"])
+            narr_col = _col(utt_df, stim_cols)
             utt_df = utt_df[utt_df[narr_col].isin(urls.keys())]
             cu_col = next((c for c in utt_df.columns if c.startswith("c2_cu")), None)
             wc_col = "word_count" if "word_count" in utt_df.columns else None
@@ -486,7 +487,7 @@ def _prepare_corelex_inputs(input_dir, output_dir, exclude_participants):
             present_narratives = set(utt_df[narr_col].dropna().unique())
 
         else:  # transcript table mode
-            narr_col = _col(utt_df, ["narrative", "scene", "story", "stimulus"])
+            narr_col = _col(utt_df, stim_cols)
             utt_col = _col(utt_df, ["utterance", "text", "tokens"])
             time_col = _col(
                 utt_df,
