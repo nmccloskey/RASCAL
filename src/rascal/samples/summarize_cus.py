@@ -1,6 +1,7 @@
 import logging
 import pandas as pd
 from pathlib import Path
+from rascal.utils.support_funcs import find_transcript_tables, extract_transcript_data
 
 
 def unblind_CUs(tiers, input_dir, output_dir):
@@ -23,7 +24,7 @@ def unblind_CUs(tiers, input_dir, output_dir):
        Save as "Summaries/unblindUtteranceData.xlsx".
     3) Produce a **blinded** utterance table by:
          - Dropping "file" and any tier columns whose tier.blind == False,
-         - Mapping each blind tier’s labels via `tier.make_blind_codes()`.
+         - Mapping each blind tier's labels via `tier.make_blind_codes()`.
        Save as "Summaries/blindUtteranceData.xlsx" and retain the mapping(s).
     4) Build a sample-level table:
          - From utterances, drop ['utterance_id','speaker','utterance','comment'] and dedupe,
@@ -74,7 +75,8 @@ def unblind_CUs(tiers, input_dir, output_dir):
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Read utterance data
-        utts = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*Utterances.xlsx')])
+        transcript_tables = find_transcript_tables(input_dir, output_dir)
+        utts = pd.concat([extract_transcript_data(tt) for tt in transcript_tables])
 
         # Read CU data
         CUbyUtts = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*CUCoding_ByUtterance.xlsx')])
