@@ -77,8 +77,8 @@ def make_transcript_tables(
 
     Returns
     -------
-    list of str
-        File paths of all written transcript tables.
+    None
+        All artifacts are saved to disk; the function does not return a value.
 
     Notes
     -----
@@ -141,4 +141,3 @@ def make_transcript_tables(
             logging.error(f"Failed to write {filename}: {e}")
 
     logging.info(f"Successfully wrote {len(written)} transcript table(s).")
-    return written
