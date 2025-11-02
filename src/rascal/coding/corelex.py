@@ -160,8 +160,8 @@ lemma_dict = {
 }
 
 base_columns = [
-    "sample_id", "narrative", "speakingTime", "numTokens",
-    "numCoreWords", "numCoreWordTokens", "lexiconCoverage", "coreWordsPerMinute",
+    "sample_id", "narrative", "speaking_time", "num_tokens",
+    "num_core_words", "num_core_word_tokens", "lexicon_coverage", "core_words_per_min",
     "core_words_pwa_percentile", "core_words_control_percentile",
     "cwpm_pwa_percentile", "cwpm_control_percentile"
 ]
@@ -346,7 +346,7 @@ def find_corelex_inputs(input_dir: str, output_dir: str) -> dict:
     Find available inputs for CoreLex in priority order:
       1) *unblindUtteranceData.xlsx (best)
       2) *transcript_tables*.xlsx            (fallback)
-    Optionally: *SpeakingTimes.xlsx  (merge with fallback)
+    Optionally: *speaking_times*.xlsx  (merge with fallback)
     
     Returns dict:
       {
@@ -362,7 +362,7 @@ def find_corelex_inputs(input_dir: str, output_dir: str) -> dict:
     # 1) Look for unblindUtteranceData.xlsx
     unblind_matches = []
     for d in search_dirs:
-        unblind_matches += list(d.rglob("*unblindUtteranceData.xlsx"))
+        unblind_matches += list(d.rglob("*unblind_utterance_data*.xlsx"))
     if unblind_matches:
         p = unblind_matches[0]
         df = _read_excel_safely(p)
@@ -373,7 +373,7 @@ def find_corelex_inputs(input_dir: str, output_dir: str) -> dict:
     # 2) Fallback to *transcript_tables*.xlsx (may be multiple; concat)
     transcript_tables = find_transcript_tables(input_dir, output_dir)
     if not transcript_tables:
-        logging.error("No transcript table files found (neither *unblindUtteranceData.xlsx nor *transcript_tables*.xlsx).")
+        logging.error("No transcript table files found (neither *unblind_utterance_data*.xlsx nor *transcript_tables*.xlsx).")
         return None
 
     utt_frames = [extract_transcript_data(tt) for tt in transcript_tables]
@@ -383,10 +383,10 @@ def find_corelex_inputs(input_dir: str, output_dir: str) -> dict:
     utt_df = pd.concat(utt_frames, ignore_index=True, sort=False)
     logging.info(f"Using concatenated transcript tables from {len(transcript_tables)} file(s).")
 
-    # Optional speaking times: *SpeakingTimes.xlsx (concat)
+    # Optional speaking times: *speaking_times*.xlsx (concat)
     time_files = []
     for d in search_dirs:
-        time_files += list(d.rglob("*SpeakingTimes.xlsx"))
+        time_files += list(d.rglob("*speaking_times*.xlsx"))
     times_df = None
     if time_files:
         time_frames = [df for f in time_files if (df := _read_excel_safely(f)) is not None]
@@ -404,6 +404,17 @@ def generate_token_columns(present_narratives):
                   for token in scene_tokens.get(scene, [])]
     return token_cols
 
+def _col(df, candidates):
+    """
+    Normalize column names to a common expectation where possible.
+    We expect at least: sample_id, narrative, utterance
+    Try to auto-fix common variants in fallback mode
+    """
+    for c in candidates:
+        if c in df.columns:
+            return c
+    return None
+
 def run_corelex(input_dir, output_dir, exclude_participants=None):
     """
     Run CoreLex analysis on aphasia narrative samples, producing lexical diversity
@@ -414,22 +425,22 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
     1. Load utterance-level input:
        - If mode = "unblind" (determined with find_corelex_inputs): expects a single "unblindUtteranceData.xlsx"
          containing columns: ['sample_id','narrative','utterance','client_time','c2CU',...].
-       - Else: expects "*Utterances.xlsx" and "*SpeakingTimes.xlsx" files.
+       - Else: expects "*Utterances.xlsx" and "*speaking_times*.xlsx" files.
          * Utterances are filtered to exclude speakers in `exclude_participants`
            (e.g., {"INV"} to drop investigators).
     2. For each sample x narrative:
        - Tokenize utterances, normalize, and match against the CoreLex lists.
        - Count:
-           * numTokens: total tokens
-           * numCoreWords: distinct core lemmas
-           * numCoreWordTokens: total core-word tokens
+           * num_tokens: total tokens
+           * num_core_words: distinct core lemmas
+           * num_core_word_tokens: total core-word tokens
        - Merge with speaking time, compute:
-           * coreWordsPerMinute (cwpm)
+           * core_words_per_min (cwpm)
     3. Preload CoreLex norms for the relevant narratives and compute percentiles:
            * core_words_control_percentile, core_words_pwa_percentile
            * cwpm_control_percentile, cwpm_pwa_percentile
     4. Write results to:
-           "<output_dir>/CoreLex/CoreLexData_<timestamp>.xlsx"
+           "<output_dir>/CoreLex/core_lex_data_<timestamp>.xlsx"
 
     Parameters
     ----------
@@ -444,7 +455,7 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
     Outputs
     -------
     Excel file:
-      "<output_dir>/CoreLex/CoreLexData_<timestamp>.xlsx"
+      "<output_dir>/CoreLex/core_lex_data_<timestamp>.xlsx"
 
     Returns
     -------
@@ -456,14 +467,14 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
     - Narrative values in the data must match keys available in CoreLex norms
       (e.g., "Sandwich", "BrokenWindow", "CatRescue").
     - Speaking time is required for cwpm calculations; in unblind mode this must
-      be a 'client_time' column, in fallback mode it comes from *SpeakingTimes.xlsx.
+      be a 'client_time' column, in fallback mode it comes from *speaking_times*.xlsx.
     - Logs warnings if norms or percentiles cannot be computed.
     """
     exclude_participants = set(exclude_participants or [])
     logging.info("Starting CoreLex processing.")
     timestamp = datetime.now().strftime('%y%m%d_%H%M')
 
-    corelex_dir = output_dir / 'CoreLex'
+    corelex_dir = output_dir / 'core_lex'
     corelex_dir.mkdir(parents=True, exist_ok=True)
     logging.info(f"Output directory created: {corelex_dir}")
 
@@ -476,27 +487,18 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
     utt_df = inputs["utt_df"].copy()
     times_df = inputs["times_df"]
 
-    # ---- Normalize column names to a common expectation where possible ----
-    # We expect at least: sample_id, narrative, utterance
-    # Try to auto-fix common variants in fallback mode
-    def _col(df, candidates):
-        for c in candidates:
-            if c in df.columns:
-                return c
-        return None
-
     if mode == "unblind":
         narr_col   = _col(utt_df, ["narrative", "scene", "story", "stimulus"])
         # Filter to relevant narratives present in urls
         utt_df = utt_df[utt_df[narr_col].isin(urls.keys())]
 
         # Inclusion: prefer CU indicator if present; else wordCount
-        cu_col = next((c for c in utt_df.columns if c.startswith("c2CU")), None)
-        na_col = cu_col or ('wordCount' if 'wordCount' in utt_df.columns else None)
+        cu_col = next((c for c in utt_df.columns if c.startswith("c2_cu")), None)
+        na_col = cu_col or ('word_count' if 'word_count' in utt_df.columns else None)
         if na_col:
             utt_df = utt_df[~np.isnan(utt_df[na_col])]
         else:
-            logging.warning("No CU/wordCount column found; proceeding without that filter in unblind mode.")
+            logging.warning("No c2_cu/word_count column found; proceeding without that filter in unblind mode.")
 
         # Present narratives
         present_narratives = set(utt_df[narr_col].dropna().unique())
@@ -534,7 +536,7 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
                 speak_col = "client_time"
                 logging.info("Merged speaking times into utterances data.")
             else:
-                logging.warning("SpeakingTimes file found but required columns missing; proceeding without times.")
+                logging.warning("speaking_times file found but required columns missing; proceeding without times.")
                 speak_col = None
 
         # Present narratives
@@ -597,12 +599,12 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
         row = {
             "sample_id": sample,
             "narrative": scene_name,
-            "speakingTime": speaking_time if pd.notnull(speaking_time) else np.nan,
-            "numTokens": num_tokens,
-            "numCoreWords": num_core_words,
-            "numCoreWordTokens": num_cw_tokens,
-            "lexiconCoverage": lexicon_coverage,
-            "coreWordsPerMinute": cwpm,
+            "speaking_time": speaking_time if pd.notnull(speaking_time) else np.nan,
+            "num_tokens": num_tokens,
+            "num_core_words": num_core_words,
+            "num_core_word_tokens": num_cw_tokens,
+            "lexicon_coverage": lexicon_coverage,
+            "core_words_per_min": cwpm,
             "core_words_pwa_percentile": acc_percentiles["pwa_percentile"],
             "core_words_control_percentile": acc_percentiles["control_percentile"],
             "cwpm_pwa_percentile": cwpm_pwa,
@@ -619,7 +621,7 @@ def run_corelex(input_dir, output_dir, exclude_participants=None):
 
     corelexdf = pd.DataFrame(rows, columns=all_columns)
 
-    output_file = corelex_dir / f'CoreLexData_{timestamp}.xlsx'
+    output_file = corelex_dir / f'core_lex_data_{timestamp}.xlsx'
     corelexdf.to_excel(output_file, index=False)
     logging.info(f"Saved: {output_file}")
     logging.info("CoreLex processing complete.")
