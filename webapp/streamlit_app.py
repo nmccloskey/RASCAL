@@ -108,7 +108,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
             "1a. Select transcription reliability samples",
             "3a. Analyze transcription reliability",
             "3b. Reselect transcription reliability samples",
-            "4a. Prepare utterance tables",
+            "4a. Prepare transcript tables",
             "4b. Make CU coding files",
             "6a. Analyze CU reliability",
             "6b. Reselect CU reliability samples",

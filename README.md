@@ -194,12 +194,12 @@ rascal 3b
 # or
 rascal "transcripts reselect"
 
-# Prepare utterance tables, CU coding & reliability files, and timesheets from chat transcripts:
+# Prepare utterance tables and CU coding & reliability files from chat transcripts:
 rascal 4
 # or
-rascal 4a,4b,4c
+rascal 4a,4b
 # or
-rascal "utterances make", "cus make", "timesheets make"
+rascal "utterances make", "cus make"
 
 # Summarize CUs and specify config (default 'config.yaml'):
 rascal 10a --config other_config.yaml
@@ -212,8 +212,10 @@ rascal 10b
 # or
 rascal "corelex analyze"
 
-# To include speaking rate, run the below and fill in the speaking time in seconds before calling 10b.
-rascal "timesheets make"
+# To include speaking rate, run the below and fill in the speaking_time column (in seconds) before calling 10b.
+rascal 4a
+# or
+rascal "transcripts make"
 
 ```
 ---
@@ -224,7 +226,7 @@ rascal "timesheets make"
 |------|----------|--------------|
 | **Succinct** | `rascal 4b` | Fast single-stage execution |
 | **Expanded** | `rascal "cus make"` | Clearer readability; use quotes for multi-word commands |
-| **Omnibus** | `rascal 4` | Runs all sub-steps in that stage (e.g., 4a–4c) |
+| **Omnibus** | `rascal 4` | Runs all sub-steps in that stage (e.g., 4a–4b) |
 
 ---
 
@@ -235,9 +237,8 @@ rascal "timesheets make"
 | 1a | transcripts select | Select transcription reliability samples | Raw `.cha` files | Reliability & full sample lists + template `.cha` files | `select_transcription_reliability_samples` |
 | 3a | transcripts evaluate | Evaluate transcription reliability | Reliability `.cha` pairs | Agreement metrics + alignment text reports | `analyze_transcription_reliability` |
 | 3b | transcripts reselect | Reselect transcription reliability samples | Original + reliability transcription tables (from **1a**) | New reliability subset(s) | `reselect_transcription_reliability_samples` |
-| 4a | utterances make | Prepare utterance tables | Raw `.cha` files | Utterance spreadsheets | `prepare_utterance_dfs` |
+| 4a | transcripts make | Prepare transcript tables | Raw `.cha` files | Sample & utterance-level spreadsheets | `make_transcript_tables` |
 | 4b | cus make | Make CU coding & reliability files | Utterance tables (from **4a**) | CU coding + reliability spreadsheets | `make_CU_coding_files` |
-| 4c | timesheets make | Make timesheets | Utterance tables (from **4a**) | Speaking time entry sheets | `make_timesheets` |
 | 6a | cus evaluate | Analyze CU reliability | Manually completed CU coding (from **4b**) | Reliability summary tables + reports | `analyze_CU_reliability` |
 | 6b | cus reselect | Reselect CU reliability samples | Manually completed CU coding (from **4b**) | New reliability subset(s) | `reselect_CU_reliability` |
 | 7a | cus analyze | Analyze CU coding | Manually completed CU coding (from **4b**) | Sample- and utterance-level CU summaries | `analyze_CU_coding` |
@@ -252,7 +253,7 @@ rascal "timesheets make"
 | Omnibus command | Succinct command | Expanded command |
 |--|--|--|
 | 1 | 1a | transcripts select |
-| 4 | 4a, 4b, 4c | utterances make, cus make, timesheets make |
+| 4 | 4a, 4b | utterances make, cus make |
 | 7 | 7a, 7b | cus analyze, words make |
 | 10 | 10a, 10b | cus summarize, corelex analyze
 

@@ -34,7 +34,7 @@ COMMAND_MAP = {
     "1a": "transcripts select",
     "3a": "transcripts evaluate",
     "3b": "transcripts reselect",
-    "4a": "utterances make",
+    "4a": "transcripts make",
     "4b": "cus make",
     "6a": "cus evaluate",
     "6b": "cus reselect",
@@ -58,7 +58,7 @@ def build_arg_parser():
             "  rascal 3b\n"
             "  rascal transcripts reselect\n"
             "  rascal 4\n"
-            "  rascal 4a,4b,4c\n"
+            "  rascal 4a,4b\n"
             "  rascal utterances make, cus make, timesheets make\n"
         ),
         formatter_class=argparse.RawTextHelpFormatter,
