@@ -45,10 +45,6 @@ def run_make_word_count_files(tiers, frac, coders, input_dir, output_dir):
     from rascal.coding.make_coding_files import make_word_count_files
     make_word_count_files(tiers=tiers, frac=frac, coders=coders, input_dir=input_dir, output_dir=output_dir)
 
-def run_make_timesheets(tiers, input_dir, output_dir):
-    from rascal.utils.make_timesheets import make_timesheets
-    make_timesheets(tiers=tiers, input_dir=input_dir, output_dir=output_dir)
-
 def run_analyze_word_count_reliability(tiers, input_dir, output_dir):
     from rascal.coding.word_count_reliability_analyzer import analyze_word_count_reliability
     analyze_word_count_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir)

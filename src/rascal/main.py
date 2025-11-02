@@ -9,7 +9,7 @@ from rascal.run_wrappers import (
     run_reselect_transcription_reliability_samples,
     run_analyze_transcription_reliability,
     run_make_transcript_tables, run_make_cu_coding_files,
-    run_make_timesheets, run_analyze_cu_reliability,
+    run_analyze_cu_reliability,
     run_analyze_cu_coding, run_reselect_cu_reliability,
     run_make_word_count_files, run_analyze_word_count_reliability,
     run_reselect_wc_reliability, run_summarize_cus, run_run_corelex
@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 # -------------------------------------------------------------
 OMNIBUS_MAP = {
     "1": ["1a"],
-    "4": ["4a", "4b", "4c"],
+    "4": ["4a", "4b"],
     "7": ["7a", "7b"],
     "10": ["10a", "10b"],
 }
@@ -36,7 +36,6 @@ COMMAND_MAP = {
     "3b": "transcripts reselect",
     "4a": "utterances make",
     "4b": "cus make",
-    "4c": "timesheets make",
     "6a": "cus evaluate",
     "6b": "cus reselect",
     "7a": "cus analyze",
@@ -169,7 +168,6 @@ def main(args):
         "4b": lambda: run_make_cu_coding_files(
             tiers, frac, coders, input_dir, out_dir, cu_paradigms, exclude_participants
         ),
-        "4c": lambda: run_make_timesheets(tiers, input_dir, out_dir),
         "6a": lambda: run_analyze_cu_reliability(tiers, input_dir, out_dir, cu_paradigms),
         "6b": lambda: run_reselect_cu_reliability(tiers, input_dir, out_dir, "CU", frac),
         "7a": lambda: run_analyze_cu_coding(tiers, input_dir, out_dir, cu_paradigms),

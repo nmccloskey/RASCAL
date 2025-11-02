@@ -22,7 +22,7 @@ from rascal.run_wrappers import (
     run_reselect_transcription_reliability_samples,
     run_analyze_transcription_reliability,
     run_prepare_utterance_dfs, run_make_CU_coding_files,
-    run_make_timesheets, run_analyze_CU_reliability,
+    run_analyze_CU_reliability,
     run_analyze_CU_coding, run_reselect_CU_reliability,
     run_make_word_count_files, run_analyze_word_count_reliability,
     run_reselect_WC_reliability, run_unblind_CUs, run_run_corelex
@@ -110,7 +110,6 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
             "3b. Reselect transcription reliability samples",
             "4a. Prepare utterance tables",
             "4b. Make CU coding files",
-            "4c. Make timesheets",
             "6a. Analyze CU reliability",
             "6b. Reselect CU reliability samples",
             "7a. Analyze CU coding",
@@ -161,8 +160,6 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
                         tiers, frac, coders, input_dir, output_dir,
                         CU_paradigms, exclude_participants
                     )
-                elif func.startswith("4c."):
-                    run_make_timesheets(tiers, input_dir, output_dir)
                 elif func.startswith("6a."):
                     run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms)
                 elif func.startswith("6b."):
