@@ -203,7 +203,7 @@ def write_reliability_report(transc_rel_subdf, report_path, partition_labels=Non
     ----------
     transc_rel_subdf : pandas.DataFrame
         One row per sample. Must contain a numeric column
-        'LevenshteinSimilarity' whose values lie in [0, 1].
+        'levenshtein_similarity' whose values lie in [0, 1].
     report_path : str | pathlib.Path
         Full path to the output .txt file.
     partition_labels : list[str] | None
@@ -212,10 +212,10 @@ def write_reliability_report(transc_rel_subdf, report_path, partition_labels=Non
 
     try:
         # ── sanity checks ──────────────────────────────────────────────────────
-        if 'LevenshteinSimilarity' not in transc_rel_subdf.columns:
-            raise KeyError("'LevenshteinSimilarity' column is missing.")
+        if 'levenshtein_similarity' not in transc_rel_subdf.columns:
+            raise KeyError("'levenshtein_similarity' column is missing.")
 
-        ls = transc_rel_subdf['LevenshteinSimilarity'].astype(float).dropna()
+        ls = transc_rel_subdf['levenshtein_similarity'].astype(float).dropna()
         n_samples = len(ls)
         mean_ls   = ls.mean()
         sd_ls     = ls.std()
@@ -280,19 +280,19 @@ def _compute_simple_stats(org_text: str, rel_text: str):
     pdiff_num_chars = percent_difference(org_num_chars, rel_num_chars)
 
     return {
-        "OrgNumTokens": org_num_tokens,
-        "RelNumTokens": rel_num_tokens,
-        "PercDiffNumTokens": pdiff_num_tokens,
-        "OrgNumChars": org_num_chars,
-        "RelNumChars": rel_num_chars,
-        "PercDiffNumChars": pdiff_num_chars,
+        "org_num_tokens": org_num_tokens,
+        "rel_num_tokens": rel_num_tokens,
+        "perc_diff_num_tokens": pdiff_num_tokens,
+        "org_num_chars": org_num_chars,
+        "rel_num_chars": rel_num_chars,
+        "perc_diff_num_chars": pdiff_num_chars,
     }
 
 def _levenshtein_metrics(org_text: str, rel_text: str):
     Ldist = distance(org_text, rel_text)
     max_len = max(len(org_text), len(rel_text)) or 1
     Lscore = 1 - (Ldist / max_len)
-    return {"LevenshteinDistance": Ldist, "LevenshteinSimilarity": Lscore}
+    return {"levenshtein_distance": Ldist, "levenshtein_similarity": Lscore}
 
 def _needleman_wunsch_global(org_text: str, rel_text: str):
     aligner = PairwiseAligner()
@@ -301,8 +301,8 @@ def _needleman_wunsch_global(org_text: str, rel_text: str):
     best = alignments[0]
     best_score = best.score
     norm = best_score / (max(len(org_text), len(rel_text)) or 1)
-    return {"NeedlemanWunschScore": best_score,
-            "NeedlemanWunschNorm": norm,
+    return {"needleman_wunsch_score": best_score,
+            "needleman_wunsch_norm": norm,
             "alignment": best}
 
 # ---------- helpers: alignment pretty print ----------
@@ -389,101 +389,62 @@ def _convert_cha_names(input_dir: str | Path) -> dict[str, list[Path]]:
     )
     return {"renamed": renamed, "originals": originals}
 
-
-# ---------- main analysis ----------
-
-def analyze_transcription_reliability(
-    tiers,
-    input_dir,
-    output_dir,
-    exclude_participants=[],
-    strip_clan=True,
-    prefer_correction=True,
-    lowercase=True,
-    test=False
-):
-    """
-    Analyze transcription reliability by comparing original and reliability CHAT files.
-
-    Parameters
-    ----------
-    tiers : dict
-        Tier objects with attributes: .name, .partition, .match(filename)->label
-    input_dir : str
-        Directory containing input CHAT files.
-    output_dir : str
-        Base directory where analysis results will be saved.
-    exclude_participants, strip_clan, prefer_correction, lowercase :
-        Passed through to extract_cha_text().
-    test : bool
-        If True, return grouped DataFrames for tests instead of None.        
-    """
-    # --- setup output dirs ---
-    transc_rel_dir = output_dir / "TranscriptionReliabilityAnalysis"
-    transc_rel_dir.mkdir(parents=True, exist_ok=True)
-    logging.info(f"Created directory: {transc_rel_dir}")
-
-    # Which tiers define partitions?
-    partition_tiers = [t.name for t in tiers.values() if getattr(t, "partition", False)]
-
-    # --- preprocess reliability subdir if present ---
-    converted = _convert_cha_names(input_dir)
-    original_reliability_files = converted["originals"]
-
-    # --- collect all other .cha files excluding reliability originals ---
-    cha_files = [
-        p for p in Path(input_dir).rglob("*.cha")
-        if p not in original_reliability_files
+def _save_alignment(tiers, rel_cha, rel_labels, transc_rel_dir, nw):
+    """Save alignment for manual inspection"""
+    partition_labels = [
+        t.match(rel_cha.name) for t in tiers.values()
+        if getattr(t, "partition", False)
     ]
-    logging.info(f"Found {len(cha_files)} .cha files in the input directory.")
+    alignment_filename = f"{''.join(rel_labels)}_transcription_reliability_alignment.txt"
+    alignment_path = Path(transc_rel_dir, *partition_labels, "global_alignments", alignment_filename)
 
-    rel_chats = [p for p in cha_files if "reliability" in p.name]
-    org_chats = [p for p in cha_files if "reliability" not in p.name]
+    try:
+        _ensure_parent_dir(alignment_path)
+        alignment_str = _format_alignment_output(
+            nw["alignment"], nw["needleman_wunsch_score"], nw["needleman_wunsch_norm"]
+        )
+        alignment_path.write_text(alignment_str, encoding="utf-8")
+    except Exception as e:
+        logging.error(f"Failed to write alignment file {alignment_path}: {e}")
 
-    def _labels_for(path: Path):
-        return tuple(t.match(path.name) for t in tiers.values())
-
-    org_index = {}
-    for org in org_chats:
-        labels = _labels_for(org)
-        org_index[labels] = org
-
-    # --- iterate reliability files and analyze ---
+def _analyze_reliability_pairs(
+    rel_chats: list[Path],
+    org_index: dict,
+    tiers: dict,
+    transc_rel_dir: Path,
+    exclude_participants: list[str],
+    strip_clan: bool,
+    prefer_correction: bool,
+    lowercase: bool,
+) -> list[dict]:
+    """
+    Iterate through reliability .cha files, compute similarity metrics,
+    save alignment outputs, and return a list of result records.
+    """
     records = []
-    seen_rel_files = set()
-    seen_org_files = set()
+    seen_rel_files, seen_org_files = set(), set()
 
     for rel_cha in tqdm(rel_chats, desc="Analyzing reliability transcripts"):
-        rel_labels = _labels_for(rel_cha)
-        org_cha = org_index.get(rel_labels)
-        if org_cha is None:
-            logging.warning(f"No matching original .cha for reliability file: {rel_cha.name}")
-            continue
-
-        # --- safeguard: skip if reliability file already processed ---
-        if rel_cha.name in seen_rel_files:
-            logging.warning(f"Skipping duplicate reliability file: {rel_cha.name}")
-            continue
-
-        # --- safeguard: skip if original file already paired ---
-        if org_cha.name in seen_org_files:
-            logging.warning(
-                f"Skipping reliability file {rel_cha.name} because original already used: {org_cha.name}"
-            )
-            continue
-
-        # mark both as seen
-        seen_rel_files.add(rel_cha.name)
-        seen_org_files.add(org_cha.name)
-
         try:
+            # match to original
+            rel_labels = tuple(t.match(rel_cha.name) for t in tiers.values())
+            org_cha = org_index.get(rel_labels)
+            if org_cha is None:
+                logging.warning(f"No matching original .cha for reliability file: {rel_cha.name}")
+                continue
+
+            # skip duplicates
+            if rel_cha.name in seen_rel_files or org_cha.name in seen_org_files:
+                logging.warning(f"Skipping duplicate pairing: {rel_cha.name}")
+                continue
+
+            seen_rel_files.add(rel_cha.name)
+            seen_org_files.add(org_cha.name)
+
             org_chat_data = pylangacq.read_chat(str(org_cha))
             rel_chat_data = pylangacq.read_chat(str(rel_cha))
-        except Exception as e:
-            logging.error(f"Failed to read CHAT files {org_cha} or {rel_cha}: {e}")
-            continue
 
-        try:
+            # process text
             org_text = process_utterances(
                 org_chat_data,
                 exclude_participants=exclude_participants,
@@ -499,59 +460,53 @@ def analyze_transcription_reliability(
                 lowercase=lowercase,
             )
 
-            # Compute metrics
+            # compute metrics
             simple = _compute_simple_stats(org_text, rel_text)
             lev = _levenshtein_metrics(org_text, rel_text)
             nw = _needleman_wunsch_global(org_text, rel_text)
 
-            # ---------- save alignment pretty-print ----------
-            # Build path components from partitions (if any)
-            partition_labels = [t.match(rel_cha.name) for t in tiers.values() if getattr(t, "partition", False)]
-            text_filename = f"{''.join(rel_labels)}_TranscriptionReliabilityAlignment.txt"
-            text_file_path = Path(transc_rel_dir, *partition_labels, "GlobalAlignments", text_filename)
+            # save printed alignment
+            _save_alignment(tiers, rel_cha, rel_labels, transc_rel_dir, nw)
 
-            try:
-                _ensure_parent_dir(text_file_path)
-                alignment_str = _format_alignment_output(nw["alignment"], nw["NeedlemanWunschScore"], nw["NeedlemanWunschNorm"])
-                with open(text_file_path, "w", encoding="utf-8") as fh:
-                    fh.write(alignment_str)
-            except Exception as e:
-                logging.error(f"Failed to write alignment file {text_file_path}: {e}")
-
-            # ---------- build record ----------
-            row = {
-                **{t.name: t.match(rel_cha.name) for t in tiers.values()},  # tier label cols
-                "OrgFile": org_cha.name,
-                "RelFile": rel_cha.name,
+            # assemble record
+            record = {
+                **{t.name: t.match(rel_cha.name) for t in tiers.values()},
+                "original_file": org_cha.name,
+                "reliability_file": rel_cha.name,
                 **simple,
                 **lev,
-                "NeedlemanWunschScore": nw["NeedlemanWunschScore"],
-                "NeedlemanWunschNorm": nw["NeedlemanWunschNorm"],
+                "needleman_wunsch_score": nw["needleman_wunsch_score"],
+                "needleman_wunsch_norm": nw["needleman_wunsch_norm"],
             }
-            records.append(row)
+            records.append(record)
 
         except Exception as e:
-            logging.error(f"Failed to analyze transcription reliability for {org_cha} and {rel_cha}: {e}")
+            logging.error(f"Failed to analyze {rel_cha}: {e}")
 
-    # --- finalize DataFrame from records ---
-    if not records:
-        logging.warning("No transcription reliability records produced.")
-        return [] if test else None
+    return records
 
-    transc_rel_df = pd.DataFrame.from_records(records)
 
-    # --- save grouped outputs + reports ---
+def _save_reliability_outputs(
+    transc_rel_df: pd.DataFrame,
+    partition_tiers: list[str],
+    transc_rel_dir: Path,
+    test: bool = False,
+):
+    """
+    Save reliability analysis outputs (Excel and text reports) grouped by partitions.
+    """
     results = []
+
     if partition_tiers:
         groups = transc_rel_df.groupby(partition_tiers, dropna=False)
         for tup, subdf in tqdm(groups, desc="Saving grouped DataFrames & reports"):
             tup_vals = (tup if isinstance(tup, tuple) else (tup,))
             base_name = "_".join(str(x) for x in tup_vals if x is not None)
 
-            df_filename = f"{base_name}_TranscriptionReliabilityAnalysis.xlsx"
+            df_filename = f"{base_name}_transcription_reliability_evaluation.xlsx"
             df_path = Path(transc_rel_dir, *[str(x) for x in tup_vals if x is not None], df_filename)
 
-            report_filename = f"{base_name}_TranscriptionReliabilityReport.txt"
+            report_filename = f"{base_name}_transcription_reliability_report.txt"
             report_path = Path(transc_rel_dir, *[str(x) for x in tup_vals if x is not None], report_filename)
 
             try:
@@ -569,9 +524,8 @@ def analyze_transcription_reliability(
             if test:
                 results.append(subdf.copy())
     else:
-        # No partitions → save one Excel + one report directly under transc_rel_dir
-        df_path = transc_rel_dir / "TranscriptionReliabilityAnalysis.xlsx"
-        report_path = transc_rel_dir / "TranscriptionReliabilityReport.txt"
+        df_path = transc_rel_dir / "transcription_reliability_evaluation.xlsx"
+        report_path = transc_rel_dir / "transcription_reliability_report.txt"
 
         try:
             transc_rel_df.to_excel(df_path, index=False)
@@ -580,11 +534,74 @@ def analyze_transcription_reliability(
             logging.error(f"Failed to write DataFrame to {df_path}: {e}")
 
         try:
-            write_reliability_report(transc_rel_df, report_path, None)
+            write_reliability_report(transc_rel_df, report_path)
         except Exception as e:
             logging.error(f"Failed to write reliability report to {report_path}: {e}")
 
         if test:
             results.append(transc_rel_df.copy())
+
+    return results
+
+def analyze_transcription_reliability(
+    tiers,
+    input_dir,
+    output_dir,
+    exclude_participants=None,
+    strip_clan=True,
+    prefer_correction=True,
+    lowercase=True,
+    test=False,
+):
+    """
+    Analyze transcription reliability by comparing original and reliability CHAT files.
+    """
+    exclude_participants = exclude_participants or []
+
+    transc_rel_dir = output_dir / "transcription_reliability_evaluation"
+    transc_rel_dir.mkdir(parents=True, exist_ok=True)
+    logging.info(f"Created directory: {transc_rel_dir}")
+
+    partition_tiers = [t.name for t in tiers.values() if getattr(t, "partition", False)]
+
+    # handle reliability subdir
+    converted = _convert_cha_names(input_dir)
+    original_reliability_files = converted["originals"]
+
+    # collect files
+    cha_files = [
+        p for p in Path(input_dir).rglob("*.cha")
+        if p not in original_reliability_files
+    ]
+    logging.info(f"Found {len(cha_files)} .cha files in the input directory.")
+
+    rel_chats = [p for p in cha_files if "reliability" in p.name]
+    org_chats = [p for p in cha_files if "reliability" not in p.name]
+
+    def _labels_for(path: Path):
+        return tuple(t.match(path.name) for t in tiers.values())
+
+    org_index = {_labels_for(org): org for org in org_chats}
+
+    # analyze pairs
+    records = _analyze_reliability_pairs(
+        rel_chats,
+        org_index,
+        tiers,
+        transc_rel_dir,
+        exclude_participants,
+        strip_clan,
+        prefer_correction,
+        lowercase,
+    )
+
+    if not records:
+        logging.warning("No transcription reliability records produced.")
+        return [] if test else None
+
+    transc_rel_df = pd.DataFrame.from_records(records)
+
+    # save grouped outputs + reports
+    results = _save_reliability_outputs(transc_rel_df, partition_tiers, transc_rel_dir, test)
 
     return results if test else None
