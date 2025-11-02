@@ -505,7 +505,7 @@ def _prepare_corelex_inputs(input_dir, output_dir, exclude_participants):
         logging.error(f"Failed to prepare CoreLex inputs: {e}")
         return None, None, None, None
 
-def _compute_corelex_for_sample(sample_df, norm_lookup, partition_tiers, tup):
+def _compute_corelex_for_sample(sample_df, norm_lookup, partition_tiers, tup, mode, times_df):
     """
     Compute CoreLex metrics for a single sample (one participant × narrative).
 
@@ -517,8 +517,16 @@ def _compute_corelex_for_sample(sample_df, norm_lookup, partition_tiers, tup):
     try:
         sample = sample_df["sample_id"].iloc[0]
         scene_name = sample_df["narrative"].iloc[0]
-        speaking_time = sample_df.get("client_time", np.nan)
-        speaking_time = speaking_time.iloc[0] if hasattr(speaking_time, "iloc") else speaking_time
+
+        if mode == "unblind":
+            speaking_time = sample_df.get("client_time", np.nan)
+            speaking_time = speaking_time.iloc[0] if hasattr(speaking_time, "iloc") else speaking_time
+        else:
+            try:
+                speaking_time = times_df.get("client_time", np.nan)
+                speaking_time = speaking_time.iloc[0] if hasattr(speaking_time, "iloc") else speaking_time
+            except:
+                logging.warning(f"Could not find time info for partition tiers: {partition_tiers}, sample: {sample}.")  
 
         text = " ".join([u for u in sample_df["utterance"].astype(str) if u.strip()])
         reformatted_text = reformat(text)
@@ -611,7 +619,7 @@ def run_corelex(tiers, input_dir, output_dir, exclude_participants=None):
             sample_df = subdf[subdf["sample_id"] == sample]
             if sample_df.empty:
                 continue
-            row = _compute_corelex_for_sample(sample_df, norm_lookup, partition_tiers, tup)
+            row = _compute_corelex_for_sample(sample_df, norm_lookup, partition_tiers, tup, mode, times_df)
             if row:
                 rows.append(row)
 

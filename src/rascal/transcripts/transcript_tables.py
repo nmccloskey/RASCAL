@@ -4,6 +4,7 @@ from typing import Dict, List
 import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
+import numpy as np
 
 
 def zero_pad(num: int, lower_bound: int = 3) -> int:
@@ -125,6 +126,7 @@ def make_transcript_tables(
                 continue
 
         sample_df = pd.DataFrame(sample_rows, columns=sample_cols)
+        sample_df["speaking_time"] = np.nan
         utt_df = pd.DataFrame(utt_rows, columns=utt_cols)
 
         filepath = transcript_dir.joinpath(*partition_str.strip("_").split("_"))
