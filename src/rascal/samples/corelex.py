@@ -8,6 +8,7 @@ import num2words as n2w
 from pathlib import Path
 from datetime import datetime
 from scipy.stats import percentileofscore
+from rascal.utils.support_funcs import find_transcript_tables, extract_transcript_data
 
 
 urls = {
@@ -344,12 +345,12 @@ def find_corelex_inputs(input_dir: str, output_dir: str) -> dict:
     """
     Find available inputs for CoreLex in priority order:
       1) *unblindUtteranceData.xlsx (best)
-      2) *Utterances.xlsx            (fallback)
+      2) *transcript_tables*.xlsx            (fallback)
     Optionally: *SpeakingTimes.xlsx  (merge with fallback)
     
     Returns dict:
       {
-        "mode": "unblind" | "utterances",
+        "mode": "unblind" | "transcript_tables",
         "utt_df": pd.DataFrame,
         "times_df": pd.DataFrame | None,
         "paths": {"utt": <Path|list>, "times": <list>}
@@ -369,20 +370,18 @@ def find_corelex_inputs(input_dir: str, output_dir: str) -> dict:
             logging.info(f"Using unblind utterance data: {p}")
             return {"mode": "unblind", "utt_df": df, "times_df": None, "paths": {"utt": p, "times": []}}
 
-    # 2) Fallback to *Utterances.xlsx (may be multiple; concat)
-    utt_files = []
-    for d in search_dirs:
-        utt_files += list(d.rglob("*Utterances.xlsx"))
-    if not utt_files:
-        logging.error("No utterance files found (neither *unblindUtteranceData.xlsx nor *Utterances.xlsx).")
+    # 2) Fallback to *transcript_tables*.xlsx (may be multiple; concat)
+    transcript_tables = find_transcript_tables(input_dir, output_dir)
+    if not transcript_tables:
+        logging.error("No transcript table files found (neither *unblindUtteranceData.xlsx nor *transcript_tables*.xlsx).")
         return None
 
-    utt_frames = [df for f in utt_files if (df := _read_excel_safely(f)) is not None]
+    utt_frames = [extract_transcript_data(tt) for tt in transcript_tables]
     if not utt_frames:
         logging.error("Utterance files were found but none could be read.")
         return None
     utt_df = pd.concat(utt_frames, ignore_index=True, sort=False)
-    logging.info(f"Using concatenated utterances from {len(utt_files)} file(s).")
+    logging.info(f"Using concatenated transcript tables from {len(transcript_tables)} file(s).")
 
     # Optional speaking times: *SpeakingTimes.xlsx (concat)
     time_files = []
@@ -397,7 +396,7 @@ def find_corelex_inputs(input_dir: str, output_dir: str) -> dict:
         else:
             logging.warning("Speaking time files found but none could be read; proceeding without times.")
 
-    return {"mode": "utterances", "utt_df": utt_df, "times_df": times_df, "paths": {"utt": utt_files, "times": time_files}}
+    return {"mode": "utterances", "utt_df": utt_df, "times_df": times_df, "paths": {"utt": transcript_tables, "times": time_files}}
 
 def generate_token_columns(present_narratives):
     token_cols = [f"{scene[:3]}_{token}"

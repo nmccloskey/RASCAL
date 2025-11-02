@@ -106,7 +106,7 @@ def make_transcript_tables(
         for i, chat_file in enumerate(sorted(file_list)):
             try:
                 labels_all = [t.match(chat_file) for t in tiers.values()]
-                sample_id = f"S{i+1:0{s_pad}d}"
+                sample_id = f"{partition_str}S{i+1:0{s_pad}d}"
                 sample_rows.append([sample_id, chat_file] + labels_all)
 
                 chat_data = chats[chat_file]
@@ -118,7 +118,7 @@ def make_transcript_tables(
                     tiers_map = getattr(line, "tiers", {})
                     utterance = tiers_map.get(speaker, "")
                     comment = tiers_map.get("%com", None)
-                    utt_id = f"U{j+1:0{u_pad}d}"
+                    utt_id = f"{partition_str}U{j+1:0{u_pad}d}"
                     utt_rows.append([sample_id, utt_id, speaker, utterance, comment])
             except Exception as e:
                 logging.error(f"Error processing {chat_file}: {e}")

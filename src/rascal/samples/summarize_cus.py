@@ -76,7 +76,7 @@ def unblind_CUs(tiers, input_dir, output_dir):
 
         # Read utterance data
         transcript_tables = find_transcript_tables(input_dir, output_dir)
-        utts = pd.concat([extract_transcript_data(tt) for tt in transcript_tables])
+        utts = pd.concat([extract_transcript_data(tt) for tt in transcript_tables], ignore_index=True, sort=False)
 
         # Read CU data
         CUbyUtts = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*CUCoding_ByUtterance.xlsx')])
