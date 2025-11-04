@@ -68,31 +68,16 @@ def record_run_metadata(
 ) -> Path:
     """
     Record structured metadata describing the RASCAL run, including
-    recursive listings of all files and subdirectories in input/output.
-
-    Parameters
-    ----------
-    input_dir : Path
-        Directory containing the input data.
-    output_dir : Path
-        Directory containing this run's outputs.
-    config_path : Path
-        Path to the configuration file used.
-    config : dict
-        result from load_config(args.config)
-    start_time, end_time : datetime
-        Datetime objects marking the start and end of the run.
-
-    Returns
-    -------
-    Path
-        Path to the saved metadata JSON file.
+    recursive listings of input/output contents and full configuration.
+    All recorded paths are relative to the immediate shared parent
+    of the input and output directories.
     """
-    def list_dir_structure(base: Path) -> dict:
-        """Recursively list all files and subdirectories from a base path."""
-        structure = {"path": str(base.resolve()), "folders": [], "files": []}
+
+    def list_dir_structure(base: Path, rel_to: Path) -> dict:
+        """Recursively list all files and subdirectories, relative to rel_to."""
+        structure = {"base": str(base.relative_to(rel_to)), "folders": [], "files": []}
         for p in sorted(base.rglob("*")):
-            rel = p.relative_to(base)
+            rel = p.relative_to(rel_to)
             if p.is_dir():
                 structure["folders"].append(str(rel))
             else:
@@ -106,20 +91,21 @@ def record_run_metadata(
         "timestamp": end_time.isoformat(timespec="seconds"),
         "runtime_seconds": runtime_seconds,
         "paths": {
-            "input_dir": str(input_dir.resolve()),
-            "output_dir": str(output_dir.resolve()),
-            "config_file": str(config_path.resolve()),
+            "input_dir": str(input_dir.relative_to(input_dir.parent)),
+            "output_dir": str(output_dir.relative_to(output_dir.parent)),
+            "config_file": str(config_path.relative_to(config_path.parent))
         },
         "configuration": config,
         "directory_snapshot": {
-            "input_contents": list_dir_structure(input_dir),
-            "output_contents": list_dir_structure(output_dir),
+            "input_contents": list_dir_structure(input_dir, input_dir.parent),
+            "output_contents": list_dir_structure(output_dir, output_dir.parent),
         },
     }
 
     log_dir = output_dir / "logs"
     log_dir.mkdir(exist_ok=True)
     meta_path = log_dir / f"rascal_{start_time.strftime('%y%m%d_%H%M')}_metadata.json"
+
     with meta_path.open("w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)
 
