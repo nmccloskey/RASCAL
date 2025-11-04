@@ -155,3 +155,13 @@ def extract_transcript_data(
     except Exception as e:
         logging.error(f"Failed to read {path}: {e}")
         raise
+
+
+def find_corresponding_file(match_tiers=[], directory=Path.cwd(), search_base="", search_ext=".xlsx"):
+    files = Path(directory).rglob(f"*{search_base}*{search_ext}")
+    matching_files = [f for f in files if all((mt in f for mt in match_tiers))]
+    if len(matching_files) == 1:
+        return next(matching_files)
+    else:
+        logging.warning(f"Multiple {len(matching_files)} matching files detected - returning list.")
+        return matching_files

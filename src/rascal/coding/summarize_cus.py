@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 from pathlib import Path
-from rascal.utils.support_funcs import find_transcript_tables, extract_transcript_data
+from rascal.utils.support_funcs import find_transcript_tables, extract_transcript_data, find_corresponding_file
 
 
 def summarize_cus(tiers, input_dir, output_dir):
@@ -74,9 +74,32 @@ def summarize_cus(tiers, input_dir, output_dir):
         output_dir = output_dir, 'Summaries'
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        # identify partition tiers to complete composite PK
+        partition_tiers = [t.name for t in tiers.values() if getattr(t, "partition", False)]
+
         # Read utterance data
         transcript_tables = find_transcript_tables(input_dir, output_dir)
-        utts = pd.concat([extract_transcript_data(tt) for tt in transcript_tables], ignore_index=True, sort=False)
+        utt_tables = {tt:extract_transcript_data(tt) for tt in transcript_tables}
+
+        for file, ut in utt_tables:
+            # tier values on which to match
+            match_tiers = [t.match(file.name) for t in tiers if t.partition]
+            # CU data
+            cu_df = find_corresponding_file(match_tiers=match_tiers,
+                                            directory=input_dir,
+                                            search_base="cu_coding_by_utterance")
+            cu_by_utt = cu_df.loc[:, ["sample_id", "utterance_id"] + list(cu_df.iloc[:, cu_df.columns.to_list().index('comment')+1:].columns)]
+            # word count data
+            wc_df = find_corresponding_file(match_tiers=match_tiers,
+                                            directory=input_dir,
+                                            search_base="word_counting")
+            wc_by_utt = wc_df.loc[:, ["sample_id", "utterance_id", "word_count"]]
+            df = cu_by_utt.merge(wc_by_utt, on=["sample_id", "utterance_id"], how="outer")
+            
+
+            
+
+        # utts = pd.concat([extract_transcript_data(tt) for tt in transcript_tables], ignore_index=True, sort=False)
 
         # Read CU data
         cu_by_utt = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*cu_coding_by_utterance*.xlsx')])
