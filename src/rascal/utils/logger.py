@@ -3,6 +3,7 @@ import json
 import logging
 from datetime import datetime
 
+
 # ---------------------------------------------------------------------
 # Global Logger Configuration
 # ---------------------------------------------------------------------
@@ -61,6 +62,7 @@ def record_run_metadata(
     input_dir: Path,
     output_dir: Path,
     config_path: Path,
+    config: dict,
     start_time: datetime,
     end_time: datetime,
 ) -> Path:
@@ -76,6 +78,8 @@ def record_run_metadata(
         Directory containing this run's outputs.
     config_path : Path
         Path to the configuration file used.
+    config : dict
+        result from load_config(args.config)
     start_time, end_time : datetime
         Datetime objects marking the start and end of the run.
 
@@ -106,6 +110,7 @@ def record_run_metadata(
             "output_dir": str(output_dir.resolve()),
             "config_file": str(config_path.resolve()),
         },
+        "configuration": config,
         "directory_snapshot": {
             "input_contents": list_dir_structure(input_dir),
             "output_contents": list_dir_structure(output_dir),
@@ -126,6 +131,7 @@ def terminate_logger(
     input_dir: Path,
     output_dir: Path,
     config_path: Path,
+    config: dict,
     start_time: datetime,
 ):
     """
@@ -142,6 +148,8 @@ def terminate_logger(
         Output directory containing generated files.
     config_path : Path
         Path to the YAML configuration used.
+    config : dict
+        result from load_config(args.config)
     start_time : datetime
         Timestamp recorded when the run began.
     """
@@ -156,6 +164,7 @@ def terminate_logger(
         input_dir=input_dir,
         output_dir=output_dir,
         config_path=config_path,
+        config=config,
         start_time=start_time,
         end_time=end_time,
     )

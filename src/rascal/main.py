@@ -197,7 +197,8 @@ def main(args):
             logger.info(f"Completed: {', '.join(executed)}")
     finally:
         terminate_logger(input_dir=input_dir, output_dir=out_dir,
-                         config_path=as_path(args.config), start_time=start_time)
+                         config_path=as_path(args.config), config=config,
+                         start_time=start_time)
 
 # -------------------------------------------------------------
 # Direct execution
