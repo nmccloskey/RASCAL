@@ -334,264 +334,170 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
             logger.error(f"Failed processing {file}: {e}")
 
 
+# --- helpers ---
+def _label_one(tier_obj, fname: str):
+    try:
+        if hasattr(tier_obj, "match"):
+            return tier_obj.match(fname)
+    except Exception:
+        pass
+    # Fallback: no label for this tier
+    return None
+
+def _labels_for(tiers, path: Path):
+    if not tiers:
+        # If tiers are not provided, fallback to just the stem so pairs can still match
+        return (path.stem,)
+    labels = []
+    for t in tiers.values():
+        try:
+            labels.append(_label_one(t, path.name))
+        except Exception:
+            labels.append(None)
+    return tuple(labels)
+
+def _cols_to_comment(df):
+    if "comment" in df.columns:
+        idx = df.columns.get_loc("comment")
+        return list(df.columns[: idx + 1])
+    return list(df.columns)
+
+def _discover_reliability_pairs(tiers, input_dir, rel_type):
+    """Return dict of {original_file: [reliability_files]} matched by tier labels."""
+    if rel_type == "CU":
+        coding_glob, rel_glob = "*cu_coding.xlsx", "*cu_reliability_coding.xlsx"
+    else:
+        coding_glob, rel_glob = "*word_counting.xlsx", "*word_counting_reliability.xlsx"
+
+    coding_files = list(input_dir.rglob(coding_glob))
+    rel_files = list(input_dir.rglob(rel_glob))
+    rel_labels = {p: _labels_for(tiers, p) for p in rel_files}
+
+    matches = {}
+    for org in coding_files:
+        org_labels = _labels_for(tiers, org)
+        matched = [p for p, labs in rel_labels.items() if labs == org_labels]
+        if not matched:
+            logger.warning(f"[{rel_type}] No reliability files for {org.name}")
+        matches[org] = matched
+    return matches
+
+def _load_original_and_reliability(org_file, rel_mates, rel_type):
+    """Load original and reliability DataFrames; ensure sample_id present."""
+    try:
+        df_org = pd.read_excel(org_file)
+    except Exception as e:
+        logger.error(f"Failed reading {org_file}: {e}")
+        return None, None
+
+    rel_dfs = []
+    for rf in rel_mates:
+        try:
+            rel_dfs.append(pd.read_excel(rf))
+        except Exception as e:
+            logger.warning(f"Failed reading {rf}: {e}")
+    if "sample_id" not in df_org:
+        logger.warning(f"[{rel_type}] Missing sample_id in {org_file.name}")
+        return None, None
+    rel_dfs = [r for r in rel_dfs if "sample_id" in r]
+    return df_org, rel_dfs
+
+def _select_new_samples(df_org, used_ids, frac, seed):
+    """Return list of reselected sample_ids not already used."""
+    all_ids = set(df_org["sample_id"].dropna().astype(str))
+    available = list(all_ids - used_ids)
+    if not available:
+        logger.warning("No unused samples available.")
+        return []
+    n = max(1, round(len(all_ids) * frac))
+    if len(available) < n:
+        n = len(available)
+    random.seed(seed)
+    return random.sample(available, n)
+
+def _build_reliability_frame(df_org, rel_template, re_ids, rel_type):
+    """Create new reliability DataFrame aligned with template columns."""
+    sub = df_org[df_org["sample_id"].astype(str).isin(re_ids)].copy()
+    head_cols = _cols_to_comment(df_org)
+
+    if "comment" in rel_template:
+        start = rel_template.columns.get_loc("comment") + 1
+        post_cols = rel_template.columns[start:]
+    else:
+        post_cols = rel_template.columns
+
+    for col in post_cols:
+        if col not in sub:
+            sub[col] = ""
+
+    if rel_type == "CU":
+        for c in ["c3_id", "c3_comment"]:
+            if c not in sub:
+                sub[c] = ""
+    else:  # WC
+        if "wc_rel_com" not in sub:
+            sub["wc_rel_com"] = ""
+
+    cols = [c for c in head_cols if c in sub] + [c for c in post_cols if c in sub and c not in head_cols]
+    return sub.loc[:, cols]
+
+def _write_reselected_reliability(df, org_file, out_dir, rel_type):
+    """Save reselected reliability DataFrame to Excel."""
+    stem = org_file.stem
+    suffix = "cu_reliability_coding" if rel_type == "CU" else "word_counting_reliability"
+    base = stem.replace("cu_coding", "").replace("word_counting", "").rstrip("_")
+    out_path = out_dir / f"{base}_reselected_{suffix}.xlsx"
+    try:
+        df.to_excel(out_path, index=False)
+        logger.info(f"[{rel_type}] Saved {out_path}")
+    except Exception as e:
+        logger.error(f"[{rel_type}] Failed writing {out_path}: {e}")
+
 def reselect_cu_wc_reliability(
-    tiers,
-    input_dir,
-    output_dir,
-    rel_type: str = "CU",
-    frac: float = 0.2,
-    rng_seed: int = 88,
+    tiers, input_dir, output_dir, rel_type="CU", frac=0.2, rng_seed=88
 ):
     """
-    Reselect reliability samples for either Conversation Units (CU) or Word Counting (WC),
-    excluding any sample_id already present in existing reliability files that match the
-    same tier labels.
+    Reselect reliability samples for CU or WC coding tables, excluding
+    any `sample_id` already present in prior reliability files.
 
-    Operation
-    ---------
-    - Recursively finds original coder-2 tables and their paired reliability tables under
-      `input_dir`. Matching is by tier labels derived from filenames via `tiers`
-      (tries `t.match(name)` per tier); if `tiers` is empty, falls back to a simple
-      stem-based label.
-    - Unions all `sample_id`s already present across matched reliability files, subtracts
-      them from the original table’s unique `sample_id`s, randomly selects a fraction
-      of the total (`max(1, round(len(all_ids)*frac))`), and writes a new reliability
-      workbook containing just the newly selected rows.
-    - The new sheet’s “post-comment” columns are templated from the matched reliability
-      files. If multiple reliability files disagree on columns after 'comment', the
-      intersection is used (warning logged). All missing template columns are added as NaN.
+    Behavior:
+      1. Match original coder files with reliability counterparts by tier labels.
+      2. Exclude used sample_ids; randomly reselect ~`frac` of remaining.
+      3. Build new reliability workbooks preserving post-comment schema.
+      4. Write results under `{output_dir}/reselected_<rel_type>_reliability/`.
 
     Parameters
     ----------
     tiers : dict[str, Tier]
-        Tier objects used to derive filename labels for matching originals to reliability.
-        Only `t.match(name)` is required here.
-    input_dir, output_dir : str | os.PathLike
-        Root directory to search; base output directory. Files are written to
-        `<output_dir>/reselected_<rel_type>_reliability/`.
+    input_dir, output_dir : Path or str
     rel_type : {"CU","WC"}, default "CU"
-        Determines filename patterns:
-          - CU: finds "*cu_coding.xlsx" with paired "*cu_reliability_coding.xlsx"
-          - WC: finds "*word_counting.xlsx" with "*word_counting_reliability.xlsx"
-    frac : float in (0,1], default 0.2
-        Target fraction of *all* unique `sample_id`s to select (before excluding used).
-        If available unused samples are fewer than target, all available are used.
+    frac : float, default 0.2
     rng_seed : int, default 88
-        Seed for reproducible selection.
-
-    Returns
-    -------
-    None
-        Writes one file per original coder-2 table:
-        `<base>_reselected_{cu_reliability_coding|word_counting_reliability}.xlsx`.
-
-    Notes
-    -----
-    - Requires a `sample_id` column in both original and reliability tables.
-    - Skips an original file if no matched reliability file exists (schema safety).
-    - CU branch ensures presence of `c3_id` and `c3_comment` columns (left as NaN unless
-      already present). Suffixed c3 fields may be wiped by downstream code if needed.
     """
-
-    rel_type = (rel_type or "CU").upper().strip()
+    rel_type = rel_type.upper().strip()
     if rel_type not in {"CU", "WC"}:
         logger.error(f"Invalid rel_type '{rel_type}'. Must be 'CU' or 'WC'.")
         return
 
     random.seed(rng_seed)
-
-    input_dir = Path(input_dir)
-    output_dir = Path(output_dir)
+    input_dir, output_dir = Path(input_dir), Path(output_dir)
     out_dir = output_dir / f"reselected_{rel_type}_reliability"
-    try:
-        out_dir.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Created/verified directory: {out_dir}")
-    except Exception as e:
-        logger.error(f"Failed to create directory {out_dir}: {e}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    pairs = _discover_reliability_pairs(tiers, input_dir, rel_type)
+    if not pairs:
+        logger.warning(f"No {rel_type} files found for reselection.")
         return
 
-    # --- discover original coder-2 files and their reliability mates ---
-    if rel_type == "CU":
-        coding_glob = "*cu_coding.xlsx"
-        rel_glob = "*cu_reliability_coding.xlsx"
-        out_rel_name = "cu_reliability_coding"
-    else:  # "WC"
-        coding_glob = "*word_counting.xlsx"
-        rel_glob = "*word_counting_reliability.xlsx"
-        out_rel_name = "word_counting_reliability"
-        d = get_word_checker()
-
-    coding_files = list(input_dir.rglob(coding_glob))
-    rel_files = list(input_dir.rglob(rel_glob))
-
-    if not coding_files:
-        logger.warning(f"No original {rel_type} files found under {input_dir} (pattern: {coding_glob}).")
-        return
-
-    # --- helpers ---
-    def _label_one(tier_obj, fname: str):
-        try:
-            if hasattr(tier_obj, "match"):
-                return tier_obj.match(fname)
-        except Exception:
-            pass
-        # Fallback: no label for this tier
-        return None
-
-    def _labels_for(path: Path):
-        if not tiers:
-            # If tiers are not provided, fallback to just the stem so pairs can still match
-            return (path.stem,)
-        labels = []
-        for t in tiers.values():
-            try:
-                labels.append(_label_one(t, path.name))
-            except Exception:
-                labels.append(None)
-        return tuple(labels)
-
-    # Build map from original -> list of matching reliability files (by tier labels)
-    org_rel_matches: dict[Path, list[Path]] = {}
-    rel_labels_cache = {p: _labels_for(p) for p in rel_files}
-
-    for org in coding_files:
-        org_labels = _labels_for(org)
-        matches = [p for p, labs in rel_labels_cache.items() if labs == org_labels]
-        if not matches:
-            logger.warning(f"[{rel_type}] No reliability files found for {org.name}. Skipping.")
-        org_rel_matches[org] = matches
-
-    # --- process each original coding file ---
-    desc = f"Reselecting {rel_type} reliability samples"
-    for org_file in tqdm(coding_files, desc=desc):
-        rel_mates = org_rel_matches.get(org_file, [])
-        if not rel_mates:
-            continue  # already warned
-
-        try:
-            df_org = pd.read_excel(org_file)
-        except Exception as e:
-            logger.error(f"Failed reading original coding file {org_file}: {e}")
+    for org_file, rel_mates in tqdm(pairs.items(), desc=f"Reselecting {rel_type} reliability"):
+        df_org, rel_dfs = _load_original_and_reliability(org_file, rel_mates, rel_type)
+        if df_org is None or not rel_dfs:
             continue
 
-        # Collect reliability DataFrames & validate 'sample_id'
-        rel_dfs = []
-        for rf in rel_mates:
-            try:
-                rel_df = pd.read_excel(rf)
-                rel_dfs.append(rel_df)
-            except Exception as e:
-                logger.warning(f"Failed reading reliability file {rf}: {e}")
-
-        if not rel_dfs:
-            logger.warning(f"[{rel_type}] All matched reliability files failed to read for {org_file.name}. Skipping.")
+        used_ids = set().union(*[set(rdf["sample_id"].dropna().astype(str)) for rdf in rel_dfs])
+        new_ids = _select_new_samples(df_org, used_ids, frac, rng_seed)
+        if not new_ids:
             continue
 
-        # Confirm 'sample_id' columns exist
-        if "sample_id" not in df_org.columns:
-            logger.warning(f"[{rel_type}] 'sample_id' missing in {org_file.name}. Skipping.")
-            continue
-        missing_sid = [rf for rf, rdf in zip(rel_mates, rel_dfs) if "sample_id" not in rdf.columns]
-        if missing_sid:
-            logger.warning(f"[{rel_type}] 'sample_id' missing in reliability file(s): {[p.name for p in missing_sid]}. Skipping {org_file.name}.")
-            continue
-
-        # Compute used sample_ids across all matched reliability files
-        used_sample_ids: set = set()
-        for rdf in rel_dfs:
-            used_sample_ids.update(set(rdf["sample_id"].dropna().astype(str).unique()))
-
-        all_sample_ids = set(df_org["sample_id"].dropna().astype(str).unique())
-        available_ids = list(all_sample_ids - used_sample_ids)
-
-        if len(available_ids) == 0:
-            logger.warning(f"[{rel_type}] No available samples to reselect for {org_file.name}. Skipping.")
-            continue
-
-        num_to_select = max(1, round(len(all_sample_ids) * float(frac)))
-        if len(available_ids) < num_to_select:
-            logger.warning(
-                f"[{rel_type}] Not enough unused samples in {org_file.name}. "
-                f"Selecting {len(available_ids)} instead of target {num_to_select}."
-            )
-            num_to_select = len(available_ids)
-
-        # Sample deterministically (within run) from available ids
-        random.seed(rng_seed)  # reset per file to make selection reproducible if code reruns
-        reselected_ids = set(random.sample(available_ids, k=num_to_select))
-
-        # --- Build new reliability frame ---
-        # Determine the template (columns) from reliability files.
-        # Use columns up to 'comment' + any columns after; if multiple have different
-        # post-'comment' sets, take intersection to reduce mismatch risk.
-        def _cols_to_comment(df):
-            if "comment" in df.columns:
-                idx = df.columns.get_loc("comment")
-                return list(df.columns[: idx + 1])
-            return list(df.columns)
-
-        # "Head" columns (up through 'comment') will come from original coding table, not from reliability.
-        head_cols = _cols_to_comment(df_org)
-
-        # Post-comment columns from reliability (template)
-        post_sets = []
-        if "comment" in rel_dfs[0].columns:
-            start = rdf.columns.get_loc("comment") + 1
-            post_cols = rdf.columns[start:]
-        else:
-            logger.error(f"No 'comment' column found in {rel_mates[0]}.")
-            post_sets.append(rdf.columns)
-
-        # Subset original coding rows for the chosen sample_ids
-        sub = df_org[df_org["sample_id"].astype(str).isin(reselected_ids)].copy()
-        if sub.empty:
-            logger.warning(f"[{rel_type}] Resolved 0 rows after filtering by reselected sample_ids for {org_file.name}. Skipping.")
-            continue
-
-        # Keep up through 'comment' if present
-        if "comment" in sub.columns:
-            end_idx = sub.columns.get_loc("comment")
-            sub = sub.iloc[:, : end_idx + 1]
-        # else: keep all (we'll align columns later)
-
-        # Add post-'comment' reliability columns (NaN by default)
-        for col in post_cols:
-            if col not in sub.columns:
-                sub[col] = ""
-
-        # CU-specific adjustments
-        if rel_type == "CU":
-            for col in ["c3_id","c3_comment"]:
-                if col not in sub.columns:
-                    sub[col] = ""
-
-        else:  # "WC"
-            # Ensure c3_id exists if present in template; set it to coder3
-            if "c2_id" not in sub.columns:
-                sub["c2_id"] = ""
-            # Add word count column and pull neutrality from original.
-            org_sub = df_org[df_org['sample_id'].isin(reselected_ids)].copy()
-            sub['word_count'] = org_sub.apply(lambda row: count_words(row['utterance'], d) if not np.isnan(row['word_count']) else 'NA', axis=1)
-            # If a 'c3_comment' exists in the template, wipe it
-            if "wc_rel_com" not in sub.columns:
-                sub["wc_rel_com"] = ""
-
-        # Order columns: head-cols first (as they exist), then post-cols in template order
-        ordered_cols = [c for c in head_cols if c in sub.columns] + [c for c in post_cols if c in sub.columns and c not in head_cols]
-        sub = sub.loc[:, ordered_cols]
-
-        # --- Write output file ---
-        stem = org_file.stem
-        if rel_type == "CU" and stem.endswith("cu_coding"):
-            base = stem[: -len("cu_coding")].rstrip("_")
-        elif rel_type == "WC" and stem.endswith("word_counting"):
-            base = stem[: -len("word_counting")].rstrip("_")
-        else:
-            base = stem
-
-        out_path = out_dir / f"{base}_reselected_{out_rel_name}.xlsx".lstrip("_")
-        try:
-            sub.to_excel(out_path, index=False)
-            logger.info(f"[{rel_type}] Saved reselected reliability file: {out_path}")
-        except Exception as e:
-            logger.error(f"[{rel_type}] Failed writing reselected file {out_path}: {e}")
+        new_df = _build_reliability_frame(df_org, rel_dfs[0], new_ids, rel_type)
+        _write_reselected_reliability(new_df, org_file, out_dir, rel_type)
