@@ -148,7 +148,7 @@ def main(args):
         chats = run_read_cha_files(input_dir)
 
     # Prepare utterance files if needed
-    if "4a" not in converted and any(c in ["4b", "4c", "7b", "10b"] for c in converted):
+    if "4a" not in converted and any(c in ["4b", "7b", "10b"] for c in converted):
         transcript_tables = find_transcript_tables(input_dir, out_dir)
         if not transcript_tables:
             logging.info("No input transcript tables detected — creating them automatically.")

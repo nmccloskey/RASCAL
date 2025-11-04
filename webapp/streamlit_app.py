@@ -106,17 +106,17 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
 
         all_functions = [
             "1a. Select transcription reliability samples",
-            "3a. Analyze transcription reliability",
+            "3a. Evaluate transcription reliability",
             "3b. Reselect transcription reliability samples",
-            "4a. Prepare transcript tables",
-            "4b. Make CU coding files",
+            "4a. Make transcript tables",
+            "4b. Make CU coding & reliability files",
             "6a. Analyze CU reliability",
             "6b. Reselect CU reliability samples",
             "7a. Analyze CU coding",
             "7b. Make word count files",
-            "9a. Analyze word count reliability",
-            "9b. Reselect WC reliability samples",
-            "10a. Unblind CU samples",
+            "9a. Evaluate word count reliability",
+            "9b. Reselect word count reliability samples",
+            "10a. Summarize CU samples",
             "10b. Run CoreLex analysis"
         ]
 

@@ -1,6 +1,6 @@
 # RASCAL - Resources for Analyzing Speech in Clinical Aphasiology Labs
 
-RASCAL is designed to facilitate monologic discourse analysis in clinical aphasiology. It processes CHAT-formatted (.cha) transcriptions, organizes data into structured tiers, and automates key analytical steps in transcription reliability, complete utterance (CU) coding, and core lexicon analysis.
+RASCAL is designed to facilitate monologic discourse analysis in clinical aphasiology. It processes CHAT-formatted (.cha) transcriptions, organizes data into structured tiers, and automates key analytical steps in transcription reliability, complete utterance (CU) coding, and core lexicon (CoreLex) analysis.
 ---
 
 ## Analysis Pipeline
@@ -17,7 +17,7 @@ RASCAL is designed to facilitate monologic discourse analysis in clinical aphasi
    - **Output:** Transcription reliability reports, reselected reliability samples
 - **Stage 4 (RASCAL):**
    - **Input:** Transcriptions (`.cha`)
-   - **Output:** Utterance tables, CU coding files, timesheets
+   - **Output:** Transcript tables, CU coding & reliability files
 - **Stage 5 (Manual):** CU coding and reliability checks
 - **Stage 6 (RASCAL):**
    - **Input:** Manually completed CU coding files
@@ -263,7 +263,7 @@ rascal "transcripts make"
 
 Below is the current RASCAL pipeline, represented as a flow chart:
 
-![RASCAL Flowchart](images/RASCAL_workflowchart.svg)
+![RASCAL Flowchart](images/RASCAL_workflowchart.drawio.svg)
 
 Stages 2, 5, & 8 are entirely manual. Dashed arrows show the alternate inputs to function **10b**: function **4a** output is required, and **4c** output is optional.
 
@@ -273,6 +273,26 @@ Stages 2, 5, & 8 are entirely manual. Dashed arrows show the alternate inputs to
 - `.cha` files must be formatted correctly according to CHAT conventions.
 - Ensure filenames match tier values as specified in `config.yaml`.
 - RASCAL searches tier values using exact spelling and capitalization.
+
+## Notes on Transcript Tables (function **4a**)
+
+Function **4a** prepares both utterance- and sample-level tabulations of CHAT-formatted transcripts in Excel files, assigning unique alphanumeric identifiers encoding level of analysis – ‘S’ for sample and ‘U’ for utterance – for example, `S008` and `U0246`.
+
+The `transcript_tables.xlsx` output contains two sheets:
+ - `samples` for transcript metadata, including file name and tier values
+ - `utterances` for transcript content, i.e., (CHAT-coded) utterances & comments (from `%com` lines)
+
+This encoded tabularization: 
+- establishes unique, human-readable identifiers that satisfy database logic
+- facilitates data management across RASCAL inputs and outputs, including joins between tables
+- promotes transparency and consistency in text processing
+- minimizes potential bias during manual coding
+
+If not provided, these tables are automatically generated from `.cha` inputs for functions `4b`, `7b`, & `10b`.
+
+## Notes on Transcription Reliability Input (function **3a**)
+
+In both the CLI and webapp versions, RASCAL function **3a** matches original with reliability transcripts based on common tiers plus a `reliability` tag in the file name, e.g., `TU88_PreTxBrokenWindow.cha` & `TU88PreTxBrokenWindow_reliability.cha`. Function **1a** generates empty `.cha` file templates with the `reliabiilty` tag for the randomly selected samples. In the CLI version, reliability samples can be collected into a `/reliability` subdirectory in the input folder. The tier values must match the originals, but this provides an alternative to tagging filenames.
 
 ## 🧪 Testing
 
