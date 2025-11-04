@@ -1,6 +1,5 @@
 import re
 import random
-import logging
 import itertools
 import numpy as np
 import contractions
@@ -9,6 +8,8 @@ from tqdm import tqdm
 import num2words as n2w
 from pathlib import Path
 from functools import lru_cache
+
+from rascal.utils.logger import logger
 from rascal.utils.support_funcs import find_transcript_tables, extract_transcript_data
 
 stim_cols = ["narrative", "scene", "story", "stimulus"]
@@ -147,7 +148,7 @@ def make_cu_coding_files(
     exclude_participants : list[str]
     """
     if len(coders) < 3:
-        logging.warning(f"Only {len(coders)} coders given; using default ['1','2','3'].")
+        logger.warning(f"Only {len(coders)} coders given; using default ['1','2','3'].")
         coders = ['1', '2', '3']
 
     base_cols = ['c1_id', 'c1_sv', 'c1_rel', 'c1_comment',
@@ -188,14 +189,14 @@ def make_cu_coding_files(
                 rel_subsets.append(_prepare_reliability_subset(cu_df, seg, ass, frac, cu_paradigms))
 
             reldf = pd.concat(rel_subsets)
-            logging.info(f"{file.name}: reliability={len(set(reldf['sample_id']))} / total={len(unique_ids)}")
+            logger.info(f"{file.name}: reliability={len(set(reldf['sample_id']))} / total={len(unique_ids)}")
 
             # Write outputs
             cu_df.to_excel(label_path / f"{lab_str}cu_coding.xlsx", index=False)
             reldf.to_excel(label_path / f"{lab_str}cu_reliability_coding.xlsx", index=False)
 
         except Exception as e:
-            logging.error(f"Failed processing {file}: {e}")
+            logger.error(f"Failed processing {file}: {e}")
 
 
 def count_words(text, d):
@@ -241,7 +242,7 @@ def _read_cu_file(file: Path) -> pd.DataFrame:
     subdfs = [g for _, g in cu_df.groupby("sample_id")]
     random.shuffle(subdfs)
     shuffled = pd.concat(subdfs, ignore_index=True)
-    logging.info(f"Read and shuffled {file.name}")
+    logger.info(f"Read and shuffled {file.name}")
     return shuffled
 
 def _prepare_wc_df(df: pd.DataFrame, d) -> pd.DataFrame:
@@ -273,7 +274,7 @@ def _assign_wc_coders(df: pd.DataFrame, coders: list[str], frac: float):
         rel_subsets.append(relsegdf)
 
     wc_rel_df = pd.concat(rel_subsets)
-    logging.info(f"Reliability subset: {len(wc_rel_df)} utterances")
+    logger.info(f"Reliability subset: {len(wc_rel_df)} utterances")
     return df, wc_rel_df
 
 def _write_wc_outputs(wc_df, wc_rel_df, word_count_dir, labels):
@@ -290,9 +291,9 @@ def _write_wc_outputs(wc_df, wc_rel_df, word_count_dir, labels):
         fpath = out_dir / fname
         try:
             df.to_excel(fpath, index=False)
-            logging.info(f"Wrote {fpath}")
+            logger.info(f"Wrote {fpath}")
         except Exception as e:
-            logging.error(f"Failed to write {fpath}: {e}")
+            logger.error(f"Failed to write {fpath}: {e}")
 
 def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
     """
@@ -330,7 +331,7 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
             wc_df, wc_rel_df = _assign_wc_coders(wc_df, coders, frac)
             _write_wc_outputs(wc_df, wc_rel_df, word_count_dir, labels)
         except Exception as e:
-            logging.error(f"Failed processing {file}: {e}")
+            logger.error(f"Failed processing {file}: {e}")
 
 
 def reselect_cu_wc_reliability(
@@ -394,7 +395,7 @@ def reselect_cu_wc_reliability(
 
     rel_type = (rel_type or "CU").upper().strip()
     if rel_type not in {"CU", "WC"}:
-        logging.error(f"Invalid rel_type '{rel_type}'. Must be 'CU' or 'WC'.")
+        logger.error(f"Invalid rel_type '{rel_type}'. Must be 'CU' or 'WC'.")
         return
 
     random.seed(rng_seed)
@@ -404,9 +405,9 @@ def reselect_cu_wc_reliability(
     out_dir = output_dir / f"reselected_{rel_type}_reliability"
     try:
         out_dir.mkdir(parents=True, exist_ok=True)
-        logging.info(f"Created/verified directory: {out_dir}")
+        logger.info(f"Created/verified directory: {out_dir}")
     except Exception as e:
-        logging.error(f"Failed to create directory {out_dir}: {e}")
+        logger.error(f"Failed to create directory {out_dir}: {e}")
         return
 
     # --- discover original coder-2 files and their reliability mates ---
@@ -424,7 +425,7 @@ def reselect_cu_wc_reliability(
     rel_files = list(input_dir.rglob(rel_glob))
 
     if not coding_files:
-        logging.warning(f"No original {rel_type} files found under {input_dir} (pattern: {coding_glob}).")
+        logger.warning(f"No original {rel_type} files found under {input_dir} (pattern: {coding_glob}).")
         return
 
     # --- helpers ---
@@ -457,7 +458,7 @@ def reselect_cu_wc_reliability(
         org_labels = _labels_for(org)
         matches = [p for p, labs in rel_labels_cache.items() if labs == org_labels]
         if not matches:
-            logging.warning(f"[{rel_type}] No reliability files found for {org.name}. Skipping.")
+            logger.warning(f"[{rel_type}] No reliability files found for {org.name}. Skipping.")
         org_rel_matches[org] = matches
 
     # --- process each original coding file ---
@@ -470,7 +471,7 @@ def reselect_cu_wc_reliability(
         try:
             df_org = pd.read_excel(org_file)
         except Exception as e:
-            logging.error(f"Failed reading original coding file {org_file}: {e}")
+            logger.error(f"Failed reading original coding file {org_file}: {e}")
             continue
 
         # Collect reliability DataFrames & validate 'sample_id'
@@ -480,19 +481,19 @@ def reselect_cu_wc_reliability(
                 rel_df = pd.read_excel(rf)
                 rel_dfs.append(rel_df)
             except Exception as e:
-                logging.warning(f"Failed reading reliability file {rf}: {e}")
+                logger.warning(f"Failed reading reliability file {rf}: {e}")
 
         if not rel_dfs:
-            logging.warning(f"[{rel_type}] All matched reliability files failed to read for {org_file.name}. Skipping.")
+            logger.warning(f"[{rel_type}] All matched reliability files failed to read for {org_file.name}. Skipping.")
             continue
 
         # Confirm 'sample_id' columns exist
         if "sample_id" not in df_org.columns:
-            logging.warning(f"[{rel_type}] 'sample_id' missing in {org_file.name}. Skipping.")
+            logger.warning(f"[{rel_type}] 'sample_id' missing in {org_file.name}. Skipping.")
             continue
         missing_sid = [rf for rf, rdf in zip(rel_mates, rel_dfs) if "sample_id" not in rdf.columns]
         if missing_sid:
-            logging.warning(f"[{rel_type}] 'sample_id' missing in reliability file(s): {[p.name for p in missing_sid]}. Skipping {org_file.name}.")
+            logger.warning(f"[{rel_type}] 'sample_id' missing in reliability file(s): {[p.name for p in missing_sid]}. Skipping {org_file.name}.")
             continue
 
         # Compute used sample_ids across all matched reliability files
@@ -504,12 +505,12 @@ def reselect_cu_wc_reliability(
         available_ids = list(all_sample_ids - used_sample_ids)
 
         if len(available_ids) == 0:
-            logging.warning(f"[{rel_type}] No available samples to reselect for {org_file.name}. Skipping.")
+            logger.warning(f"[{rel_type}] No available samples to reselect for {org_file.name}. Skipping.")
             continue
 
         num_to_select = max(1, round(len(all_sample_ids) * float(frac)))
         if len(available_ids) < num_to_select:
-            logging.warning(
+            logger.warning(
                 f"[{rel_type}] Not enough unused samples in {org_file.name}. "
                 f"Selecting {len(available_ids)} instead of target {num_to_select}."
             )
@@ -538,13 +539,13 @@ def reselect_cu_wc_reliability(
             start = rdf.columns.get_loc("comment") + 1
             post_cols = rdf.columns[start:]
         else:
-            logging.error(f"No 'comment' column found in {rel_mates[0]}.")
+            logger.error(f"No 'comment' column found in {rel_mates[0]}.")
             post_sets.append(rdf.columns)
 
         # Subset original coding rows for the chosen sample_ids
         sub = df_org[df_org["sample_id"].astype(str).isin(reselected_ids)].copy()
         if sub.empty:
-            logging.warning(f"[{rel_type}] Resolved 0 rows after filtering by reselected sample_ids for {org_file.name}. Skipping.")
+            logger.warning(f"[{rel_type}] Resolved 0 rows after filtering by reselected sample_ids for {org_file.name}. Skipping.")
             continue
 
         # Keep up through 'comment' if present
@@ -591,6 +592,6 @@ def reselect_cu_wc_reliability(
         out_path = out_dir / f"{base}_reselected_{out_rel_name}.xlsx".lstrip("_")
         try:
             sub.to_excel(out_path, index=False)
-            logging.info(f"[{rel_type}] Saved reselected reliability file: {out_path}")
+            logger.info(f"[{rel_type}] Saved reselected reliability file: {out_path}")
         except Exception as e:
-            logging.error(f"[{rel_type}] Failed writing reselected file {out_path}: {e}")
+            logger.error(f"[{rel_type}] Failed writing reselected file {out_path}: {e}")

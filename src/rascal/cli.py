@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import logging
+from rascal.utils.logger import logger
 from .main import main as main_core, build_arg_parser
 
 
@@ -11,7 +11,7 @@ def main():
     try:
         main_core(args)
     except Exception as e:
-        logging.error(f"RASCAL execution failed: {e}")
+        logger.error(f"RASCAL execution failed: {e}")
         raise
 
 

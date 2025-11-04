@@ -1,8 +1,8 @@
 import random
-import logging
 import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
+from rascal.utils.logger import logger
 
 
 def select_transcription_reliability_samples(tiers, chats, frac, output_dir):
@@ -51,7 +51,7 @@ def select_transcription_reliability_samples(tiers, chats, frac, output_dir):
       * "reliability_selection": sampled subset.
       * "all_transcripts": all CHAT files with tier labels.
     """
-    logging.info("Starting transcription reliability sample selection.")
+    logger.info("Starting transcription reliability sample selection.")
 
     # Determine whether partitions are in play
     has_partition = any(t.partition for t in tiers.values())
@@ -62,7 +62,7 @@ def select_transcription_reliability_samples(tiers, chats, frac, output_dir):
             partition_tiers = [t.match(cha_file) for t in tiers.values() if t.partition]
             partition_tiers = [pt for pt in partition_tiers if pt is not None]
             if not partition_tiers:
-                logging.warning(f"No partition tiers matched for '{cha_file}', skipping.")
+                logger.warning(f"No partition tiers matched for '{cha_file}', skipping.")
                 continue
             partition_key = tuple(partition_tiers)
         else:
@@ -87,7 +87,7 @@ def select_transcription_reliability_samples(tiers, chats, frac, output_dir):
         # Select subset
         subset_size = max(1, round(frac * len(cha_files)))
         subset = random.sample(cha_files, k=subset_size)
-        logging.info(f"Selected {subset_size} files for partition {partition_tiers or 'root'}.")
+        logger.info(f"Selected {subset_size} files for partition {partition_tiers or 'root'}.")
 
         for cha_file in cha_files:
             labels = [t.match(cha_file) for t in tiers.values()]
@@ -111,9 +111,9 @@ def select_transcription_reliability_samples(tiers, chats, frac, output_dir):
                             if line.startswith('@'):
                                 f.write(line + '\n')
 
-                    logging.info(f"Written blank CHAT file with header: {filepath}")
+                    logger.info(f"Written blank CHAT file with header: {filepath}")
                 except Exception as e:
-                    logging.error(f"Failed to write blank CHAT file for {cha_file}: {e}")
+                    logger.error(f"Failed to write blank CHAT file for {cha_file}: {e}")
 
         # Write Excel with two sheets
         try:
@@ -126,9 +126,9 @@ def select_transcription_reliability_samples(tiers, chats, frac, output_dir):
                 df_subset.to_excel(writer, sheet_name="reliability_selection", index=False)
                 df_all.to_excel(writer, sheet_name="all_transcripts", index=False)
 
-            logging.info(f"Reliability Excel saved to: {df_filepath}")
+            logger.info(f"Reliability Excel saved to: {df_filepath}")
         except Exception as e:
-            logging.error(f"Failed to write reliability Excel for partition {partition_tiers}: {e}")
+            logger.error(f"Failed to write reliability Excel for partition {partition_tiers}: {e}")
 
 
 def reselect_transcription_reliability_samples(input_dir, output_dir, frac):
@@ -164,7 +164,7 @@ def reselect_transcription_reliability_samples(input_dir, output_dir, frac):
 
     transc_sel_files = list(input_dir.rglob("*transcription_reliability_samples.xlsx"))
     if not transc_sel_files:
-        logging.warning(f"No reliability transcriptions files found in {input_dir}")
+        logger.warning(f"No reliability transcriptions files found in {input_dir}")
         return
 
     for filepath in transc_sel_files:
@@ -172,7 +172,7 @@ def reselect_transcription_reliability_samples(input_dir, output_dir, frac):
             # Load sheets
             xls = pd.ExcelFile(filepath)
             if not {"all_transcripts", "reliability_selection"}.issubset(set(xls.sheet_names)):
-                logging.warning(f"Skipping {filepath}: missing required sheets: 'all_transcripts' & 'reliability_selection'")
+                logger.warning(f"Skipping {filepath}: missing required sheets: 'all_transcripts' & 'reliability_selection'")
                 continue
 
             df_all = pd.read_excel(filepath, sheet_name="all_transcripts")
@@ -182,7 +182,7 @@ def reselect_transcription_reliability_samples(input_dir, output_dir, frac):
             used_files = set(df_rel["file"])
             candidates = df_all[~df_all["file"].isin(used_files)]
             if candidates.empty:
-                logging.info(f"No remaining candidates in {filepath}, skipping.")
+                logger.info(f"No remaining candidates in {filepath}, skipping.")
                 continue
 
             # Number of samples to draw
@@ -194,7 +194,7 @@ def reselect_transcription_reliability_samples(input_dir, output_dir, frac):
             outname = f"reselected_{filepath.name}"
             outpath = reselect_dir / outname
             sample_df.to_excel(outpath, index=False, sheet_name="reselected_reliability")
-            logging.info(f"reselected_reliability {n_samples} files → {outpath}")
+            logger.info(f"reselected_reliability {n_samples} files → {outpath}")
 
         except Exception as e:
-            logging.error(f"Failed to reselect samples for {filepath}: {e}")
+            logger.error(f"Failed to reselect samples for {filepath}: {e}")

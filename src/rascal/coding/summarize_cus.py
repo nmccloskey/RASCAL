@@ -1,6 +1,6 @@
-import logging
 import pandas as pd
 from pathlib import Path
+from rascal.utils.logger import logger
 from rascal.utils.support_funcs import find_transcript_tables, extract_transcript_data, find_corresponding_file
 
 
@@ -95,7 +95,7 @@ def summarize_cus(tiers, input_dir, output_dir):
                                             search_base="word_counting")
             wc_by_utt = wc_df.loc[:, ["sample_id", "utterance_id", "word_count"]]
             df = cu_by_utt.merge(wc_by_utt, on=["sample_id", "utterance_id"], how="outer")
-            
+
 
             
 
@@ -104,7 +104,7 @@ def summarize_cus(tiers, input_dir, output_dir):
         # Read CU data
         cu_by_utt = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*cu_coding_by_utterance*.xlsx')])
         cu_by_utt = cu_by_utt.loc[:, ['utterance_id', 'sample_id'] + list(cu_by_utt.iloc[:, cu_by_utt.columns.to_list().index('comment')+1:].columns)]
-        logging.info("CU utterance data loaded successfully.")
+        logger.info("CU utterance data loaded successfully.")
 
         # Read word count data
         word_counts = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*word_counting*.xlsx')])
@@ -114,12 +114,12 @@ def summarize_cus(tiers, input_dir, output_dir):
         merged_utts = utts.copy()
         merged_utts = pd.merge(merged_utts, cu_by_utt, on=['utterance_id', 'sample_id'], how='inner')
         merged_utts = pd.merge(merged_utts, word_counts, on=['utterance_id', 'sample_id'], how='inner')
-        logging.info("Utterance data merged successfully.")
+        logger.info("Utterance data merged successfully.")
 
         # Save unblinded utterances
         unblinded_utts = output_dir / 'unblind_utterance_data.xlsx'
         merged_utts.to_excel(unblinded_utts, index=False)
-        logging.info(f"Unblinded utterances saved to {unblinded_utts}.")
+        logger.info(f"Unblinded utterances saved to {unblinded_utts}.")
 
         # Prepare blind codes and blinded utterances
         remove_tiers = [t.name for t in tiers.values() if not t.blind]
@@ -133,37 +133,37 @@ def summarize_cus(tiers, input_dir, output_dir):
             if column_name in blind_utts.columns:
                 blind_utts[column_name] = blind_utts[column_name].map(blind_codes[tier.name])
                 blind_codes_output.update(blind_codes)
-        logging.info("Blinded utterance data prepared successfully.")
+        logger.info("Blinded utterance data prepared successfully.")
 
         # Save blinded utterances
         blind_utts_file = output_dir / 'blind_utterance_data.xlsx'
         blind_utts.to_excel(blind_utts_file, index=False)
-        logging.info(f"Blinded utterances saved to {blind_utts_file}.")
+        logger.info(f"Blinded utterances saved to {blind_utts_file}.")
 
         # Aggregate by sample - first filter utterance data.
         utts = utts.drop(columns=['utterance_id', 'speaker', 'utterance', 'comment']).drop_duplicates(keep='first')
-        logging.info("Utterance data loaded and preprocessed successfully.")
+        logger.info("Utterance data loaded and preprocessed successfully.")
     
         # Load sample CU data.
         cu_by_sample = pd.concat([pd.read_excel(f) for f in Path(input_dir).rglob('*cu_coding_by_sample*.xlsx')])
         
         # Sum word counts.
         word_counts = word_counts.groupby(['sample_id']).agg(word_count=('word_count', 'sum'))
-        logging.info("Word count data aggregated successfully.")
+        logger.info("Word count data aggregated successfully.")
 
         merged_samples = utts.copy()
         merged_samples = pd.merge(merged_samples, cu_by_sample, on='sample_id', how='inner')
         merged_samples = pd.merge(merged_samples, word_counts, on='sample_id', how='inner')
-        logging.info("Sample data merged successfully.")
+        logger.info("Sample data merged successfully.")
 
         # Calculate words per minute
         merged_samples['wpm'] = merged_samples.apply(lambda row: round(row['word_count'] / (row['speaking_time'] / 60), 2), axis=1)
-        logging.info("Words per minute calculated successfully.")
+        logger.info("Words per minute calculated successfully.")
 
         # Save unblinded summary
         unblinded_sample_path = output_dir / 'unblind_sample_data.xlsx'
         merged_samples.to_excel(unblinded_sample_path, index=False)
-        logging.info(f"Unblinded summary saved to {unblinded_sample_path}.")
+        logger.info(f"Unblinded summary saved to {unblinded_sample_path}.")
 
         # Prepare blinded samples
         blind_samples = merged_samples.copy()
@@ -173,18 +173,18 @@ def summarize_cus(tiers, input_dir, output_dir):
             column_name = tier.name
             if column_name in blind_samples.columns:
                 blind_samples[column_name] = blind_samples[column_name].map(blind_codes_output[tier.name])
-        logging.info("Blinded utterance data prepared successfully.")
+        logger.info("Blinded utterance data prepared successfully.")
 
         # Save blinded summary
         blinded_samples_path = output_dir / 'blind_sample_data.xlsx'
         blind_samples.to_excel(blinded_samples_path, index=False)
-        logging.info(f"Blinded summary saved to {blinded_samples_path}.")
+        logger.info(f"Blinded summary saved to {blinded_samples_path}.")
 
         # Save blind codes separately
         blind_codes_file = output_dir / 'blind_codes.xlsx'
         pd.DataFrame(blind_codes_output).to_excel(blind_codes_file, index=True)
-        logging.info(f"Blind codes saved to {blind_codes_file}.")
+        logger.info(f"Blind codes saved to {blind_codes_file}.")
     
     except Exception as e:
-        logging.error(f"An error occurred: {e}")
+        logger.error(f"An error occurred: {e}")
         raise

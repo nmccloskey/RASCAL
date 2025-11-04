@@ -1,5 +1,4 @@
 import re
-import logging
 import numpy as np
 import contractions
 import pandas as pd
@@ -8,6 +7,8 @@ import num2words as n2w
 from pathlib import Path
 from datetime import datetime
 from scipy.stats import percentileofscore
+
+from rascal.utils.logger import logger
 from rascal.coding.make_coding_files import stim_cols
 from rascal.utils.support_funcs import find_transcript_tables, extract_transcript_data
 
@@ -231,7 +232,7 @@ def reformat(text: str) -> str:
         return " ".join(toks).strip()
 
     except Exception as e:
-        logging.error(f"An error occurred while reformatting: {e}")
+        logger.error(f"An error occurred while reformatting: {e}")
         return ""
 
 
@@ -312,9 +313,9 @@ def preload_corelex_norms(present_narratives: set) -> dict:
                 "accuracy": load_corelex_norms_online(scene, "accuracy"),
                 "efficiency": load_corelex_norms_online(scene, "efficiency")
             }
-            logging.info(f"Loaded CoreLex norms for: {scene}")
+            logger.info(f"Loaded CoreLex norms for: {scene}")
         except Exception as e:
-            logging.warning(f"Failed to load norms for {scene}: {e}")
+            logger.warning(f"Failed to load norms for {scene}: {e}")
             norm_data[scene] = {"accuracy": None, "efficiency": None}
 
     return norm_data
@@ -348,7 +349,7 @@ def _read_excel_safely(path):
     try:
         return pd.read_excel(path)
     except Exception as e:
-        logging.warning(f"Failed reading {path}: {e}")
+        logger.warning(f"Failed reading {path}: {e}")
         return None
 
 
@@ -382,13 +383,13 @@ def find_corelex_inputs(input_dir: str, output_dir: str) -> dict | None:
         p = unblind_matches[0]
         df = _read_excel_safely(p)
         if df is not None:
-            logging.info(f"Using unblind utterance data: {p}")
+            logger.info(f"Using unblind utterance data: {p}")
             return "unblind", df
 
     # 2) Fallback: transcript tables
     transcript_tables = find_transcript_tables(input_dir, output_dir)
     if not transcript_tables:
-        logging.error(
+        logger.error(
             "No CoreLex input files found (*unblind_utterance_data*.xlsx "
             "or *transcript_tables*.xlsx)."
         )
@@ -396,11 +397,11 @@ def find_corelex_inputs(input_dir: str, output_dir: str) -> dict | None:
 
     utt_frames = [extract_transcript_data(tt) for tt in transcript_tables if tt]
     if not utt_frames:
-        logging.error("Transcript tables found but none could be loaded.")
+        logger.error("Transcript tables found but none could be loaded.")
         return None, None
 
     utt_df = pd.concat(utt_frames, ignore_index=True, sort=False)
-    logging.info(f"Loaded and concatenated {len(transcript_tables)} transcript table(s).")
+    logger.info(f"Loaded and concatenated {len(transcript_tables)} transcript table(s).")
     return "transcripts", utt_df
 
 
@@ -483,7 +484,7 @@ def _prepare_corelex_inputs(input_dir, output_dir, exclude_participants):
             if filter_col:
                 utt_df = utt_df[~np.isnan(utt_df[filter_col])]
             else:
-                logging.warning("No c2_cu or word_count column; continuing unfiltered.")
+                logger.warning("No c2_cu or word_count column; continuing unfiltered.")
             present_narratives = set(utt_df[narr_col].dropna().unique())
 
         else:  # transcript table mode
@@ -502,7 +503,7 @@ def _prepare_corelex_inputs(input_dir, output_dir, exclude_participants):
             )
 
             if not all([narr_col, utt_col, time_col]):
-                logging.error("Required columns missing in transcript table input.")
+                logger.error("Required columns missing in transcript table input.")
                 return None, None
 
             utt_df = utt_df[utt_df[narr_col].isin(urls.keys())]
@@ -519,7 +520,7 @@ def _prepare_corelex_inputs(input_dir, output_dir, exclude_participants):
         return utt_df, present_narratives
 
     except Exception as e:
-        logging.error(f"Failed to prepare CoreLex inputs: {e}")
+        logger.error(f"Failed to prepare CoreLex inputs: {e}")
         return None, None
 
 
@@ -596,7 +597,7 @@ def _compute_corelex_for_sample(sample_df, norm_lookup, partition_tiers, tup):
         return row
 
     except Exception as e:
-        logging.error(f"Failed to compute CoreLex metrics for sample: {e}")
+        logger.error(f"Failed to compute CoreLex metrics for sample: {e}")
         return {}
 
 
@@ -626,7 +627,7 @@ def run_corelex(tiers, input_dir, output_dir, exclude_participants=None):
     timestamp = datetime.now().strftime("%y%m%d_%H%M")
     corelex_dir = output_dir / "core_lex"
     corelex_dir.mkdir(parents=True, exist_ok=True)
-    logging.info(f"CoreLex output directory: {corelex_dir}")
+    logger.info(f"CoreLex output directory: {corelex_dir}")
 
     utt_df, present_narratives = _prepare_corelex_inputs(input_dir, output_dir, exclude_participants)
     if utt_df is None:
@@ -648,15 +649,15 @@ def run_corelex(tiers, input_dir, output_dir, exclude_participants=None):
                 rows.append(row)
 
     if not rows:
-        logging.warning("No CoreLex rows produced; no output written.")
+        logger.warning("No CoreLex rows produced; no output written.")
         return
 
     corelex_df = pd.DataFrame(rows, columns=all_columns)
     output_file = corelex_dir / f"core_lex_data_{timestamp}.xlsx"
     try:
         corelex_df.to_excel(output_file, index=False)
-        logging.info(f"CoreLex results written to {output_file}")
+        logger.info(f"CoreLex results written to {output_file}")
     except Exception as e:
-        logging.error(f"Failed to write CoreLex results: {e}")
+        logger.error(f"Failed to write CoreLex results: {e}")
 
-    logging.info("CoreLex processing complete.")
+    logger.info("CoreLex processing complete.")

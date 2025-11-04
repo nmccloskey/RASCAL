@@ -1,8 +1,8 @@
-import logging
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
+from rascal.utils.logger import logger
 
 
 def percent_difference(value1, value2):
@@ -17,7 +17,7 @@ def percent_difference(value1, value2):
         float: The percentage difference, or infinity if either value is zero.
     """
     if value1 == 0 or value2 == 0:
-        logging.warning("One of the values is zero, returning 100%.")
+        logger.warning("One of the values is zero, returning 100%.")
         return 100
     elif value1 == value2 == 0:
         return 0
@@ -133,9 +133,9 @@ def analyze_word_count_reliability(tiers, input_dir, output_dir):
     word_count_reliability_dir = output_dir / 'word_count_reliability'
     try:
         word_count_reliability_dir.mkdir(parents=True, exist_ok=True)
-        logging.info(f"Created directory: {word_count_reliability_dir}")
+        logger.info(f"Created directory: {word_count_reliability_dir}")
     except Exception as e:
-        logging.error(f"Failed to create directory {word_count_reliability_dir}: {e}")
+        logger.error(f"Failed to create directory {word_count_reliability_dir}: {e}")
         return
 
     # Collect relevant files
@@ -154,9 +154,9 @@ def analyze_word_count_reliability(tiers, input_dir, output_dir):
                 try:
                     wc_df = pd.read_excel(cod)
                     wc_rel_df = pd.read_excel(rel)
-                    logging.info(f"Processing coding file: {cod} and reliability file: {rel}")
+                    logger.info(f"Processing coding file: {cod} and reliability file: {rel}")
                 except Exception as e:
-                    logging.error(f"Failed to read files {cod} or {rel}: {e}")
+                    logger.error(f"Failed to read files {cod} or {rel}: {e}")
                     continue
 
                 # Clean and filter the reliability DataFrame
@@ -166,13 +166,13 @@ def analyze_word_count_reliability(tiers, input_dir, output_dir):
                 # Merge on utterance_id
                 try:
                     wc_merged = pd.merge(wc_df, wc_rel_df, on="utterance_id", how="inner", suffixes=('_org', '_rel'))
-                    logging.info(f"Merged reliability file with coding file for {rel.name}")
+                    logger.info(f"Merged reliability file with coding file for {rel.name}")
                 except Exception as e:
-                    logging.error(f"Failed to merge {cod.name} with {rel.name}: {e}")
+                    logger.error(f"Failed to merge {cod.name} with {rel.name}: {e}")
                     continue
 
                 if len(wc_rel_df) != len(wc_merged):
-                    logging.error(f"Length mismatch between reliability and joined files for {rel.name}.")
+                    logger.error(f"Length mismatch between reliability and joined files for {rel.name}.")
 
                 # Calculate percent difference
                 wc_merged['abs_diff'] = wc_merged.apply(lambda row: row['word_count_org'] - row['word_count_rel'], axis=1)
@@ -185,27 +185,27 @@ def analyze_word_count_reliability(tiers, input_dir, output_dir):
                 output_path = Path(word_count_reliability_dir, *partition_labels)
                 try:
                     output_path.mkdir(parents=True, exist_ok=True)
-                    logging.info(f"Created partition directory: {output_path}")
+                    logger.info(f"Created partition directory: {output_path}")
                 except Exception as e:
-                    logging.error(f"Failed to create partition directory {output_path}: {e}")
+                    logger.error(f"Failed to create partition directory {output_path}: {e}")
                     continue
 
                 # Write tables.
                 lab_str = '_'.join(partition_labels) + '_' if partition_labels else ''
                 filename = Path(output_path, lab_str + 'word_counting_reliability_results.xlsx')
-                logging.info(f"Writing word counting reliability results file: {filename}")
+                logger.info(f"Writing word counting reliability results file: {filename}")
                 try:
                     filename.parent.mkdir(parents=True, exist_ok=True)
                     wc_merged.to_excel(filename, index=False)
                 except Exception as e:
-                    logging.error(f"Failed to write word count reliability results file {filename}: {e}")
+                    logger.error(f"Failed to write word count reliability results file {filename}: {e}")
                 
                 # Subset the data for ICC calculation
                 icc_data = wc_merged[['word_count_org', 'word_count_rel']].dropna()
 
                 # Calculate ICC
                 icc_value = calculate_icc(icc_data)
-                logging.info(f"Calculated ICC(2,1) for {rel.name}: {icc_value}")
+                logger.info(f"Calculated ICC(2,1) for {rel.name}: {icc_value}")
 
                 # Write reliability report
                 num_samples_agmt = np.nansum(wc_merged['agmt'])
@@ -216,6 +216,6 @@ def analyze_word_count_reliability(tiers, input_dir, output_dir):
                         report.write(f"Word Count Reliability Report for {' '.join(partition_labels)}\n\n")
                         report.write(f"Coders have 90% similarity in {num_samples_agmt} out of {len(wc_merged)} total samples: {perc_samples_agmt}%\n\n")
                         report.write(f"Intraclass Correlation Coefficient (ICC(2,1)): {icc_value}\n")
-                    logging.info(f"Reliability report written to {report_path}")
+                    logger.info(f"Reliability report written to {report_path}")
                 except Exception as e:
-                    logging.error(f"Failed to write reliability report {report_path}: {e}")
+                    logger.error(f"Failed to write reliability report {report_path}: {e}")

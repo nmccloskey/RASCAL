@@ -1,10 +1,11 @@
-import logging
 import re
 from .tier import Tier
+from rascal.utils.logger import logger
+
 
 def default_tiers() -> dict:
     """Return a default single-tier mapping that matches the entire filename."""
-    logging.warning("No valid tiers detected — defaulting to full filename match ('.*(?=\.cha)').")
+    logger.warning("No valid tiers detected — defaulting to full filename match ('.*(?=\.cha)').")
     default_name = "file_name"
     # one regex string in a list → treated as user regex
     return {default_name: Tier(name=default_name, values=[r".*(?=\.cha)"], partition=False, blind=False)}
@@ -39,7 +40,7 @@ def read_tiers(config_tiers: dict | None) -> dict[str, Tier]:
     """
 
     if not config_tiers or not isinstance(config_tiers, dict):
-        logging.warning("Tier config missing or invalid; using default tiers.")
+        logger.warning("Tier config missing or invalid; using default tiers.")
         return default_tiers()
 
     tiers: dict[str, Tier] = {}
@@ -58,7 +59,7 @@ def read_tiers(config_tiers: dict | None) -> dict[str, Tier]:
             blind = bool(tier_data.get("blind", False))
 
             if not values:
-                logging.warning(f"Tier '{tier_name}' has no values; it will never match.")
+                logger.warning(f"Tier '{tier_name}' has no values; it will never match.")
                 tiers[tier_name] = Tier(tier_name, [], partition=partition, blind=blind)
                 continue
 
@@ -68,27 +69,27 @@ def read_tiers(config_tiers: dict | None) -> dict[str, Tier]:
                 try:
                     re.compile(user_regex)
                 except re.error as e:
-                    logging.error(f"Tier '{tier_name}': invalid regex {user_regex!r} — {e}")
+                    logger.error(f"Tier '{tier_name}': invalid regex {user_regex!r} — {e}")
                     continue
-                logging.info(f"Tier '{tier_name}' using user regex {user_regex!r}")
+                logger.info(f"Tier '{tier_name}' using user regex {user_regex!r}")
                 tier_obj = Tier(tier_name, [user_regex], partition=partition, blind=blind)
             else:
-                logging.info(f"Tier '{tier_name}' using {len(values)} literal values.")
+                logger.info(f"Tier '{tier_name}' using {len(values)} literal values.")
                 tier_obj = Tier(tier_name, values, partition=partition, blind=blind)
 
             tiers[tier_name] = tier_obj
 
             if partition:
-                logging.info(f"Tier '{tier_name}' marked as partition level.")
+                logger.info(f"Tier '{tier_name}' marked as partition level.")
             if blind:
-                logging.info(f"Tier '{tier_name}' marked as blind column.")
+                logger.info(f"Tier '{tier_name}' marked as blind column.")
 
         except Exception as e:
-            logging.error(f"Failed to parse tier '{tier_name}': {e}")
+            logger.error(f"Failed to parse tier '{tier_name}': {e}")
 
     if not tiers:
-        logging.warning("No valid tiers created — using default tiers.")
+        logger.warning("No valid tiers created — using default tiers.")
         tiers = default_tiers()
 
-    logging.info(f"Finished parsing tiers. Total: {len(tiers)}")
+    logger.info(f"Finished parsing tiers. Total: {len(tiers)}")
     return tiers

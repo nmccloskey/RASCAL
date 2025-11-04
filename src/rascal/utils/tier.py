@@ -1,7 +1,8 @@
 import re
 import random
-import logging
 from typing import List
+from rascal.utils.logger import logger
+
 
 class Tier:
     def __init__(self, name: str, values: List[str], partition: bool, blind: bool):
@@ -33,7 +34,7 @@ class Tier:
                     f"Tier '{self.name}': invalid regex provided: {self.search_str!r}. "
                     f"Regex compile error: {e}"
                 )
-            logging.info(
+            logger.info(
                 f"Initialized Tier '{self.name}' with user regex: {self.search_str!r} "
                 f"(partition={self.partition}, blind={self.blind})"
             )
@@ -48,7 +49,7 @@ class Tier:
                     f"Tier '{self.name}': failed to compile built regex {self.search_str!r}. "
                     f"Compile error: {e}"
                 )
-            logging.info(
+            logger.info(
                 f"Initialized Tier '{self.name}' with {len(self.values)} literal values "
                 f"(partition={self.partition}, blind={self.blind}). Regex={self.search_str!r}"
             )
@@ -59,13 +60,13 @@ class Tier:
         Returns a non-capturing group: (?:v1|v2|...)
         """
         if not values:
-            logging.warning(f"Tier '{self.name}' received empty values; regex will never match.")
+            logger.warning(f"Tier '{self.name}' received empty values; regex will never match.")
             return r"(?!x)x"  # matches nothing
 
         # Escape each literal to avoid accidental regex meta-characters
         escaped = [re.escape(v) for v in values]
         search_str = "(?:" + "|".join(escaped) + ")"
-        logging.debug(f"Tier '{self.name}': generated search string from literals: {search_str}")
+        logger.debug(f"Tier '{self.name}': generated search string from literals: {search_str}")
         return search_str
 
     def match(self, text: str, return_None: bool = False):
@@ -81,9 +82,9 @@ class Tier:
         if m:
             return m.group(0)
         if return_None:
-            logging.warning(f"No match for tier '{self.name}' in text: {text!r}")
+            logger.warning(f"No match for tier '{self.name}' in text: {text!r}")
             return None
-        logging.error(f"No match for tier '{self.name}' in text: {text!r}. Returning tier name.")
+        logger.error(f"No match for tier '{self.name}' in text: {text!r}. Returning tier name.")
         return self.name
 
     def make_blind_codes(self):
@@ -91,13 +92,13 @@ class Tier:
         Generates a blinded coding system for the tier values (for literal-value tiers).
         For user-regex tiers, 'values' may not be an exhaustive set—use with caution.
         """
-        logging.info(f"Generating blind codes for tier: {self.name}")
+        logger.info(f"Generating blind codes for tier: {self.name}")
         if not self.values:
-            logging.warning(f"Tier '{self.name}' has no values; blind code mapping will be empty.")
+            logger.warning(f"Tier '{self.name}' has no values; blind code mapping will be empty.")
             return {self.name: {}}
 
         blind_codes = list(range(len(self.values)))
         random.shuffle(blind_codes)
         blind_code_mapping = {k: v for k, v in zip(self.values, blind_codes)}
-        logging.debug(f"Blind code mapping for '{self.name}': {blind_code_mapping}")
+        logger.debug(f"Blind code mapping for '{self.name}': {blind_code_mapping}")
         return {self.name: blind_code_mapping}

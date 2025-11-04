@@ -1,12 +1,9 @@
-import logging
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
+from rascal.utils.logger import logger
 
-
-# Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Define helper functions for aggregation.
 def utt_ct(x):
@@ -50,7 +47,7 @@ def compute_cu_column(row):
     sv, rel = row.iloc[0], row.iloc[1]
 
     if (pd.isna(sv) and not pd.isna(rel)) or (pd.isna(rel) and not pd.isna(sv)):
-        logging.error(f"Neutrality inconsistency in CU computation: SV={sv}, REL={rel}")
+        logger.error(f"Neutrality inconsistency in CU computation: SV={sv}, REL={rel}")
         return np.nan
     elif pd.isna(sv) and pd.isna(rel):
         return np.nan
@@ -122,10 +119,10 @@ def summarize_cu_reliability(cu_rel_coding, sv2, rel2, sv3, rel3):
             sample_agmt_rel=('agmt_rel', ag_check),
             sample_agmt_cu=('agmt_cu', ag_check)
         ).reset_index()
-        logging.info("Successfully aggregated CU reliability data.")
+        logger.info("Successfully aggregated CU reliability data.")
         return cu_rel_sum
     except Exception as e:
-        logging.error(f"Failed during CU reliability aggregation: {e}")
+        logger.error(f"Failed during CU reliability aggregation: {e}")
         return pd.DataFrame()  # Fail-safe return
 
 def write_reliability_report(cu_rel_sum, report_path, partition_labels=None):
@@ -167,9 +164,9 @@ def write_reliability_report(cu_rel_sum, report_path, partition_labels=None):
             report.write(f"Average agreement on REL: {round(np.nanmean(cu_rel_sum['perc_agmt_rel']), 3)}\n")
             report.write(f"Average agreement on CU: {round(np.nanmean(cu_rel_sum['perc_agmt_cu']), 3)}\n")
 
-        logging.info(f"Successfully wrote CU reliability report to {report_path}")
+        logger.info(f"Successfully wrote CU reliability report to {report_path}")
     except Exception as e:
-        logging.error(f"Failed to write reliability report to {report_path}: {e}")
+        logger.error(f"Failed to write reliability report to {report_path}: {e}")
 
 def analyze_cu_reliability(tiers, input_dir, output_dir, cu_paradigms):
     """
@@ -239,9 +236,9 @@ def analyze_cu_reliability(tiers, input_dir, output_dir, cu_paradigms):
     cu_reliability_dir = output_dir / 'cu_reliability'
     try:
         cu_reliability_dir.mkdir(parents=True, exist_ok=True)
-        logging.info(f"Created directory: {cu_reliability_dir}")
+        logger.info(f"Created directory: {cu_reliability_dir}")
     except Exception as e:
-        logging.error(f"Failed to create directory {cu_reliability_dir}: {e}")
+        logger.error(f"Failed to create directory {cu_reliability_dir}: {e}")
         return
 
     coding_files = [f for f in Path(input_dir).rglob('*cu_coding.xlsx')]
@@ -259,9 +256,9 @@ def analyze_cu_reliability(tiers, input_dir, output_dir, cu_paradigms):
                 try:
                     cu_coding = pd.read_excel(cod)
                     cu_rel = pd.read_excel(rel)
-                    logging.info(f"Processing coding file: {cod} and reliability file: {rel}")
+                    logger.info(f"Processing coding file: {cod} and reliability file: {rel}")
                 except Exception as e:
-                    logging.error(f"Failed to read files {cod} or {rel}: {e}")
+                    logger.error(f"Failed to read files {cod} or {rel}: {e}")
                     continue
 
                 # Determine paradigms to iterate
@@ -285,12 +282,12 @@ def analyze_cu_reliability(tiers, input_dir, output_dir, cu_paradigms):
                     try:
                         cu_rel_coding = pd.merge(cu_cod_sub, cu_rel_sub, on="utterance_id", how="inner")
                     except Exception as e:
-                        logging.error(f"Merge failed for paradigm {paradigm} on {rel.name}: {e}")
+                        logger.error(f"Merge failed for paradigm {paradigm} on {rel.name}: {e}")
                         continue
 
                     # Validate length
                     if len(cu_rel_sub) != len(cu_rel_coding):
-                        logging.error(f"Length mismatch for {paradigm or 'default'}: {rel.name}")
+                        logger.error(f"Length mismatch for {paradigm or 'default'}: {rel.name}")
 
                     # --- CU computation ---
                     cu_rel_coding['c2_cu'] = cu_rel_coding[[sv2, rel2]].apply(compute_cu_column, axis=1)
@@ -308,7 +305,7 @@ def analyze_cu_reliability(tiers, input_dir, output_dir, cu_paradigms):
                     try:
                         output_path.mkdir(parents=True, exist_ok=True)
                     except Exception as e:
-                        logging.error(f"Failed to make output folder {output_path}: {e}")
+                        logger.error(f"Failed to make output folder {output_path}: {e}")
                         continue
 
                     # Save utterance-level results
@@ -391,9 +388,9 @@ def analyze_cu_coding(tiers, input_dir, output_dir, cu_paradigms=[]):
     cu_analysis_dir = output_dir / 'cu_coding_analysis'
     try:
         cu_analysis_dir.mkdir(parents=True, exist_ok=True)
-        logging.info(f"Created directory: {cu_analysis_dir}")
+        logger.info(f"Created directory: {cu_analysis_dir}")
     except Exception as e:
-        logging.error(f"Failed to create CU analysis directory {cu_analysis_dir}: {e}")
+        logger.error(f"Failed to create CU analysis directory {cu_analysis_dir}: {e}")
         return
 
     coding_files = list(Path(input_dir).rglob('*cu_coding.xlsx'))
@@ -401,9 +398,9 @@ def analyze_cu_coding(tiers, input_dir, output_dir, cu_paradigms=[]):
     for cod in tqdm(coding_files, desc="Analyzing CU coding..."):
         try:
             cu_coding = pd.read_excel(cod)
-            logging.info(f"Processing CU coding file: {cod}")
+            logger.info(f"Processing CU coding file: {cod}")
         except Exception as e:
-            logging.error(f"Failed to read CU coding file {cod}: {e}")
+            logger.error(f"Failed to read CU coding file {cod}: {e}")
             continue
 
         # Clean base columns
@@ -424,7 +421,7 @@ def analyze_cu_coding(tiers, input_dir, output_dir, cu_paradigms=[]):
             cu_col = f'c2_cu_{paradigm}' if paradigm else 'c2_cu'
 
             if sv_col not in cu_coding.columns or rel_col not in cu_coding.columns:
-                logging.warning(f"Skipping paradigm {paradigm}: columns missing in {cod.name}")
+                logger.warning(f"Skipping paradigm {paradigm}: columns missing in {cod.name}")
                 continue
 
             # Compute CU column
@@ -448,7 +445,7 @@ def analyze_cu_coding(tiers, input_dir, output_dir, cu_paradigms=[]):
                 ).reset_index()
                 summary_list.append(cu_codsum)
             except Exception as e:
-                logging.error(f"Aggregation failed for {cod.name}, paradigm {paradigm}: {e}")
+                logger.error(f"Aggregation failed for {cod.name}, paradigm {paradigm}: {e}")
                 continue
 
         # Save full utterance-level file
@@ -458,15 +455,15 @@ def analyze_cu_coding(tiers, input_dir, output_dir, cu_paradigms=[]):
         try:
             out_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
-            logging.error(f"Failed to create output directory {out_dir}: {e}")
+            logger.error(f"Failed to create output directory {out_dir}: {e}")
             continue
 
         utterance_path = Path(out_dir, f"{'_'.join(partition_labels)}_cu_coding_by_utterance.xlsx")
         try:
             cu_coding.to_excel(utterance_path, index=False)
-            logging.info(f"Saved utterance-level CU analysis: {utterance_path}")
+            logger.info(f"Saved utterance-level CU analysis: {utterance_path}")
         except Exception as e:
-            logging.error(f"Failed to save utterance-level file: {e}")
+            logger.error(f"Failed to save utterance-level file: {e}")
 
         # Merge all paradigm summaries
         if summary_list:
@@ -477,7 +474,7 @@ def analyze_cu_coding(tiers, input_dir, output_dir, cu_paradigms=[]):
 
                 summary_path = Path(out_dir, f"{'_'.join(partition_labels)}_cu_coding_by_sample.xlsx")
                 cu_codsum_all.to_excel(summary_path, index=False)
-                logging.info(f"Saved combined CU summary: {summary_path}")
+                logger.info(f"Saved combined CU summary: {summary_path}")
 
             except Exception as e:
-                logging.error(f"Failed to merge and save summary files: {e}")
+                logger.error(f"Failed to merge and save summary files: {e}")

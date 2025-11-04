@@ -1,12 +1,13 @@
-import logging
+from rascal.utils.logger import logger
+
 
 def run_read_tiers(config_tiers):
     from rascal.utils.read_tiers import read_tiers
     tiers = read_tiers(config_tiers)
     if tiers:
-        logging.info("Successfully parsed tiers from config.")
+        logger.info("Successfully parsed tiers from config.")
     else:
-        logging.warning("Tiers are empty or malformed.")
+        logger.warning("Tiers are empty or malformed.")
     return tiers
 
 def run_read_cha_files(input_dir, shuffle=False):

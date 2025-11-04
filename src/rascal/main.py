@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import argparse
-import logging
 from datetime import datetime
+from rascal.utils.logger import logger, initialize_logger, terminate_logger
 from rascal.utils.support_funcs import as_path, load_config, find_transcript_tables
 from rascal.run_wrappers import (
     run_read_tiers, run_read_cha_files,
@@ -15,10 +15,6 @@ from rascal.run_wrappers import (
     run_reselect_wc_reliability, run_summarize_cus, run_run_corelex
 )
 
-# -------------------------------------------------------------
-# Logging
-# -------------------------------------------------------------
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # -------------------------------------------------------------
 # Omnibus mappings
@@ -94,104 +90,114 @@ def build_arg_parser():
 # -------------------------------------------------------------
 def main(args):
     """Main function to process input arguments and execute appropriate steps."""
-    config = load_config(args.config)
-    input_dir = as_path(config.get("input_dir", "rascal_data/input"))
-    output_dir = as_path(config.get("output_dir", "rascal_data/output"))
-    frac = config.get("reliability_fraction", 0.2)
-    coders = config.get("coders", []) or []
-    cu_paradigms = config.get("cu_paradigms", []) or []
-    exclude_participants = config.get("exclude_participants", []) or []
-    strip_clan = config.get("strip_clan", True)
-    prefer_correction = config.get("prefer_correction", True)
-    lowercase = config.get("lowercase", True)
+    try:
+            
+        start_time = datetime.now()
+        
+        config = load_config(args.config)
+        input_dir = as_path(config.get("input_dir", "rascal_data/input"))
+        output_dir = as_path(config.get("output_dir", "rascal_data/output"))
 
-    input_dir.mkdir(parents=True, exist_ok=True)
-    tiers = run_read_tiers(config.get("tiers", {})) or {}
+        # Timestamped output folder
+        timestamp = start_time.strftime("%y%m%d_%H%M")
+        out_dir = output_dir / f"rascal_output_{timestamp}"
+        out_dir.mkdir(parents=True, exist_ok=True)
 
-    # ---------------------------------------------------------
-    # Expand omnibus & comma-separated commands
-    # ---------------------------------------------------------
-    if isinstance(args.command, list):
-        args.command = " ".join(args.command)
-    raw_commands = [c.strip() for c in args.command.split(",") if c.strip()]
+        initialize_logger(start_time, out_dir)
 
-    # Standardize to succinct abbreviations
-    rev_cmap = {v: k for k, v in COMMAND_MAP.items()}
-    converted = []
-    for c in raw_commands:
-        # Direct succinct match
-        if c in COMMAND_MAP:
-            converted.append(c)
-        # Expanded (e.g. "transcripts select")
-        elif c in COMMAND_MAP.values():
-            converted.append(rev_cmap[c])
-        # Omnibus --> succinct
-        elif c in OMNIBUS_MAP:
-            converted.extend(OMNIBUS_MAP[c])
-        else:
-            logging.warning(f"Command {c} not recognized - skipping")
+        frac = config.get("reliability_fraction", 0.2)
+        coders = config.get("coders", []) or []
+        cu_paradigms = config.get("cu_paradigms", []) or []
+        exclude_participants = config.get("exclude_participants", []) or []
+        strip_clan = config.get("strip_clan", True)
+        prefer_correction = config.get("prefer_correction", True)
+        lowercase = config.get("lowercase", True)
 
-    if not converted:
-        logging.error("No valid commands recognized — exiting.")
-        return
+        input_dir.mkdir(parents=True, exist_ok=True)
+        tiers = run_read_tiers(config.get("tiers", {})) or {}
 
-    logging.info(f"Executing standardized command(s): {', '.join(converted)}")
+        # ---------------------------------------------------------
+        # Expand omnibus & comma-separated commands
+        # ---------------------------------------------------------
+        if isinstance(args.command, list):
+            args.command = " ".join(args.command)
+        raw_commands = [c.strip() for c in args.command.split(",") if c.strip()]
 
-    # Timestamped output folder
-    timestamp = datetime.now().strftime("%y%m%d_%H%M")
-    out_dir = output_dir / f"rascal_{'_'.join(converted)}_output_{timestamp}"
-    out_dir.mkdir(parents=True, exist_ok=True)
+        # Standardize to succinct abbreviations
+        rev_cmap = {v: k for k, v in COMMAND_MAP.items()}
+        converted = []
+        for c in raw_commands:
+            # Direct succinct match
+            if c in COMMAND_MAP:
+                converted.append(c)
+            # Expanded (e.g. "transcripts select")
+            elif c in COMMAND_MAP.values():
+                converted.append(rev_cmap[c])
+            # Omnibus --> succinct
+            elif c in OMNIBUS_MAP:
+                converted.extend(OMNIBUS_MAP[c])
+            else:
+                logger.warning(f"Command {c} not recognized - skipping")
 
-    # Load .cha if required
-    chats = None
-    if any(c in ["1a", "4a"] for c in converted):
-        chats = run_read_cha_files(input_dir)
+        if not converted:
+            logger.error("No valid commands recognized — exiting.")
+            return
 
-    # Prepare utterance files if needed
-    if "4a" not in converted and any(c in ["4b", "7b", "10b"] for c in converted):
-        transcript_tables = find_transcript_tables(input_dir, out_dir)
-        if not transcript_tables:
-            logging.info("No input transcript tables detected — creating them automatically.")
-            chats = chats or run_read_cha_files(input_dir)
-            run_make_transcript_tables(tiers, chats, out_dir)
+        logger.info(f"Executing command(s): {', '.join(converted)}")
 
-    # ---------------------------------------------------------
-    # Dispatch dictionary
-    # ---------------------------------------------------------
-    dispatch = {
-        "1a": lambda: run_select_transcription_reliability_samples(tiers, chats, frac, out_dir),
-        "3a": lambda: run_analyze_transcription_reliability(
-            tiers, input_dir, out_dir, exclude_participants, strip_clan, prefer_correction, lowercase
-        ),
-        "3b": lambda: run_reselect_transcription_reliability_samples(input_dir, out_dir, frac),
-        "4a": lambda: run_make_transcript_tables(tiers, chats, out_dir),
-        "4b": lambda: run_make_cu_coding_files(
-            tiers, frac, coders, input_dir, out_dir, cu_paradigms, exclude_participants
-        ),
-        "6a": lambda: run_analyze_cu_reliability(tiers, input_dir, out_dir, cu_paradigms),
-        "6b": lambda: run_reselect_cu_reliability(tiers, input_dir, out_dir, "CU", frac),
-        "7a": lambda: run_analyze_cu_coding(tiers, input_dir, out_dir, cu_paradigms),
-        "7b": lambda: run_make_word_count_files(tiers, frac, coders, input_dir, out_dir),
-        "9a": lambda: run_analyze_word_count_reliability(tiers, input_dir, out_dir),
-        "9b": lambda: run_reselect_wc_reliability(tiers, input_dir, out_dir, "WC", frac),
-        "10a": lambda: run_summarize_cus(tiers, input_dir, out_dir),
-        "10b": lambda: run_run_corelex(tiers, input_dir, out_dir, exclude_participants),
-    }
+        # Load .cha if required
+        chats = None
+        if any(c in ["1a", "4a"] for c in converted):
+            chats = run_read_cha_files(input_dir)
 
-    # ---------------------------------------------------------
-    # Execute all requested commands
-    # ---------------------------------------------------------
-    executed = []
-    for cmd in converted:
-        func = dispatch.get(cmd)
-        if func:
-            func()
-            executed.append(cmd)
-        else:
-            logging.error(f"Unknown command: {cmd}")
+        # Prepare utterance files if needed
+        if "4a" not in converted and any(c in ["4b", "7b", "10b"] for c in converted):
+            transcript_tables = find_transcript_tables(input_dir, out_dir)
+            if not transcript_tables:
+                logger.info("No input transcript tables detected — creating them automatically.")
+                chats = chats or run_read_cha_files(input_dir)
+                run_make_transcript_tables(tiers, chats, out_dir)
 
-    if executed:
-        logging.info(f"Completed: {', '.join(executed)}")
+        # ---------------------------------------------------------
+        # Dispatch dictionary
+        # ---------------------------------------------------------
+        dispatch = {
+            "1a": lambda: run_select_transcription_reliability_samples(tiers, chats, frac, out_dir),
+            "3a": lambda: run_analyze_transcription_reliability(
+                tiers, input_dir, out_dir, exclude_participants, strip_clan, prefer_correction, lowercase
+            ),
+            "3b": lambda: run_reselect_transcription_reliability_samples(input_dir, out_dir, frac),
+            "4a": lambda: run_make_transcript_tables(tiers, chats, out_dir),
+            "4b": lambda: run_make_cu_coding_files(
+                tiers, frac, coders, input_dir, out_dir, cu_paradigms, exclude_participants
+            ),
+            "6a": lambda: run_analyze_cu_reliability(tiers, input_dir, out_dir, cu_paradigms),
+            "6b": lambda: run_reselect_cu_reliability(tiers, input_dir, out_dir, "CU", frac),
+            "7a": lambda: run_analyze_cu_coding(tiers, input_dir, out_dir, cu_paradigms),
+            "7b": lambda: run_make_word_count_files(tiers, frac, coders, input_dir, out_dir),
+            "9a": lambda: run_analyze_word_count_reliability(tiers, input_dir, out_dir),
+            "9b": lambda: run_reselect_wc_reliability(tiers, input_dir, out_dir, "WC", frac),
+            "10a": lambda: run_summarize_cus(tiers, input_dir, out_dir),
+            "10b": lambda: run_run_corelex(tiers, input_dir, out_dir, exclude_participants),
+        }
+
+        # ---------------------------------------------------------
+        # Execute all requested commands
+        # ---------------------------------------------------------
+        executed = []
+        for cmd in converted:
+            func = dispatch.get(cmd)
+            if func:
+                func()
+                executed.append(cmd)
+            else:
+                logger.error(f"Unknown command: {cmd}")
+
+        if executed:
+            logger.info(f"Completed: {', '.join(executed)}")
+    finally:
+        terminate_logger(input_dir=input_dir, output_dir=out_dir,
+                         config_path=as_path(args.config), start_time=start_time)
 
 # -------------------------------------------------------------
 # Direct execution
