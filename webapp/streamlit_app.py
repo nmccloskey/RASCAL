@@ -45,11 +45,11 @@ from rascal.run_wrappers import (
     run_select_transcription_reliability_samples,
     run_reselect_transcription_reliability_samples,
     run_analyze_transcription_reliability,
-    run_prepare_utterance_dfs, run_make_CU_coding_files,
-    run_analyze_CU_reliability,
-    run_analyze_CU_coding, run_reselect_CU_reliability,
+    run_make_transcript_tables, run_make_cu_coding_files,
+    run_analyze_cu_reliability,
+    run_analyze_cu_coding, run_reselect_cu_reliability,
     run_make_word_count_files, run_analyze_word_count_reliability,
-    run_reselect_WC_reliability, run_unblind_CUs, run_run_corelex
+    run_reselect_wc_reliability, run_summarize_cus, run_run_corelex
 )
 
 
@@ -184,26 +184,26 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
                 elif func.startswith("3b."):
                     run_reselect_transcription_reliability_samples(input_dir, out_dir, frac)
                 elif func.startswith("4a."):
-                    run_prepare_utterance_dfs(tiers, chats, out_dir)
+                    run_make_transcript_tables(tiers, chats, out_dir)
                 elif func.startswith("4b."):
-                    run_make_CU_coding_files(
+                    run_make_cu_coding_files(
                         tiers, frac, coders, input_dir, out_dir,
                         CU_paradigms, exclude_participants
                     )
                 elif func.startswith("6a."):
-                    run_analyze_CU_reliability(tiers, input_dir, out_dir, CU_paradigms)
+                    run_analyze_cu_reliability(tiers, input_dir, out_dir, CU_paradigms)
                 elif func.startswith("6b."):
-                    run_reselect_CU_reliability(tiers, input_dir, out_dir, "CU", frac)
+                    run_reselect_cu_reliability(tiers, input_dir, out_dir, "CU", frac)
                 elif func.startswith("7a."):
-                    run_analyze_CU_coding(tiers, input_dir, out_dir, CU_paradigms)
+                    run_analyze_cu_coding(tiers, input_dir, out_dir, CU_paradigms)
                 elif func.startswith("7b."):
                     run_make_word_count_files(tiers, frac, coders, input_dir, out_dir)
                 elif func.startswith("9a."):
                     run_analyze_word_count_reliability(tiers, input_dir, out_dir)
                 elif func.startswith("9b."):
-                    run_reselect_WC_reliability(tiers, input_dir, out_dir, "WC", frac)
+                    run_reselect_wc_reliability(tiers, input_dir, out_dir, "WC", frac)
                 elif func.startswith("10a."):
-                    run_unblind_CUs(tiers, input_dir, out_dir)
+                    run_summarize_cus(tiers, input_dir, out_dir)
                 elif func.startswith("10b."):
                     run_run_corelex(tiers, input_dir, out_dir, exclude_participants)
 

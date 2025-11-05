@@ -6,7 +6,7 @@ import pytest
 
 # Import target
 try:
-    from rascal.coding import make_coding_files as mcf
+    from rascal.coding import coding_files as mcf
 except Exception as e:
     pytest.skip(f"Could not import rascal.utterances.make_coding_files: {e}", allow_module_level=True)
 

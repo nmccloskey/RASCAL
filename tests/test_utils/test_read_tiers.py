@@ -2,7 +2,7 @@ import pytest
 import re
 import logging
 from rascal.utils.tier import Tier
-from rascal.utils.read_tiers import read_tiers  # adjust import to actual module path
+from rascal.utils.tier_parsing import read_tiers
 
 
 def test_multiple_values_literal(monkeypatch):

@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 from pathlib import Path
 
-from rascal.transcripts.transcription_reliability_selector import (
+from rascal.transcripts.transcription_reliability_selection import (
     reselect_transcription_reliability_samples,
 )
 

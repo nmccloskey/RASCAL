@@ -9,7 +9,7 @@ from datetime import datetime
 from scipy.stats import percentileofscore
 
 from rascal.utils.logger import logger
-from rascal.coding.make_coding_files import stim_cols
+from rascal.coding.coding_files import stim_cols
 from rascal.utils.auxiliary import find_transcript_tables, extract_transcript_data
 
 

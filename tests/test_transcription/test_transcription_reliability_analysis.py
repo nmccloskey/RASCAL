@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 try:
-    import rascal.transcripts.transcription_reliability_analysis as tra
+    import rascal.transcripts.transcription_reliability_evaluation as tra
 except Exception as e:
     pytest.skip(f"Could not import transcription_reliability_analysis: {e}", allow_module_level=True)
 
@@ -86,7 +86,7 @@ def test_analyze_transcription_reliability_basic(tmp_path, monkeypatch):
     monkeypatch.setattr(pd.DataFrame, "to_excel", fake_to_excel, raising=True)
 
     # --- Act --------------------------------------------------------------------
-    results = tra.analyze_transcription_reliability(
+    results = tra.evaluate_transcription_reliability(
         tiers=tiers,
         input_dir=str(input_dir),
         output_dir=str(output_dir),

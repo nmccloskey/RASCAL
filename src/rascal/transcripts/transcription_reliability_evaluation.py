@@ -543,7 +543,7 @@ def _save_reliability_outputs(
 
     return results
 
-def analyze_transcription_reliability(
+def evaluate_transcription_reliability(
     tiers,
     input_dir,
     output_dir,

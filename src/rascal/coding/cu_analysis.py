@@ -168,7 +168,7 @@ def write_reliability_report(cu_rel_sum, report_path, partition_labels=None):
     except Exception as e:
         logger.error(f"Failed to write reliability report to {report_path}: {e}")
 
-def analyze_cu_reliability(tiers, input_dir, output_dir, cu_paradigms):
+def evaluate_cu_reliability(tiers, input_dir, output_dir, cu_paradigms):
     """
     Analyze Complete Utterance (CU) reliability by pairing coder-2 coding with coder-3
     reliability coding, computing utterance-level agreement, and summarizing by sample.

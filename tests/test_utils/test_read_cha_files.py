@@ -2,7 +2,7 @@ from pathlib import Path
 import types
 import pytest
 
-from rascal.utils.read_cha_files import read_cha_files
+from rascal.utils.cha_files import read_cha_files
 
 
 class StubReader:
@@ -23,7 +23,7 @@ def test_read_cha_files_monkeypatched(monkeypatch, tmp_path):
     (tmp_path / "b" / "three.cha").write_text("*PAR:\thi\n")
 
     # Monkeypatch pylangacq.read_chat to return a stub without reading/parsing
-    import rascal.utils.read_cha_files as module_under_test
+    import rascal.utils.cha_files as module_under_test
     calls = []
     def fake_read_chat(path_str):
         calls.append(Path(path_str).name)
@@ -43,7 +43,7 @@ def test_read_cha_files_shuffle(monkeypatch, tmp_path):
     (tmp_path / "x.cha").write_text("*PAR:\tx\n")
     (tmp_path / "y.cha").write_text("*PAR:\ty\n")
 
-    import rascal.utils.read_cha_files as module_under_test
+    import rascal.utils.cha_files as module_under_test
     monkeypatch.setattr(
         module_under_test,
         "pylangacq",
