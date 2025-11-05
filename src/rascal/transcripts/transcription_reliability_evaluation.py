@@ -6,7 +6,7 @@ from tqdm import tqdm
 from pathlib import Path
 from Bio.Align import PairwiseAligner
 from typing import Union, List
-from rascal.utils.logger import logger
+from rascal.utils.logger import logger, _rel
 
 
 def percent_difference(a, b):
@@ -260,10 +260,10 @@ def write_reliability_report(transc_rel_subdf, report_path, partition_labels=Non
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(report_text)
 
-        logger.info("Successfully wrote transcription reliability report to %s", report_path)
+        logger.info("Successfully wrote transcription reliability report to %s", _rel(report_path))
 
     except Exception as e:
-        logger.error("Failed to write transcription reliability report to %s: %s", report_path, e)
+        logger.error("Failed to write transcription reliability report to %s: %s", _rel(report_path), e)
         raise
 
 # ---------- helpers: computation ----------
@@ -354,7 +354,7 @@ def _convert_cha_names(input_dir: str | Path) -> dict[str, list[Path]]:
     - Intended so the main function can exclude originals and include only the
       renamed copies when collecting .cha files.
     """
-    input_dir = Path(input_dir).expanduser().resolve()
+    # input_dir = Path(input_dir).expanduser().resolve()
     rel_dir = input_dir / "reliability"
 
     if not rel_dir.exists():
@@ -367,11 +367,14 @@ def _convert_cha_names(input_dir: str | Path) -> dict[str, list[Path]]:
     renamed, originals = [], []
     for cha in rel_dir.rglob("*.cha"):
         try:
+            if cha.name.endswith("reliability.cha"):
+                continue
+
             new_name = f"{cha.stem}_reliability.cha"
             new_path = renamed_dir / new_name
 
             if new_path.exists():
-                logger.warning("Renamed file already exists, skipping: %s", new_path)
+                logger.warning("Renamed file already exists, skipping: %s", _rel(new_path))
                 continue
 
             new_path.write_bytes(cha.read_bytes())
@@ -380,12 +383,12 @@ def _convert_cha_names(input_dir: str | Path) -> dict[str, list[Path]]:
             logger.info("Created renamed reliability copy: %s → %s", cha.name, new_name)
 
         except Exception as e:
-            logger.error("Failed to process reliability file %s: %s", cha, e)
+            logger.error("Failed to process reliability file %s: %s", _rel(cha), e)
 
     logger.info(
         "Reliability rename complete. %d file(s) copied to '%s'.",
         len(renamed),
-        renamed_dir,
+        _rel(renamed_dir),
     )
     return {"renamed": renamed, "originals": originals}
 
@@ -405,7 +408,7 @@ def _save_alignment(tiers, rel_cha, rel_labels, transc_rel_dir, nw):
         )
         alignment_path.write_text(alignment_str, encoding="utf-8")
     except Exception as e:
-        logger.error(f"Failed to write alignment file {alignment_path}: {e}")
+        logger.error(f"Failed to write alignment file {_rel(alignment_path)}: {e}")
 
 def _analyze_reliability_pairs(
     rel_chats: list[Path],
@@ -481,7 +484,7 @@ def _analyze_reliability_pairs(
             records.append(record)
 
         except Exception as e:
-            logger.error(f"Failed to analyze {rel_cha}: {e}")
+            logger.error(f"Failed to analyze {_rel(rel_cha)}: {e}")
 
     return records
 
@@ -512,14 +515,14 @@ def _save_reliability_outputs(
             try:
                 _ensure_parent_dir(df_path)
                 subdf.to_excel(df_path, index=False)
-                logger.info(f"Saved reliability analysis DataFrame to: {df_path}")
+                logger.info(f"Saved reliability analysis DataFrame to: {_rel(df_path)}")
             except Exception as e:
-                logger.error(f"Failed to write DataFrame to {df_path}: {e}")
+                logger.error(f"Failed to write DataFrame to {_rel(df_path)}: {e}")
 
             try:
                 write_reliability_report(subdf, report_path, tup_vals)
             except Exception as e:
-                logger.error(f"Failed to write reliability report to {report_path}: {e}")
+                logger.error(f"Failed to write reliability report to {_rel(report_path)}: {e}")
 
             if test:
                 results.append(subdf.copy())
@@ -529,14 +532,14 @@ def _save_reliability_outputs(
 
         try:
             transc_rel_df.to_excel(df_path, index=False)
-            logger.info(f"Saved reliability analysis DataFrame to: {df_path}")
+            logger.info(f"Saved reliability analysis DataFrame to: {_rel(df_path)}")
         except Exception as e:
-            logger.error(f"Failed to write DataFrame to {df_path}: {e}")
+            logger.error(f"Failed to write DataFrame to {_rel(df_path)}: {e}")
 
         try:
             write_reliability_report(transc_rel_df, report_path)
         except Exception as e:
-            logger.error(f"Failed to write reliability report to {report_path}: {e}")
+            logger.error(f"Failed to write reliability report to {_rel(report_path)}: {e}")
 
         if test:
             results.append(transc_rel_df.copy())
@@ -560,7 +563,7 @@ def evaluate_transcription_reliability(
 
     transc_rel_dir = output_dir / "transcription_reliability_evaluation"
     transc_rel_dir.mkdir(parents=True, exist_ok=True)
-    logger.info(f"Created directory: {transc_rel_dir}")
+    logger.info(f"Created directory: {_rel(transc_rel_dir)}")
 
     partition_tiers = [t.name for t in tiers.values() if getattr(t, "partition", False)]
 
