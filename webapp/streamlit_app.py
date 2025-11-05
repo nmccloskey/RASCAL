@@ -33,7 +33,7 @@ def zip_folder(folder_path: Path) -> BytesIO:
 # ------------------------------------------------------------------
 # RASCAL imports
 # ------------------------------------------------------------------
-from rascal.utils.auxiliary import as_path, find_utt_files
+from rascal.utils.auxiliary import find_transcript_tables
 from rascal.utils.logger import (
     logger,
     initialize_logger,
@@ -164,13 +164,13 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
                 chats = run_read_cha_files(input_dir)
 
             # --- Prepare utterance files if needed ---
-            needs_utt = any(f.startswith(x) for x in ("4b", "4c", "7b", "10b") for f in selected_funcs)
+            needs_utt = any(f.startswith(x) for x in ("4b", "7b", "10b") for f in selected_funcs)
             if needs_utt and not any(f.startswith("4a") for f in selected_funcs):
-                utt_files = find_utt_files(input_dir, out_dir)
-                if not utt_files:
-                    st.info("No utterance files detected — creating automatically.")
+                transcript_tables = find_transcript_tables(input_dir, out_dir)
+                if not transcript_tables:
+                    logger.info("No utterance files detected — creating automatically.")
                     chats = chats or run_read_cha_files(input_dir)
-                    run_prepare_utterance_dfs(tiers, chats, out_dir)
+                    run_make_transcript_tables(tiers, chats, out_dir)
 
             # --- Execute selected functions ---
             for func in selected_funcs:
