@@ -54,7 +54,7 @@ def initialize_logger(start_time: datetime, out_dir: Path) -> Path:
     logger.addHandler(file_handler)
 
     logger.info(f"=== RASCAL run initialized at {start_time.isoformat()} ===")
-    logger.info(f"Log file created at: {log_path}")
+    logger.info(f"Log file created at: {log_path.relative_to(log_path.parent)}")
     return log_path
 
 

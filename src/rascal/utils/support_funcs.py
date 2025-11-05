@@ -27,6 +27,32 @@ def as_path(p: str | Path) -> Path:
         raise
 
 
+def find_config_file(base_dir: Path, user_arg: str | None = None) -> Path | None:
+    """
+    Find a YAML configuration file.
+    Priority:
+      1. User-specified path via --config
+      2. config.yaml in current directory
+      3. Any *.yaml file under input/config/
+    """
+    if user_arg:
+        cfg = Path(user_arg)
+        if cfg.exists():
+            return cfg.resolve()
+        else:
+            raise FileNotFoundError(f"Specified config not found: {cfg}")
+
+    # Default: search in current working directory
+    cwd_cfg = Path("config.yaml")
+    if cwd_cfg.exists():
+        return cwd_cfg.resolve()
+
+    # Fallback: search recursively under input/config/
+    for p in Path("input/config").rglob("*.yaml"):
+        return p.resolve()  # first match
+
+    raise FileNotFoundError("No configuration file found. Use --config to specify one.")
+
 def load_config(config_file: str | Path) -> dict:
     """
     Load configuration settings from a YAML file.
@@ -41,7 +67,7 @@ def load_config(config_file: str | Path) -> dict:
     dict
         Configuration dictionary loaded from YAML.
     """
-    config_file = as_path(config_file)
+    config_file = find_config_file(Path.cwd(), config_file)
     try:
         with open(config_file, "r", encoding="utf-8") as file:
             config = yaml.safe_load(file)

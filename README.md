@@ -265,7 +265,7 @@ Below is the current RASCAL pipeline, represented as a flow chart:
 
 ![RASCAL Flowchart](images/RASCAL_workflowchart.drawio.svg)
 
-Stages 2, 5, & 8 are entirely manual. Dashed arrows show the alternate inputs to function **10b**: function **4a** output is required, and **4c** output is optional.
+Stages 2, 5, & 8 are entirely manual. Dashed arrows show the alternate inputs to function **10b**: function **4a** output is required, and recording speaking time in the `samples` sheet is optional but recommended.
 
 
 ## Notes on Input Transcriptions
