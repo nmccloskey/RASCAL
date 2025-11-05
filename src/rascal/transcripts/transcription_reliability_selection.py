@@ -16,7 +16,7 @@ def select_transcription_reliability_samples(tiers, chats, frac, output_dir):
       1. Group CHAT files by partition tiers (or single group if none).
       2. Randomly select a fraction (≥1) per group.
       3. Save blank headers and Excel summaries to
-         `output_dir/transcription_reliability/<partition>/`.
+         `output_dir/transcription_reliability_selection/<partition>/`.
 
     Parameters
     ----------
@@ -45,7 +45,7 @@ def select_transcription_reliability_samples(tiers, chats, frac, output_dir):
             key = tuple()
         partitions.setdefault(key, []).append(cha_file)
 
-    transc_rel_dir = Path(output_dir) / "transcription_reliability"
+    transc_rel_dir = Path(output_dir) / "transcription_reliability_selection"
     transc_rel_dir.mkdir(parents=True, exist_ok=True)
     columns = ["file"] + list(tiers.keys())
 
@@ -82,7 +82,8 @@ def select_transcription_reliability_samples(tiers, chats, frac, output_dir):
         try:
             df_all = pd.DataFrame(rows_all, columns=columns)
             df_subset = pd.DataFrame(rows_subset, columns=columns)
-            suffix = "_".join(partition_tiers) if partition_tiers else "transcription_reliability_samples"
+            suffix_str = "_".join(partition_tiers) + "_" if partition_tiers else ""
+            suffix = f"{suffix_str}transcription_reliability_samples"
             df_filepath = partition_path / f"{suffix}.xlsx"
             with pd.ExcelWriter(df_filepath) as writer:
                 df_subset.to_excel(writer, sheet_name="reliability_selection", index=False)
