@@ -8,8 +8,7 @@ from tqdm import tqdm
 import num2words as n2w
 from pathlib import Path
 from functools import lru_cache
-
-from rascal.utils.logger import logger
+from rascal.utils.logger import logger, _rel
 from rascal.utils.auxiliary import find_transcript_tables, extract_transcript_data
 
 stim_cols = ["narrative", "scene", "story", "stimulus"]
@@ -196,7 +195,7 @@ def make_cu_coding_files(
             reldf.to_excel(label_path / f"{lab_str}cu_reliability_coding.xlsx", index=False)
 
         except Exception as e:
-            logger.error(f"Failed processing {file}: {e}")
+            logger.error(f"Failed processing {_rel(file)}: {e}")
 
 
 def count_words(text, d):
@@ -291,9 +290,9 @@ def _write_wc_outputs(wc_df, wc_rel_df, word_count_dir, labels):
         fpath = out_dir / fname
         try:
             df.to_excel(fpath, index=False)
-            logger.info(f"Wrote {fpath}")
+            logger.info(f"Wrote {_rel(fpath)}")
         except Exception as e:
-            logger.error(f"Failed to write {fpath}: {e}")
+            logger.error(f"Failed to write {_rel(fpath)}: {e}")
 
 def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
     """
@@ -331,7 +330,7 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
             wc_df, wc_rel_df = _assign_wc_coders(wc_df, coders, frac)
             _write_wc_outputs(wc_df, wc_rel_df, word_count_dir, labels)
         except Exception as e:
-            logger.error(f"Failed processing {file}: {e}")
+            logger.error(f"Failed processing {_rel(file)}: {e}")
 
 
 # --- helpers ---
@@ -387,7 +386,7 @@ def _load_original_and_reliability(org_file, rel_mates, rel_type):
     try:
         df_org = pd.read_excel(org_file)
     except Exception as e:
-        logger.error(f"Failed reading {org_file}: {e}")
+        logger.error(f"Failed reading {_rel(org_file)}: {e}")
         return None, None
 
     rel_dfs = []
@@ -395,7 +394,7 @@ def _load_original_and_reliability(org_file, rel_mates, rel_type):
         try:
             rel_dfs.append(pd.read_excel(rf))
         except Exception as e:
-            logger.warning(f"Failed reading {rf}: {e}")
+            logger.warning(f"Failed reading {_rel(rf)}: {e}")
     if "sample_id" not in df_org:
         logger.warning(f"[{rel_type}] Missing sample_id in {org_file.name}")
         return None, None
@@ -449,9 +448,9 @@ def _write_reselected_reliability(df, org_file, out_dir, rel_type):
     out_path = out_dir / f"{base}_reselected_{suffix}.xlsx"
     try:
         df.to_excel(out_path, index=False)
-        logger.info(f"[{rel_type}] Saved {out_path}")
+        logger.info(f"[{rel_type}] Saved {_rel(out_path)}")
     except Exception as e:
-        logger.error(f"[{rel_type}] Failed writing {out_path}: {e}")
+        logger.error(f"[{rel_type}] Failed writing {_rel(out_path)}: {e}")
 
 def reselect_cu_wc_reliability(
     tiers, input_dir, output_dir, rel_type="CU", frac=0.2, rng_seed=88
