@@ -453,7 +453,7 @@ def _write_reselected_reliability(df, org_file, out_dir, rel_type):
         logger.error(f"[{rel_type}] Failed writing {_rel(out_path)}: {e}")
 
 def reselect_cu_wc_reliability(
-    tiers, input_dir, output_dir, rel_type="CU", frac=0.2, rng_seed=88
+    tiers, input_dir, output_dir, rel_type="CU", frac=0.2, rng_seed=42
 ):
     """
     Reselect reliability samples for CU or WC coding tables, excluding
@@ -471,7 +471,7 @@ def reselect_cu_wc_reliability(
     input_dir, output_dir : Path or str
     rel_type : {"CU","WC"}, default "CU"
     frac : float, default 0.2
-    rng_seed : int, default 88
+    rng_seed : int, default 42
     """
     rel_type = rel_type.upper().strip()
     if rel_type not in {"CU", "WC"}:

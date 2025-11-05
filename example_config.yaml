@@ -1,6 +1,7 @@
 input_dir: rascal_data/input
 output_dir: rascal_data/output
 reliability_fraction: 0.2
+random_seed: 42
 coders:
 - '1'
 - '2'
