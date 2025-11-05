@@ -8,7 +8,6 @@ from rascal.utils.logger import (
     terminate_logger,
 )
 from rascal.utils.auxiliary import (
-    as_path,
     project_path,
     load_config,
     find_transcript_tables,

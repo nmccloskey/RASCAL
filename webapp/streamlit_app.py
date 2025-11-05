@@ -7,35 +7,17 @@ from pathlib import Path
 from datetime import datetime
 from config_builder import build_config_ui
 
+start_time = datetime.now()
 
+# ------------------------------------------------------------------
+# Path setup and zip utility
+# ------------------------------------------------------------------
 def add_src_to_sys_path():
     import sys
     src_path = Path(__file__).resolve().parent.parent / "src"
     sys.path.insert(0, str(src_path))
-
 add_src_to_sys_path()
 
-from rascal.utils.auxiliary import as_path, find_utt_files
-from rascal.run_wrappers import (
-    run_read_tiers, run_read_cha_files,
-    run_select_transcription_reliability_samples,
-    run_reselect_transcription_reliability_samples,
-    run_analyze_transcription_reliability,
-    run_prepare_utterance_dfs, run_make_CU_coding_files,
-    run_analyze_CU_reliability,
-    run_analyze_CU_coding, run_reselect_CU_reliability,
-    run_make_word_count_files, run_analyze_word_count_reliability,
-    run_reselect_WC_reliability, run_unblind_CUs, run_run_corelex
-)
-
-st.title("RASCAL Web App")
-st.caption("Resources for Analyzing Speech in Clinical Aphasiology Labs")
-
-if "confirmed_config" not in st.session_state:
-    st.session_state.confirmed_config = False
-
-
-# --- Utility: Zip entire output folder ---
 def zip_folder(folder_path: Path) -> BytesIO:
     """Compress the given folder into an in-memory ZIP buffer."""
     zip_buffer = BytesIO()
@@ -48,11 +30,51 @@ def zip_folder(folder_path: Path) -> BytesIO:
     return zip_buffer
 
 
+# ------------------------------------------------------------------
+# RASCAL imports
+# ------------------------------------------------------------------
+from rascal.utils.auxiliary import as_path, find_utt_files
+from rascal.utils.logger import (
+    logger,
+    initialize_logger,
+    terminate_logger,
+    early_log,
+)
+from rascal.run_wrappers import (
+    run_read_tiers, run_read_cha_files,
+    run_select_transcription_reliability_samples,
+    run_reselect_transcription_reliability_samples,
+    run_analyze_transcription_reliability,
+    run_prepare_utterance_dfs, run_make_CU_coding_files,
+    run_analyze_CU_reliability,
+    run_analyze_CU_coding, run_reselect_CU_reliability,
+    run_make_word_count_files, run_analyze_word_count_reliability,
+    run_reselect_WC_reliability, run_unblind_CUs, run_run_corelex
+)
+
+
+# ------------------------------------------------------------------
+# Streamlit header
+# ------------------------------------------------------------------
+st.title("RASCAL Web App")
+st.caption("Resources for Analyzing Speech in Clinical Aphasiology Labs")
+
+# ------------------------------------------------------------------
+# Instruction manual toggle
+# ------------------------------------------------------------------
+manual_path = Path(__file__).resolve().parent.parent / "rascal_manual.md"
+if manual_path.exists():
+    with st.expander("📘 Show / Hide Instruction Manual"):
+        st.markdown(manual_path.read_text(encoding="utf-8"))
+
+
 # ---------------------------------------------------------------
 # PART 1: CONFIG
 # ---------------------------------------------------------------
-st.header("Part 1: Create or upload config file")
+if "confirmed_config" not in st.session_state:
+    st.session_state.confirmed_config = False
 
+st.header("Part 1: Create or upload config file")
 config_file = st.file_uploader("Upload your config.yaml", type=["yaml", "yml"])
 config = None
 
@@ -72,14 +94,15 @@ else:
 # PART 2: INPUT FILES
 # ---------------------------------------------------------------
 st.header("Part 2: Upload input files")
-
 cha_files = st.file_uploader("Upload input files", type=["cha", "xlsx"], accept_multiple_files=True)
 
 if (config_file or st.session_state.confirmed_config) and cha_files:
     with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_path = as_path(tmpdir)
-        input_dir = tmp_path / "input"
-        output_dir = tmp_path / "output"
+        root_dir = Path(tmpdir).resolve()
+        early_log("info", f"RASCAL web run initialized (temporary root: {root_dir})")
+
+        input_dir = (root_dir / "input").resolve()
+        output_dir = (root_dir / "output").resolve()
         input_dir.mkdir(exist_ok=True)
         output_dir.mkdir(exist_ok=True)
 
@@ -89,7 +112,15 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
             with file_path.open("wb") as f:
                 f.write(file.read())
 
-        # Read config values
+        # Create timestamped output folder and logger
+        timestamp = start_time.strftime("%y%m%d_%H%M")
+        out_dir = (output_dir / f"rascal_output_{timestamp}").resolve()
+        out_dir.mkdir(parents=True, exist_ok=True)
+        initialize_logger(start_time, out_dir)
+
+        # ------------------------------------------------------------------
+        # Load config parameters
+        # ------------------------------------------------------------------
         tiers = run_read_tiers(config.get("tiers", {})) or {}
         frac = config.get("reliability_fraction", 0.2)
         coders = config.get("coders", []) or []
@@ -102,15 +133,14 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
         # ---------------------------------------------------------------
         # PART 3: FUNCTION SELECTION
         # ---------------------------------------------------------------
-        st.header("Part 3: Select functions to run")
-
+        st.header("Part 3: Select function(s) to run")
         all_functions = [
             "1a. Select transcription reliability samples",
             "3a. Evaluate transcription reliability",
             "3b. Reselect transcription reliability samples",
             "4a. Make transcript tables",
             "4b. Make CU coding & reliability files",
-            "6a. Analyze CU reliability",
+            "6a. Evaluate CU reliability",
             "6b. Reselect CU reliability samples",
             "7a. Analyze CU coding",
             "7b. Make word count files",
@@ -126,67 +156,67 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
             if not selected_funcs:
                 st.warning("Please select at least one function.")
                 st.stop()
+            logger.info(f"Running selected functions: {selected_funcs}")
 
             # --- Read .cha if needed ---
+            chats = None
             if any(f.startswith(("1a", "4a")) for f in selected_funcs):
                 chats = run_read_cha_files(input_dir)
-            else:
-                chats = None
 
             # --- Prepare utterance files if needed ---
             needs_utt = any(f.startswith(x) for x in ("4b", "4c", "7b", "10b") for f in selected_funcs)
             if needs_utt and not any(f.startswith("4a") for f in selected_funcs):
-                utt_files = find_utt_files(input_dir, output_dir)
+                utt_files = find_utt_files(input_dir, out_dir)
                 if not utt_files:
                     st.info("No utterance files detected — creating automatically.")
                     chats = chats or run_read_cha_files(input_dir)
-                    run_prepare_utterance_dfs(tiers, chats, output_dir)
+                    run_prepare_utterance_dfs(tiers, chats, out_dir)
 
             # --- Execute selected functions ---
             for func in selected_funcs:
                 if func.startswith("1a."):
-                    run_select_transcription_reliability_samples(tiers, chats, frac, output_dir)
+                    run_select_transcription_reliability_samples(tiers, chats, frac, out_dir)
                 elif func.startswith("3a."):
                     run_analyze_transcription_reliability(
-                        tiers, input_dir, output_dir,
+                        tiers, input_dir, out_dir,
                         exclude_participants, strip_clan, prefer_correction, lowercase
                     )
                 elif func.startswith("3b."):
-                    run_reselect_transcription_reliability_samples(input_dir, output_dir, frac)
+                    run_reselect_transcription_reliability_samples(input_dir, out_dir, frac)
                 elif func.startswith("4a."):
-                    run_prepare_utterance_dfs(tiers, chats, output_dir)
+                    run_prepare_utterance_dfs(tiers, chats, out_dir)
                 elif func.startswith("4b."):
                     run_make_CU_coding_files(
-                        tiers, frac, coders, input_dir, output_dir,
+                        tiers, frac, coders, input_dir, out_dir,
                         CU_paradigms, exclude_participants
                     )
                 elif func.startswith("6a."):
-                    run_analyze_CU_reliability(tiers, input_dir, output_dir, CU_paradigms)
+                    run_analyze_CU_reliability(tiers, input_dir, out_dir, CU_paradigms)
                 elif func.startswith("6b."):
-                    run_reselect_CU_reliability(tiers, input_dir, output_dir, "CU", frac)
+                    run_reselect_CU_reliability(tiers, input_dir, out_dir, "CU", frac)
                 elif func.startswith("7a."):
-                    run_analyze_CU_coding(tiers, input_dir, output_dir, CU_paradigms)
+                    run_analyze_CU_coding(tiers, input_dir, out_dir, CU_paradigms)
                 elif func.startswith("7b."):
-                    run_make_word_count_files(tiers, frac, coders, input_dir, output_dir)
+                    run_make_word_count_files(tiers, frac, coders, input_dir, out_dir)
                 elif func.startswith("9a."):
-                    run_analyze_word_count_reliability(tiers, input_dir, output_dir)
+                    run_analyze_word_count_reliability(tiers, input_dir, out_dir)
                 elif func.startswith("9b."):
-                    run_reselect_WC_reliability(tiers, input_dir, output_dir, "WC", frac)
+                    run_reselect_WC_reliability(tiers, input_dir, out_dir, "WC", frac)
                 elif func.startswith("10a."):
-                    run_unblind_CUs(tiers, input_dir, output_dir)
+                    run_unblind_CUs(tiers, input_dir, out_dir)
                 elif func.startswith("10b."):
-                    run_run_corelex(tiers, input_dir, output_dir, exclude_participants)
+                    run_run_corelex(tiers, input_dir, out_dir, exclude_participants)
 
             st.success("✅ All selected functions completed successfully!")
+            terminate_logger(input_dir, out_dir, Path("config.yaml"), config, start_time)
 
             # --- Create timestamped ZIP for download ---
-            timestamp = datetime.now().strftime("%y%m%d_%H%M")
-            func_str = "_".join([f.split(".")[0] for f in selected_funcs])
-            zip_buffer = zip_folder(output_dir)
+            timestamp = start_time.strftime("%y%m%d_%H%M")
+            zip_buffer = zip_folder(out_dir)
             st.download_button(
                 label="⬇️ Download Results ZIP",
                 data=zip_buffer,
-                file_name=f"rascal_{func_str}_output_{timestamp}.zip",
+                file_name=f"rascal_web_output_{timestamp}.zip",
                 mime="application/zip"
             )
 
