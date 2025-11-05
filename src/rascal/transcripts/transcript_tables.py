@@ -4,7 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
 import numpy as np
-from rascal.utils.logger import logger
+from rascal.utils.logger import logger, _rel
 
 
 def zero_pad(num: int, lower_bound: int = 3) -> int:
@@ -54,7 +54,7 @@ def partition_cha(chats: Dict[str, object], tiers: Dict[str, object]) -> Dict[st
             chunk_str = "_".join(map(str, partition_labels))
             cha_chunks.setdefault(chunk_str, []).append(chat_file)
         except Exception as e:
-            logger.error(f"Partitioning failed for {chat_file}: {e}")
+            logger.error(f"Partitioning failed for {_rel(chat_file)}: {e}")
     logger.info(f"Identified {len(cha_chunks)} partition groups.")
     return cha_chunks
 
@@ -122,7 +122,7 @@ def make_transcript_tables(
                     utt_id = f"U{j+1:0{u_pad}d}"
                     utt_rows.append([sample_id, utt_id, speaker, utterance, comment])
             except Exception as e:
-                logger.error(f"Error processing {chat_file}: {e}")
+                logger.error(f"Error processing {_rel(chat_file)}: {e}")
                 continue
 
         sample_df = pd.DataFrame(sample_rows, columns=sample_cols)
@@ -138,8 +138,8 @@ def make_transcript_tables(
                 sample_df.to_excel(writer, sheet_name="samples", index=False)
                 utt_df.to_excel(writer, sheet_name="utterances", index=False)
             written.append(str(filename))
-            logger.info(f"Wrote transcript table: {filename}")
+            logger.info(f"Wrote transcript table: {_rel(filename)}")
         except Exception as e:
-            logger.error(f"Failed to write {filename}: {e}")
+            logger.error(f"Failed to write {_rel(filename)}: {e}")
 
     logger.info(f"Successfully wrote {len(written)} transcript table(s).")
