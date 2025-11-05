@@ -2,8 +2,9 @@
 from pathlib import Path
 from datetime import datetime
 from rascal.utils.logger import (
+    get_root,
+    set_root,
     logger,
-    early_log,
     initialize_logger,
     terminate_logger,
 )
@@ -18,11 +19,11 @@ from rascal.run_wrappers import (
     run_read_tiers, run_read_cha_files,
     run_select_transcription_reliability_samples,
     run_reselect_transcription_reliability_samples,
-    run_analyze_transcription_reliability,
+    run_evaluate_transcription_reliability,
     run_make_transcript_tables, run_make_cu_coding_files,
-    run_analyze_cu_reliability,
+    run_evaluate_cu_reliability,
     run_analyze_cu_coding, run_reselect_cu_reliability,
-    run_make_word_count_files, run_analyze_word_count_reliability,
+    run_make_word_count_files, run_evaluate_word_count_reliability,
     run_reselect_wc_reliability, run_summarize_cus, run_run_corelex
 )
 
@@ -34,10 +35,7 @@ def main(args):
     """Main function to process input arguments and execute appropriate steps."""
     try:
         start_time = datetime.now()
-        root_dir = Path.cwd().resolve()
-
-        early_log("info", f"Starting RASCAL run at {start_time.isoformat()}")
-        early_log("info", f"RASCAL root directory set to: {root_dir} (all paths relative to this root)")
+        set_root(Path.cwd())
 
         # -----------------------------------------------------------------
         # Configuration and directories
@@ -46,7 +44,7 @@ def main(args):
         config = load_config(config_path)
 
         input_dir = project_path(config.get("input_dir", "rascal_data/input"))
-        if not input_dir.is_relative_to(root_dir):
+        if not input_dir.is_relative_to(get_root()):
             logger.warning(f"Input directory {input_dir} is outside the project root.")
         output_dir = project_path(config.get("output_dir", "rascal_data/output"))
 
@@ -57,7 +55,7 @@ def main(args):
         # -----------------------------------------------------------------
         # Initialize logger once output folder is ready
         # -----------------------------------------------------------------
-        initialize_logger(start_time, out_dir)
+        initialize_logger(start_time, out_dir, "RASCAL")
         logger.info("Logger initialized and early logs flushed.")
 
         frac = config.get("reliability_fraction", 0.2)
@@ -118,7 +116,7 @@ def main(args):
         # ---------------------------------------------------------
         dispatch = {
             "1a": lambda: run_select_transcription_reliability_samples(tiers, chats, frac, out_dir),
-            "3a": lambda: run_analyze_transcription_reliability(
+            "3a": lambda: run_evaluate_transcription_reliability(
                 tiers, input_dir, out_dir, exclude_participants, strip_clan, prefer_correction, lowercase
             ),
             "3b": lambda: run_reselect_transcription_reliability_samples(input_dir, out_dir, frac),
@@ -126,11 +124,11 @@ def main(args):
             "4b": lambda: run_make_cu_coding_files(
                 tiers, frac, coders, input_dir, out_dir, cu_paradigms, exclude_participants
             ),
-            "6a": lambda: run_analyze_cu_reliability(tiers, input_dir, out_dir, cu_paradigms),
+            "6a": lambda: run_evaluate_cu_reliability(tiers, input_dir, out_dir, cu_paradigms),
             "6b": lambda: run_reselect_cu_reliability(tiers, input_dir, out_dir, "CU", frac),
             "7a": lambda: run_analyze_cu_coding(tiers, input_dir, out_dir, cu_paradigms),
             "7b": lambda: run_make_word_count_files(tiers, frac, coders, input_dir, out_dir),
-            "9a": lambda: run_analyze_word_count_reliability(tiers, input_dir, out_dir),
+            "9a": lambda: run_evaluate_word_count_reliability(tiers, input_dir, out_dir),
             "9b": lambda: run_reselect_wc_reliability(tiers, input_dir, out_dir, "WC", frac),
             "10a": lambda: run_summarize_cus(tiers, input_dir, out_dir),
             "10b": lambda: run_run_corelex(tiers, input_dir, out_dir, exclude_participants),

@@ -1,7 +1,7 @@
 import yaml
 from pathlib import Path
 import pandas as pd
-from rascal.utils.logger import logger
+from rascal.utils.logger import logger, get_root, early_log, _rel
 import argparse
 
 
@@ -144,20 +144,20 @@ def load_config(config_file: str | Path) -> dict:
     dict
         Configuration dictionary loaded from YAML.
     """
-    config_file = find_config_file(Path.cwd(), config_file)
+    config_file = find_config_file(get_root(), config_file)
     try:
         with open(config_file, "r", encoding="utf-8") as file:
             config = yaml.safe_load(file)
-        logger.info(f"Loaded configuration from {config_file}")
+        early_log("info", f"Loaded configuration from {_rel(config_file)}")
         return config
     except FileNotFoundError:
-        logger.error(f"Configuration file not found: {config_file}")
+        early_log("error", f"Configuration file not found: {_rel(config_file)}")
         raise
     except yaml.YAMLError as e:
-        logger.error(f"YAML parsing error in {config_file}: {e}")
+        early_log("error", f"YAML parsing error in {_rel(config_file)}: {e}")
         raise
     except Exception as e:
-        logger.error(f"Unexpected error loading {config_file}: {e}")
+        early_log("error", f"Unexpected error loading {_rel(config_file)}: {e}")
         raise
 
 

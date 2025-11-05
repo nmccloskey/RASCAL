@@ -63,7 +63,7 @@ def test_analyze_word_count_reliability(tmp_path, monkeypatch):
 
     tiers = {"site": MockTier(idx=0, partition=True)}
 
-    wcra.analyze_word_count_reliability(
+    wcra.evaluate_word_count_reliability(
         tiers=tiers,
         input_dir=str(input_dir),
         output_dir=str(output_dir),

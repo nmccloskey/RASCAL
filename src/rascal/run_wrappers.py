@@ -46,9 +46,9 @@ def run_make_word_count_files(tiers, frac, coders, input_dir, output_dir):
     from rascal.coding.coding_files import make_word_count_files
     make_word_count_files(tiers=tiers, frac=frac, coders=coders, input_dir=input_dir, output_dir=output_dir)
 
-def run_analyze_word_count_reliability(tiers, input_dir, output_dir):
-    from rascal.coding.word_count_reliability_evaluation import analyze_word_count_reliability
-    analyze_word_count_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir)
+def run_evaluate_word_count_reliability(tiers, input_dir, output_dir):
+    from rascal.coding.word_count_reliability_evaluation import evaluate_word_count_reliability
+    evaluate_word_count_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir)
 
 def run_summarize_cus(tiers, input_dir, output_dir):
     from rascal.coding.cu_summarization import summarize_cus

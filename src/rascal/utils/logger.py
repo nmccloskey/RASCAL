@@ -18,25 +18,35 @@ logger.addHandler(console_handler)
 
 # Early-log buffer and root directory
 _early_logs: list[tuple[str, str]] = []
-_root_dir: Path = Path.cwd().resolve()
+_root_dir: Path | None = None
 
 
 # ---------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------
+def set_root(path: Path):
+    """Set the global RASCAL root directory (usually project root)."""
+    global _root_dir
+    _root_dir = path.resolve()
+
+def get_root() -> Path:
+    """Return the current RASCAL root directory."""
+    if _root_dir is None:
+        return Path.cwd().resolve()
+    return _root_dir
+
 def _rel(path: Path) -> str:
-    """Safely return path relative to project root (or absolute fallback)."""
+    """Safely return path relative to RASCAL root (absolute fallback)."""
+    root = get_root()
     try:
-        return str(path.resolve().relative_to(_root_dir))
+        return str(path.resolve().relative_to(root))
     except Exception:
         return str(path.resolve())
-
 
 def early_log(level: str, message: str):
     """Queue a log message before the file logger is initialized."""
     _early_logs.append((level, message))
     print(f"[{level.upper()}] {message}")  # still visible on console
-
 
 def flush_early_logs():
     """Replay buffered early logs into the main logger."""
@@ -48,12 +58,13 @@ def flush_early_logs():
 # ---------------------------------------------------------------------
 # Initialization and termination
 # ---------------------------------------------------------------------
-def initialize_logger(start_time: datetime, out_dir: Path):
+def initialize_logger(start_time: datetime, out_dir: Path, program_name: str):
     """
     Initialize file-based logging for a RASCAL run.
     """
     global _root_dir
-    _root_dir = Path.cwd().resolve()
+    if _root_dir is None:
+        _root_dir = Path.cwd().resolve()
 
     log_dir = out_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -65,8 +76,8 @@ def initialize_logger(start_time: datetime, out_dir: Path):
     file_handler.setLevel(logging.INFO)
     logger.addHandler(file_handler)
 
-    logger.info(f"=== RASCAL run initialized at {start_time.isoformat()} ===")
-    logger.info(f"Working directory: {_root_dir}")
+    logger.info(f"=== {program_name} run initialized at {start_time.isoformat()} ===")
+    logger.info(f"{program_name} root directory set to: {get_root()} (all paths relative to this root)")
     logger.info(f"Log file created: {_rel(log_path)}")
 
     flush_early_logs()

@@ -77,7 +77,7 @@ def calculate_icc(data):
 
     return round(icc, 4)
 
-def analyze_word_count_reliability(tiers, input_dir, output_dir):
+def evaluate_word_count_reliability(tiers, input_dir, output_dir):
     """
     Analyze word count reliability by comparing coder-1 word counts with
     coder-2 reliability word counts.
