@@ -15,7 +15,7 @@ def add_src_to_sys_path():
 
 add_src_to_sys_path()
 
-from rascal.utils.support_funcs import as_path, find_utt_files
+from rascal.utils.auxiliary import as_path, find_utt_files
 from rascal.run_wrappers import (
     run_read_tiers, run_read_cha_files,
     run_select_transcription_reliability_samples,

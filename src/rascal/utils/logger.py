@@ -1,52 +1,64 @@
-from pathlib import Path
-import json
+from __future__ import annotations
 import logging
 from datetime import datetime
-
+from pathlib import Path
+import json
 
 # ---------------------------------------------------------------------
-# Global Logger Configuration
+# Globals
 # ---------------------------------------------------------------------
-
 logger = logging.getLogger("RASCALLogger")
 logger.setLevel(logging.INFO)
 
 formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-
-# Stream to console
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 console_handler.setLevel(logging.INFO)
 logger.addHandler(console_handler)
 
+# Early-log buffer and root directory
+_early_logs: list[tuple[str, str]] = []
+_root_dir: Path = Path.cwd().resolve()
+
 
 # ---------------------------------------------------------------------
-# Logger Lifecycle Functions
+# Helpers
 # ---------------------------------------------------------------------
+def _rel(path: Path) -> str:
+    """Safely return path relative to project root (or absolute fallback)."""
+    try:
+        return str(path.resolve().relative_to(_root_dir))
+    except Exception:
+        return str(path.resolve())
 
-def initialize_logger(start_time: datetime, out_dir: Path) -> Path:
+
+def early_log(level: str, message: str):
+    """Queue a log message before the file logger is initialized."""
+    _early_logs.append((level, message))
+    print(f"[{level.upper()}] {message}")  # still visible on console
+
+
+def flush_early_logs():
+    """Replay buffered early logs into the main logger."""
+    for level, msg in _early_logs:
+        getattr(logger, level.lower(), logger.info)(msg)
+    _early_logs.clear()
+
+
+# ---------------------------------------------------------------------
+# Initialization and termination
+# ---------------------------------------------------------------------
+def initialize_logger(start_time: datetime, out_dir: Path):
     """
     Initialize file-based logging for a RASCAL run.
-
-    Creates a timestamped log file within the run's output directory
-    and records the initialization event.
-
-    Parameters
-    ----------
-    start_time : datetime
-        Timestamp marking the start of the run.
-    out_dir : Path
-        Output directory for this RASCAL run.
-
-    Returns
-    -------
-    Path
-        Full path to the created log file.
     """
+    global _root_dir
+    _root_dir = Path.cwd().resolve()
+
     log_dir = out_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     timestamp = start_time.strftime("%y%m%d_%H%M")
-    log_path = log_dir / f"rascal_{timestamp}.log"
+    log_path = (log_dir / f"rascal_{timestamp}.log").resolve()
 
     file_handler = logging.FileHandler(log_path, encoding="utf-8")
     file_handler.setFormatter(formatter)
@@ -54,7 +66,10 @@ def initialize_logger(start_time: datetime, out_dir: Path) -> Path:
     logger.addHandler(file_handler)
 
     logger.info(f"=== RASCAL run initialized at {start_time.isoformat()} ===")
-    logger.info(f"Log file created at: {log_path.relative_to(log_path.parent)}")
+    logger.info(f"Working directory: {_root_dir}")
+    logger.info(f"Log file created: {_rel(log_path)}")
+
+    flush_early_logs()
     return log_path
 
 
@@ -66,50 +81,39 @@ def record_run_metadata(
     start_time: datetime,
     end_time: datetime,
 ) -> Path:
-    """
-    Record structured metadata describing the RASCAL run, including
-    recursive listings of input/output contents and full configuration.
-    All recorded paths are relative to the immediate shared parent
-    of the input and output directories.
-    """
-
-    def list_dir_structure(base: Path, rel_to: Path) -> dict:
-        """Recursively list all files and subdirectories, relative to rel_to."""
-        structure = {"base": str(base.relative_to(rel_to)), "folders": [], "files": []}
-        for p in sorted(base.rglob("*")):
-            rel = p.relative_to(rel_to)
-            if p.is_dir():
-                structure["folders"].append(str(rel))
-            else:
-                structure["files"].append(str(rel))
-        return structure
-
+    """Record structured metadata including configuration and directory snapshots."""
     runtime_seconds = round((end_time - start_time).total_seconds(), 2)
+
+    def list_dir_structure(base: Path) -> dict:
+        files, folders = [], []
+        for p in sorted(base.rglob("*")):
+            rel = _rel(p)
+            (folders if p.is_dir() else files).append(rel)
+        return {"base": _rel(base), "folders": folders, "files": files}
 
     metadata = {
         "header": f"RASCAL run {start_time.strftime('%Y-%m-%d %H:%M:%S')}",
         "timestamp": end_time.isoformat(timespec="seconds"),
         "runtime_seconds": runtime_seconds,
+        "root_directory": str(_root_dir),
         "paths": {
-            "input_dir": str(input_dir.relative_to(input_dir.parent)),
-            "output_dir": str(output_dir.relative_to(output_dir.parent)),
-            "config_file": str(config_path.relative_to(config_path.parent))
+            "input_dir": _rel(input_dir),
+            "output_dir": _rel(output_dir),
+            "config_file": _rel(config_path),
         },
         "configuration": config,
         "directory_snapshot": {
-            "input_contents": list_dir_structure(input_dir, input_dir.parent),
-            "output_contents": list_dir_structure(output_dir, output_dir.parent),
+            "input_contents": list_dir_structure(input_dir),
+            "output_contents": list_dir_structure(output_dir),
         },
     }
 
-    log_dir = output_dir / "logs"
-    log_dir.mkdir(exist_ok=True)
-    meta_path = log_dir / f"rascal_{start_time.strftime('%y%m%d_%H%M')}_metadata.json"
-
+    meta_path = (output_dir / "logs" /
+                 f"rascal_{start_time.strftime('%y%m%d_%H%M')}_metadata.json").resolve()
     with meta_path.open("w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)
 
-    logger.info(f"Run metadata saved at {meta_path}")
+    logger.info(f"Run metadata saved at {_rel(meta_path)}")
     return meta_path
 
 
@@ -120,42 +124,14 @@ def terminate_logger(
     config: dict,
     start_time: datetime,
 ):
-    """
-    Finalize logging for a RASCAL run.
-
-    Records completion time and metadata, reports total runtime,
-    and gracefully closes all file handlers.
-
-    Parameters
-    ----------
-    input_dir : Path
-        Input directory used for this run.
-    output_dir : Path
-        Output directory containing generated files.
-    config_path : Path
-        Path to the YAML configuration used.
-    config : dict
-        result from load_config(args.config)
-    start_time : datetime
-        Timestamp recorded when the run began.
-    """
+    """Finalize logging: record metadata and close file handlers."""
     end_time = datetime.now()
     elapsed = (end_time - start_time).total_seconds()
-
     logger.info(f"=== RASCAL run completed at {end_time.isoformat()} ===")
     logger.info(f"Total runtime: {elapsed:.2f} seconds")
 
-    # Write structured metadata
-    record_run_metadata(
-        input_dir=input_dir,
-        output_dir=output_dir,
-        config_path=config_path,
-        config=config,
-        start_time=start_time,
-        end_time=end_time,
-    )
+    record_run_metadata(input_dir, output_dir, config_path, config, start_time, end_time)
 
-    # Close all file handlers cleanly
     for handler in logger.handlers[:]:
         if isinstance(handler, logging.FileHandler):
             handler.close()

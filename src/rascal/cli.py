@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
+from .main import main as main_core
 from rascal.utils.logger import logger
-from .main import main as main_core, build_arg_parser
+from rascal.utils.auxiliary import build_arg_parser
 
 
 def main():

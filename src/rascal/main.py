@@ -1,8 +1,20 @@
 #!/usr/bin/env python3
-import argparse
+from pathlib import Path
 from datetime import datetime
-from rascal.utils.logger import logger, initialize_logger, terminate_logger
-from rascal.utils.support_funcs import as_path, load_config, find_transcript_tables
+from rascal.utils.logger import (
+    logger,
+    early_log,
+    initialize_logger,
+    terminate_logger,
+)
+from rascal.utils.auxiliary import (
+    as_path,
+    project_path,
+    load_config,
+    find_transcript_tables,
+    OMNIBUS_MAP,
+    COMMAND_MAP,
+    build_arg_parser)
 from rascal.run_wrappers import (
     run_read_tiers, run_read_cha_files,
     run_select_transcription_reliability_samples,
@@ -17,93 +29,37 @@ from rascal.run_wrappers import (
 
 
 # -------------------------------------------------------------
-# Omnibus mappings
-# -------------------------------------------------------------
-OMNIBUS_MAP = {
-    "1": ["1a"],
-    "4": ["4a", "4b"],
-    "7": ["7a", "7b"],
-    "10": ["10a", "10b"],
-}
-
-COMMAND_MAP = {
-    "1a": "transcripts select",
-    "3a": "transcripts evaluate",
-    "3b": "transcripts reselect",
-    "4a": "transcripts make",
-    "4b": "cus make",
-    "6a": "cus evaluate",
-    "6b": "cus reselect",
-    "7a": "cus analyze",
-    "7b": "words make",
-    "9a": "words evaluate",
-    "9b": "words reselect",
-    "10a": "cus summarize",
-    "10b": "corelex analyze",
-}
-
-# -------------------------------------------------------------
-# CLI setup utilities
-# -------------------------------------------------------------
-def build_arg_parser():
-    """Construct and return the argument parser used by both main.py and cli.py."""
-    parser = argparse.ArgumentParser(
-        description=(
-            "RASCAL command-line interface.\n\n"
-            "Examples:\n"
-            "  rascal 3b\n"
-            "  rascal transcripts reselect\n"
-            "  rascal 4\n"
-            "  rascal 4a,4b\n"
-            "  rascal utterances make, cus make, timesheets make\n"
-        ),
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-
-    parser.add_argument(
-        "command",
-        nargs="+",
-        help="Command(s) to run (comma-separated or space-separated)."
-    )
-
-    parser.add_argument(
-        "--config",
-        type=str,
-        default="config.yaml",
-        help="Path to the configuration file (default: config.yaml)"
-    )
-
-    # ---- Help text for expansions ----
-    help_lines = ["\nAvailable Commands:\n"]
-    for short, long in COMMAND_MAP.items():
-        help_lines.append(f"  {short:<4}  →  {long}")
-    help_lines.append("\nOmnibus Commands:\n")
-    for omni, subs in OMNIBUS_MAP.items():
-        expansions = [f"{s} ({COMMAND_MAP[s]})" for s in subs]
-        help_lines.append(f"  {omni:<4}  →  {', '.join(expansions)}")
-    parser.epilog = "\n".join(help_lines)
-
-    return parser
-
-# -------------------------------------------------------------
 # Main
 # -------------------------------------------------------------
 def main(args):
     """Main function to process input arguments and execute appropriate steps."""
     try:
-            
         start_time = datetime.now()
-        
-        config = load_config(args.config)
-        input_dir = as_path(config.get("input_dir", "rascal_data/input"))
-        output_dir = as_path(config.get("output_dir", "rascal_data/output"))
+        root_dir = Path.cwd().resolve()
 
-        # Timestamped output folder
+        early_log("info", f"Starting RASCAL run at {start_time.isoformat()}")
+        early_log("info", f"RASCAL root directory set to: {root_dir} (all paths relative to this root)")
+
+        # -----------------------------------------------------------------
+        # Configuration and directories
+        # -----------------------------------------------------------------
+        config_path = project_path(args.config or "config.yaml")
+        config = load_config(config_path)
+
+        input_dir = project_path(config.get("input_dir", "rascal_data/input"))
+        if not input_dir.is_relative_to(root_dir):
+            logger.warning(f"Input directory {input_dir} is outside the project root.")
+        output_dir = project_path(config.get("output_dir", "rascal_data/output"))
+
         timestamp = start_time.strftime("%y%m%d_%H%M")
-        out_dir = output_dir / f"rascal_output_{timestamp}"
+        out_dir = (output_dir / f"rascal_output_{timestamp}").resolve()
         out_dir.mkdir(parents=True, exist_ok=True)
 
+        # -----------------------------------------------------------------
+        # Initialize logger once output folder is ready
+        # -----------------------------------------------------------------
         initialize_logger(start_time, out_dir)
+        logger.info("Logger initialized and early logs flushed.")
 
         frac = config.get("reliability_fraction", 0.2)
         coders = config.get("coders", []) or []
@@ -195,10 +151,12 @@ def main(args):
 
         if executed:
             logger.info(f"Completed: {', '.join(executed)}")
+    except Exception as e:
+        logger.error(f"RASCAL execution failed: {e}", exc_info=True)
+        raise
     finally:
-        terminate_logger(input_dir=input_dir, output_dir=out_dir,
-                         config_path=as_path(args.config), config=config,
-                         start_time=start_time)
+        # Always finalize logging and metadata
+        terminate_logger(input_dir, out_dir, config_path, config, start_time)
 
 # -------------------------------------------------------------
 # Direct execution

@@ -2,30 +2,107 @@ import yaml
 from pathlib import Path
 import pandas as pd
 from rascal.utils.logger import logger
+import argparse
 
+
+# -------------------------------------------------------------
+# Omnibus mappings
+# -------------------------------------------------------------
+OMNIBUS_MAP = {
+    "1": ["1a"],
+    "4": ["4a", "4b"],
+    "7": ["7a", "7b"],
+    "10": ["10a", "10b"],
+}
+
+COMMAND_MAP = {
+    "1a": "transcripts select",
+    "3a": "transcripts evaluate",
+    "3b": "transcripts reselect",
+    "4a": "transcripts make",
+    "4b": "cus make",
+    "6a": "cus evaluate",
+    "6b": "cus reselect",
+    "7a": "cus analyze",
+    "7b": "words make",
+    "9a": "words evaluate",
+    "9b": "words reselect",
+    "10a": "cus summarize",
+    "10b": "corelex analyze",
+}
+
+# -------------------------------------------------------------
+# CLI setup utilities
+# -------------------------------------------------------------
+def build_arg_parser():
+    """Construct and return the argument parser used by both main.py and cli.py."""
+    parser = argparse.ArgumentParser(
+        description=(
+            "RASCAL command-line interface.\n\n"
+            "Examples:\n"
+            "  rascal 3b\n"
+            "  rascal transcripts reselect\n"
+            "  rascal 4\n"
+            "  rascal 4a,4b\n"
+            "  rascal utterances make, cus make, timesheets make\n"
+        ),
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+
+    parser.add_argument(
+        "command",
+        nargs="+",
+        help="Command(s) to run (comma-separated or space-separated)."
+    )
+
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="config.yaml",
+        help="Path to the configuration file (default: config.yaml)"
+    )
+
+    # ---- Help text for expansions ----
+    help_lines = ["\nAvailable Commands:\n"]
+    for short, long in COMMAND_MAP.items():
+        help_lines.append(f"  {short:<4}  →  {long}")
+    help_lines.append("\nOmnibus Commands:\n")
+    for omni, subs in OMNIBUS_MAP.items():
+        expansions = [f"{s} ({COMMAND_MAP[s]})" for s in subs]
+        help_lines.append(f"  {omni:<4}  →  {', '.join(expansions)}")
+    parser.epilog = "\n".join(help_lines)
+
+    return parser
+
+def project_path(*parts) -> Path:
+    """Return an absolute path anchored to the project root."""
+    return (Path.cwd().resolve() / Path(*parts)).resolve()
 
 def as_path(p: str | Path) -> Path:
     """
-    Resolve a string or Path to an absolute, expanded Path object.
+    Normalize a path to be relative to the current working directory (project root).
 
-    Parameters
-    ----------
-    p : str or Path
-        A file or directory path (may include ~ for user home).
-
-    Returns
-    -------
-    pathlib.Path
-        Resolved absolute Path object.
+    If the target lies outside the working directory, returns its resolved absolute path.
+    This ensures all internal references stay project-root–relative without failures.
     """
     try:
-        resolved = Path(p).expanduser().resolve()
-        logger.debug(f"Resolved path: {resolved}")
-        return resolved
+        p = Path(p).expanduser()
+        cwd = Path.cwd().resolve()
+        resolved = (cwd / p).resolve() if not p.is_absolute() else p.resolve()
+
+        # Try to make relative if possible
+        try:
+            rel = resolved.relative_to(cwd)
+            logger.debug(f"Resolved relative path: {rel}")
+            return rel
+        except ValueError:
+            # Not under cwd — fine, just return absolute
+            logger.debug(f"Resolved absolute path (outside cwd): {resolved}")
+            return resolved
+
     except Exception as e:
         logger.error(f"Failed to resolve path {p}: {e}")
         raise
-
 
 def find_config_file(base_dir: Path, user_arg: str | None = None) -> Path | None:
     """

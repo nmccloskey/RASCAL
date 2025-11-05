@@ -1,7 +1,7 @@
 import pandas as pd
 from pathlib import Path
 from rascal.utils.logger import logger
-from rascal.utils.support_funcs import find_transcript_tables, extract_transcript_data, find_corresponding_file
+from rascal.utils.auxiliary import find_transcript_tables, extract_transcript_data, find_corresponding_file
 
 
 def summarize_cus(tiers, input_dir, output_dir):

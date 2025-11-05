@@ -10,7 +10,7 @@ from pathlib import Path
 from functools import lru_cache
 
 from rascal.utils.logger import logger
-from rascal.utils.support_funcs import find_transcript_tables, extract_transcript_data
+from rascal.utils.auxiliary import find_transcript_tables, extract_transcript_data
 
 stim_cols = ["narrative", "scene", "story", "stimulus"]
 
