@@ -286,7 +286,7 @@ def _write_wc_outputs(wc_df, wc_rel_df, word_count_dir, labels):
 
     files = {
         f"{lab_str}word_counting.xlsx": wc_df,
-        f"{lab_str}word_counting_reliability.xlsx": wc_rel_df,
+        f"{lab_str}word_count_reliability.xlsx": wc_rel_df,
     }
     for fname, df in files.items():
         fpath = out_dir / fname
@@ -302,7 +302,7 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
 
     Each input *cu_coding_by_utterance*.xlsx produces:
       - *_word_counting.xlsx* → all samples
-      - *_word_counting_reliability.xlsx* → subset (~frac) for reliability
+      - *_word_count_reliability.xlsx* → subset (~frac) for reliability
 
     Steps:
       1. Locate CU coding files in `input_dir` and `output_dir`.
@@ -368,7 +368,7 @@ def _discover_reliability_pairs(tiers, input_dir, rel_type):
     if rel_type == "CU":
         coding_glob, rel_glob = "*cu_coding.xlsx", "*cu_reliability_coding.xlsx"
     else:
-        coding_glob, rel_glob = "*word_counting.xlsx", "*word_counting_reliability.xlsx"
+        coding_glob, rel_glob = "*word_counting.xlsx", "*word_count_reliability.xlsx"
 
     coding_files = list(input_dir.rglob(coding_glob))
     rel_files = list(input_dir.rglob(rel_glob))
@@ -445,7 +445,7 @@ def _build_reliability_frame(df_org, rel_template, re_ids, rel_type):
 def _write_reselected_reliability(df, org_file, out_dir, rel_type):
     """Save reselected reliability DataFrame to Excel."""
     stem = org_file.stem
-    suffix = "cu_reliability_coding" if rel_type == "CU" else "word_counting_reliability"
+    suffix = "cu_reliability_coding" if rel_type == "CU" else "word_count_reliability"
     base = stem.replace("cu_coding", "").replace("word_counting", "").rstrip("_")
     out_path = out_dir / f"{base}_reselected_{suffix}.xlsx"
     try:

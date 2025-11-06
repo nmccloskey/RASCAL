@@ -98,7 +98,7 @@ def _write_word_rel_outputs(wc_merged, out_dir, partition_labels, rel_name):
         return
 
     # Excel results
-    results_path = out_dir / f"{lab_prefix}word_counting_reliability_results.xlsx"
+    results_path = out_dir / f"{lab_prefix}word_count_reliability_results.xlsx"
     try:
         wc_merged.to_excel(results_path, index=False)
         logger.info(f"Wrote word-count reliability results: {_rel(results_path)}")
@@ -136,7 +136,7 @@ def evaluate_word_count_reliability(tiers, input_dir, output_dir):
     Behavior
     --------
     • Finds and pairs *word_counting*.xlsx (coding) with
-      *word_counting_reliability*.xlsx (reliability) files sharing tier labels.
+      *word_count_reliability*.xlsx (reliability) files sharing tier labels.
     • Merges on 'utterance_id', computes:
         abs_diff, perc_diff, perc_sim, agmt (≤1 word or ≥85 % similar)
     • Calculates ICC(2,1) across utterances.
@@ -156,7 +156,7 @@ def evaluate_word_count_reliability(tiers, input_dir, output_dir):
     word_rel_dir.mkdir(parents=True, exist_ok=True)
 
     coding_files = list(Path(input_dir).rglob("*word_counting*.xlsx"))
-    rel_files = list(Path(input_dir).rglob("*word_counting_reliability*.xlsx"))
+    rel_files = list(Path(input_dir).rglob("*word_count_reliability*.xlsx"))
 
     for rel in tqdm(rel_files, desc="Analyzing word count reliability..."):
         rel_labels = [t.match(rel.name, return_None=True) for t in tiers.values()]

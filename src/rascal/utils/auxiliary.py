@@ -260,11 +260,75 @@ def extract_transcript_data(
         raise
 
 
-def find_corresponding_file(match_tiers=[], directory=Path.cwd(), search_base="", search_ext=".xlsx"):
-    files = Path(directory).rglob(f"*{search_base}*{search_ext}")
-    matching_files = [f for f in files if all((mt in f for mt in match_tiers))]
-    if len(matching_files) == 1:
-        return next(matching_files)
-    else:
-        logger.warning(f"Multiple {len(matching_files)} matching files detected - returning list.")
-        return matching_files
+def find_corresponding_file(match_tiers=None, directory=Path.cwd(), search_base="", search_ext=".xlsx"):
+    """
+    Find file(s) in `directory` matching all tier labels and a given base pattern.
+
+    Behavior
+    --------
+    • Recursively searches `directory` for files containing both `search_base`
+      and all stringified tier labels from `match_tiers`.
+    • Returns:
+        - a single Path if exactly one match,
+        - a list[Path] if multiple,
+        - None if none found.
+    • Logs warnings when multiple or no matches are found.
+
+    Parameters
+    ----------
+    match_tiers : list[str] | None
+        Tier labels (usually from `tier.match(filename)`), e.g. ["AC", "PreTx"].
+        None or empty entries are ignored.
+    directory : Path or str
+        Root directory to search recursively.
+    search_base : str
+        Core pattern string (e.g., "cu_coding_by_utterance").
+    search_ext : str, default ".xlsx"
+        File extension to filter (including dot).
+
+    Returns
+    -------
+    Path | list[Path] | None
+        Matching file(s), or None if no matches.
+
+    Notes
+    -----
+    - Converts all tier labels to lowercase strings for matching.
+    - Logs relative paths via `_rel()` for readability.
+    - Catches and logs filesystem errors without interrupting the pipeline.
+    """
+    directory = Path(directory)
+    match_tiers = [str(mt).lower() for mt in (match_tiers or []) if mt]
+
+    try:
+        files = list(directory.rglob(f"*{search_base}*{search_ext}"))
+        if not files:
+            logger.warning(f"No files found for pattern '*{search_base}*{search_ext}' in {_rel(directory)}.")
+            return None
+
+        matching_files = []
+        for f in files:
+            fname = f.name.lower()
+            if all(mt in fname for mt in match_tiers):
+                matching_files.append(f)
+
+        if not matching_files:
+            logger.warning(
+                f"No files matched tier values {match_tiers} for base '{search_base}' in {_rel(directory)}."
+            )
+            return None
+        elif len(matching_files) == 1:
+            match = matching_files[0]
+            logger.info(f"Matched file for {search_base}: {_rel(match)}")
+            return match
+        else:
+            logger.warning(
+                f"Multiple ({len(matching_files)}) files matched '{search_base}' and {match_tiers}; returning list."
+            )
+            for f in matching_files:
+                logger.debug(f"  - {_rel(f)}")
+            return matching_files
+
+    except Exception as e:
+        logger.error(f"Error while searching for '{search_base}' in {_rel(directory)}: {e}")
+        return None
