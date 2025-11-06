@@ -248,12 +248,14 @@ def _prepare_wc_df(df: pd.DataFrame, d) -> pd.DataFrame:
     """Add coder and word_count columns; drop CU-specific ones."""
     df = df.copy()
     df["c1_id"] = ""
-    df["wc_comment"] = ""
+    c2_cu_col = next((col for col in df.columns if col.startswith("c2_cu")))
     df["word_count"] = df.apply(
-        lambda r: count_words(r["utterance"], d) if not pd.isna(r.get("c2_cu")) else "NA",
+        lambda r: count_words(r["utterance"], d) if not pd.isna(r.get(c2_cu_col)) else "NA",
         axis=1
     )
-    drop_cols = [c for c in df if c.startswith(("c2_sv", "c2_rel", "c2_cu", "c2_comment", "agreement"))]
+    df["wc_comment"] = ""
+    
+    drop_cols = [c for c in df if c.startswith(("c1_sv", "c1_rel", "c1_cu", "c1_comment", "c2_sv", "c2_rel", "c2_cu", "c2_comment", "agmt"))]
     df.drop(columns=drop_cols, inplace=True, errors="ignore")
     return df
 
