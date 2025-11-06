@@ -8,7 +8,7 @@ from pathlib import Path
 from datetime import datetime
 from scipy.stats import percentileofscore
 
-from rascal.utils.logger import logger
+from rascal.utils.logger import logger, _rel
 from rascal.coding.coding_files import stim_cols
 from rascal.utils.auxiliary import find_transcript_tables, extract_transcript_data
 
@@ -349,7 +349,7 @@ def _read_excel_safely(path):
     try:
         return pd.read_excel(path)
     except Exception as e:
-        logger.warning(f"Failed reading {path}: {e}")
+        logger.warning(f"Failed reading {_rel(path)}: {e}")
         return None
 
 
@@ -383,7 +383,7 @@ def find_corelex_inputs(input_dir: str, output_dir: str) -> dict | None:
         p = unblind_matches[0]
         df = _read_excel_safely(p)
         if df is not None:
-            logger.info(f"Using unblind utterance data: {p}")
+            logger.info(f"Using unblind utterance data: {_rel(p)}")
             return "unblind", df
 
     # 2) Fallback: transcript tables
@@ -627,7 +627,7 @@ def run_corelex(tiers, input_dir, output_dir, exclude_participants=None):
     timestamp = datetime.now().strftime("%y%m%d_%H%M")
     corelex_dir = output_dir / "core_lex"
     corelex_dir.mkdir(parents=True, exist_ok=True)
-    logger.info(f"CoreLex output directory: {corelex_dir}")
+    logger.info(f"CoreLex output directory: {_rel(corelex_dir)}")
 
     utt_df, present_narratives = _prepare_corelex_inputs(input_dir, output_dir, exclude_participants)
     if utt_df is None:
@@ -656,7 +656,7 @@ def run_corelex(tiers, input_dir, output_dir, exclude_participants=None):
     output_file = corelex_dir / f"core_lex_data_{timestamp}.xlsx"
     try:
         corelex_df.to_excel(output_file, index=False)
-        logger.info(f"CoreLex results written to {output_file}")
+        logger.info(f"CoreLex results written to {_rel(output_file)}")
     except Exception as e:
         logger.error(f"Failed to write CoreLex results: {e}")
 
