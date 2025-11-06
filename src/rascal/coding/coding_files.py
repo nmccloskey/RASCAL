@@ -9,7 +9,7 @@ import num2words as n2w
 from pathlib import Path
 from functools import lru_cache
 from rascal.utils.logger import logger, _rel
-from rascal.utils.auxiliary import find_transcript_tables, extract_transcript_data
+from rascal.utils.auxiliary import find_corresponding_file, extract_transcript_data
 
 stim_cols = ["narrative", "scene", "story", "stimulus"]
 
@@ -155,7 +155,8 @@ def make_cu_coding_files(
     cu_coding_dir = Path(output_dir) / "cu_coding"
     cu_coding_dir.mkdir(parents=True, exist_ok=True)
 
-    transcript_tables = find_transcript_tables(input_dir, output_dir)
+    transcript_tables = find_corresponding_file(directories=[input_dir, output_dir],
+                                                search_base="transcript_tables")
     utt_dfs = [extract_transcript_data(tt) for tt in transcript_tables]
 
     for file, uttdf in tqdm(zip(transcript_tables, utt_dfs), desc="Generating CU coding files"):

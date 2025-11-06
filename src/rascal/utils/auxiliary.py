@@ -161,33 +161,94 @@ def load_config(config_file: str | Path) -> dict:
         raise
 
 
-def find_transcript_tables(input_dir: str | Path, output_dir: str | Path) -> list[Path]:
+# -------------------------------------------------------------
+# File handling utilities
+# -------------------------------------------------------------
+def find_corresponding_file(
+    match_tiers=None,
+    directories=None,
+    search_base="",
+    search_ext=".xlsx",
+    deduplicate=True,
+):
     """
-    Locate transcript table Excel files in given directories.
+    Find file(s) across one or more directories matching tier labels and a base pattern.
+
+    Behavior
+    --------
+    • Recursively searches each directory for files containing `search_base`
+      and all tier labels from `match_tiers` (case-sensitive).
+    • Returns:
+        - Path if exactly one match,
+        - list[Path] if multiple,
+        - None if none.
+    • Optionally deduplicates identical filenames (warns if removed).
 
     Parameters
     ----------
-    input_dir : str or Path
-        Directory containing input data.
-    output_dir : str or Path
-        Directory containing generated transcript tables.
+    match_tiers : list[str] | None
+        Tier labels (e.g., ["AC", "PreTx"]). None/empty entries ignored.
+    directories : Path | str | list[Path | str] | None
+        One or more directories to search recursively; defaults to CWD.
+    search_base : str
+        Core substring to match in filenames.
+    search_ext : str, default ".xlsx"
+        File extension (with dot).
+    deduplicate : bool, default True
+        Remove duplicate filenames across directories.
 
     Returns
     -------
-    list of Path
-        All matching *transcript_tables*.xlsx files.
+    Path | list[Path] | None
+        Matching file(s), or None if none found.
     """
-    input_dir, output_dir = as_path(input_dir), as_path(output_dir)
-    logger.info("Searching for *transcript_tables*.xlsx files")
+    match_tiers = [str(mt) for mt in (match_tiers or []) if mt]
+    if directories is None:
+        directories = [Path.cwd()]
+    elif isinstance(directories, (str, Path)):
+        directories = [directories]
 
-    try:
-        transcript_tables = list(input_dir.rglob("*transcript_tables*.xlsx")) + \
-                            list(output_dir.rglob("*transcript_tables*.xlsx"))
-        logger.info(f"Found {len(transcript_tables)} transcript table file(s)")
-        return transcript_tables
-    except Exception as e:
-        logger.error(f"Error while searching for transcript tables: {e}")
-        raise
+    all_matches = []
+    for d in directories:
+        try:
+            d = Path(d)
+            if not d.exists():
+                logger.warning(f"Directory not found: {_rel(d)} (skipping).")
+                continue
+
+            for f in d.rglob(f"*{search_base}*{search_ext}"):
+                if all(mt in f.name for mt in match_tiers):
+                    all_matches.append(f)
+        except Exception as e:
+            logger.error(f"Error searching in {_rel(d)}: {e}")
+
+    if not all_matches:
+        logger.warning(f"No matches found for base '{search_base}' with tiers {match_tiers}.")
+        return None
+
+    if deduplicate:
+        seen = {}
+        for f in all_matches:
+            seen.setdefault(f.name, f)
+        unique_matches = list(seen.values())
+        if len(unique_matches) < len(all_matches):
+            logger.warning(
+                f"Removed {len(all_matches) - len(unique_matches)} duplicate filename(s) across directories."
+            )
+    else:
+        unique_matches = all_matches
+
+    if len(unique_matches) == 1:
+        match = unique_matches[0]
+        logger.info(f"Matched file for '{search_base}': {_rel(match)}")
+        return match
+
+    logger.warning(
+        f"Multiple ({len(unique_matches)}) files matched '{search_base}' and {match_tiers}; returning list."
+    )
+    for f in unique_matches:
+        logger.debug(f"  - {_rel(f)}")
+    return unique_matches
 
 
 def extract_transcript_data(
@@ -258,77 +319,3 @@ def extract_transcript_data(
     except Exception as e:
         logger.error(f"Failed to read {path}: {e}")
         raise
-
-
-def find_corresponding_file(match_tiers=None, directory=Path.cwd(), search_base="", search_ext=".xlsx"):
-    """
-    Find file(s) in `directory` matching all tier labels and a given base pattern.
-
-    Behavior
-    --------
-    • Recursively searches `directory` for files containing both `search_base`
-      and all stringified tier labels from `match_tiers`.
-    • Returns:
-        - a single Path if exactly one match,
-        - a list[Path] if multiple,
-        - None if none found.
-    • Logs warnings when multiple or no matches are found.
-
-    Parameters
-    ----------
-    match_tiers : list[str] | None
-        Tier labels (usually from `tier.match(filename)`), e.g. ["AC", "PreTx"].
-        None or empty entries are ignored.
-    directory : Path or str
-        Root directory to search recursively.
-    search_base : str
-        Core pattern string (e.g., "cu_coding_by_utterance").
-    search_ext : str, default ".xlsx"
-        File extension to filter (including dot).
-
-    Returns
-    -------
-    Path | list[Path] | None
-        Matching file(s), or None if no matches.
-
-    Notes
-    -----
-    - Converts all tier labels to lowercase strings for matching.
-    - Logs relative paths via `_rel()` for readability.
-    - Catches and logs filesystem errors without interrupting the pipeline.
-    """
-    directory = Path(directory)
-    match_tiers = [str(mt).lower() for mt in (match_tiers or []) if mt]
-
-    try:
-        files = list(directory.rglob(f"*{search_base}*{search_ext}"))
-        if not files:
-            logger.warning(f"No files found for pattern '*{search_base}*{search_ext}' in {_rel(directory)}.")
-            return None
-
-        matching_files = []
-        for f in files:
-            fname = f.name.lower()
-            if all(mt in fname for mt in match_tiers):
-                matching_files.append(f)
-
-        if not matching_files:
-            logger.warning(
-                f"No files matched tier values {match_tiers} for base '{search_base}' in {_rel(directory)}."
-            )
-            return None
-        elif len(matching_files) == 1:
-            match = matching_files[0]
-            logger.info(f"Matched file for {search_base}: {_rel(match)}")
-            return match
-        else:
-            logger.warning(
-                f"Multiple ({len(matching_files)}) files matched '{search_base}' and {match_tiers}; returning list."
-            )
-            for f in matching_files:
-                logger.debug(f"  - {_rel(f)}")
-            return matching_files
-
-    except Exception as e:
-        logger.error(f"Error while searching for '{search_base}' in {_rel(directory)}: {e}")
-        return None

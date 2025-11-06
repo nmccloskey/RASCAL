@@ -10,7 +10,7 @@ from scipy.stats import percentileofscore
 
 from rascal.utils.logger import logger, _rel
 from rascal.coding.coding_files import stim_cols
-from rascal.utils.auxiliary import find_transcript_tables, extract_transcript_data
+from rascal.utils.auxiliary import find_corresponding_file, extract_transcript_data
 
 
 urls = {
@@ -387,7 +387,8 @@ def find_corelex_inputs(input_dir: str, output_dir: str) -> dict | None:
             return "unblind", df
 
     # 2) Fallback: transcript tables
-    transcript_tables = find_transcript_tables(input_dir, output_dir)
+    transcript_tables = find_corresponding_file(directories=[input_dir, output_dir],
+                                                search_base="transcript_tables")
     if not transcript_tables:
         logger.error(
             "No CoreLex input files found (*unblind_utterance_data*.xlsx "

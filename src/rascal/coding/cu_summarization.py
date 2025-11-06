@@ -2,7 +2,6 @@ import pandas as pd
 from pathlib import Path
 from rascal.utils.logger import logger, _rel
 from rascal.utils.auxiliary import (
-    find_transcript_tables,
     extract_transcript_data,
     find_corresponding_file,
 )
@@ -217,7 +216,8 @@ def summarize_cus(tiers, input_dir, output_dir):
     logger.info(f"CU summary outputs will be written to {_rel(out_dir)}")
 
     try:
-        transcript_tables = find_transcript_tables(input_dir, out_dir)
+        transcript_tables = find_corresponding_file(directories=[input_dir, output_dir],
+                                                    search_base="transcript_tables")
         utt_tables = {tt: extract_transcript_data(tt) for tt in transcript_tables}
         unblind_utt_dfs, blind_utt_dfs = [], []
         unblind_sample_dfs, blind_sample_dfs = [], []

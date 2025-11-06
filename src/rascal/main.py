@@ -11,7 +11,7 @@ from rascal.utils.logger import (
 from rascal.utils.auxiliary import (
     project_path,
     load_config,
-    find_transcript_tables,
+    find_corresponding_file,
     OMNIBUS_MAP,
     COMMAND_MAP,
     build_arg_parser)
@@ -28,9 +28,6 @@ from rascal.run_wrappers import (
 )
 
 
-# -------------------------------------------------------------
-# Main
-# -------------------------------------------------------------
 def main(args):
     """Main function to process input arguments and execute appropriate steps."""
     try:
@@ -66,7 +63,6 @@ def main(args):
         prefer_correction = config.get("prefer_correction", True)
         lowercase = config.get("lowercase", True)
 
-        input_dir.mkdir(parents=True, exist_ok=True)
         tiers = run_read_tiers(config.get("tiers", {})) or {}
 
         # ---------------------------------------------------------
@@ -105,7 +101,8 @@ def main(args):
 
         # Prepare utterance files if needed
         if "4a" not in converted and any(c in ["4b", "7b", "10b"] for c in converted):
-            transcript_tables = find_transcript_tables(input_dir, out_dir)
+            transcript_tables = find_corresponding_file(directories=[input_dir, out_dir],
+                                                        search_base="transcript_tables")
             if not transcript_tables:
                 logger.info("No input transcript tables detected — creating them automatically.")
                 chats = chats or run_read_cha_files(input_dir)
@@ -148,9 +145,11 @@ def main(args):
 
         if executed:
             logger.info(f"Completed: {', '.join(executed)}")
+
     except Exception as e:
         logger.error(f"RASCAL execution failed: {e}", exc_info=True)
         raise
+
     finally:
         # Always finalize logging and metadata
         terminate_logger(input_dir, out_dir, config_path, config, start_time)
