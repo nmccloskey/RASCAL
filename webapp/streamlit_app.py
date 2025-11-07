@@ -4,6 +4,7 @@ import tempfile
 from io import BytesIO
 import streamlit as st
 from pathlib import Path
+import random, numpy as np
 from datetime import datetime
 from config_builder import build_config_ui
 
@@ -121,6 +122,11 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
         # ------------------------------------------------------------------
         # Load config parameters
         # ------------------------------------------------------------------
+        random_seed = config.get("random_seed", 8) or 8
+        random.seed(random_seed)
+        np.random.seed(random_seed)
+        logger.info(f"Random seed set to {random_seed}")
+
         tiers = run_read_tiers(config.get("tiers", {})) or {}
         frac = config.get("reliability_fraction", 0.2)
         coders = config.get("coders", []) or []

@@ -16,9 +16,15 @@ def _split_values(text: str):
 def build_config_ui():
     st.subheader("🔧 Create RASCAL Config")
 
-    # ---- Top-level defaults for public release ----
+    # ---- Top-level ----
     input_dir = st.text_input("Input directory", value="data/input")
     output_dir = st.text_input("Output directory", value="data/output")
+
+    random_seed = st.number_input(
+        "Random seed (for reproducibility)", min_value=0, value=8, step=1,
+        help="Ensures deterministic random selections across runs"
+    )
+
     reliability_fraction = st.number_input(
         "Reliability fraction", min_value=0.0, max_value=1.0, value=0.2
     )
@@ -135,6 +141,7 @@ def build_config_ui():
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
+        "random_seed": int(random_seed),
         "reliability_fraction": reliability_fraction,
         "coders": coder_list,
         "CU_paradigms": CU_paradigm_list,

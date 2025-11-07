@@ -119,8 +119,7 @@ def test_reselect_cu_reliability_basic(tmp_path, monkeypatch):
         input_dir=str(input_dir),
         output_dir=str(output_dir),
         rel_type="CU",
-        frac=0.2,
-        rng_seed=88,
+        frac=0.2
     )
 
     outdir = output_dir / "reselected_CU_reliability"
@@ -189,8 +188,7 @@ def test_reselect_cu_reliability_no_available(tmp_path, monkeypatch):
         input_dir=str(input_dir),
         output_dir=str(output_dir),
         rel_type="CU",
-        frac=0.5,
-        rng_seed=42,
+        frac=0.5
     )
     outdir = output_dir / "reselected_CU_reliability"
     # Directory exists, but no files created
@@ -253,8 +251,7 @@ def test_reselect_wc_reliability_basic(tmp_path, monkeypatch):
         input_dir=str(input_dir),
         output_dir=str(output_dir),
         rel_type="WC",
-        frac=0.2,      # all ids {S1,S2,S3} -> round(0.6)=1 -> choose S2 via fake_sample
-        rng_seed=7,
+        frac=0.2      # all ids {S1,S2,S3} -> round(0.6)=1 -> choose S2 via fake_sample
     )
 
     outdir = output_dir / "reselected_WC_reliability"

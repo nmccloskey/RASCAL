@@ -404,7 +404,7 @@ def _load_original_and_reliability(org_file, rel_mates, rel_type):
     rel_dfs = [r for r in rel_dfs if "sample_id" in r]
     return df_org, rel_dfs
 
-def _select_new_samples(df_org, used_ids, frac, seed):
+def _select_new_samples(df_org, used_ids, frac):
     """Return list of reselected sample_ids not already used."""
     all_ids = set(df_org["sample_id"].dropna().astype(str))
     available = list(all_ids - used_ids)
@@ -414,7 +414,6 @@ def _select_new_samples(df_org, used_ids, frac, seed):
     n = max(1, round(len(all_ids) * frac))
     if len(available) < n:
         n = len(available)
-    random.seed(seed)
     return random.sample(available, n)
 
 def _build_reliability_frame(df_org, rel_template, re_ids, rel_type):
@@ -456,7 +455,7 @@ def _write_reselected_reliability(df, org_file, out_dir, rel_type):
         logger.error(f"[{rel_type}] Failed writing {_rel(out_path)}: {e}")
 
 def reselect_cu_wc_reliability(
-    tiers, input_dir, output_dir, rel_type="CU", frac=0.2, rng_seed=42
+    tiers, input_dir, output_dir, rel_type="CU", frac=0.2
 ):
     """
     Reselect reliability samples for CU or WC coding tables, excluding
@@ -474,14 +473,12 @@ def reselect_cu_wc_reliability(
     input_dir, output_dir : Path or str
     rel_type : {"CU","WC"}, default "CU"
     frac : float, default 0.2
-    rng_seed : int, default 42
     """
     rel_type = rel_type.upper().strip()
     if rel_type not in {"CU", "WC"}:
         logger.error(f"Invalid rel_type '{rel_type}'. Must be 'CU' or 'WC'.")
         return
 
-    random.seed(rng_seed)
     input_dir, output_dir = Path(input_dir), Path(output_dir)
     out_dir = output_dir / f"reselected_{rel_type}_reliability"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -497,7 +494,7 @@ def reselect_cu_wc_reliability(
             continue
 
         used_ids = set().union(*[set(rdf["sample_id"].dropna().astype(str)) for rdf in rel_dfs])
-        new_ids = _select_new_samples(df_org, used_ids, frac, rng_seed)
+        new_ids = _select_new_samples(df_org, used_ids, frac)
         if not new_ids:
             continue
 

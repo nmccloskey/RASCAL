@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import random, numpy as np
 from datetime import datetime
 from rascal.utils.logger import (
     get_root,
@@ -55,13 +56,18 @@ def main(args):
         initialize_logger(start_time, out_dir, "RASCAL")
         logger.info("Logger initialized and early logs flushed.")
 
-        frac = config.get("reliability_fraction", 0.2)
+        random_seed = config.get("random_seed", 8) or 8
+        random.seed(random_seed)
+        np.random.seed(random_seed)
+        logger.info(f"Random seed set to {random_seed}")
+
+        frac = config.get("reliability_fraction", 0.2) or 0.2
         coders = config.get("coders", []) or []
         cu_paradigms = config.get("cu_paradigms", []) or []
         exclude_participants = config.get("exclude_participants", []) or []
-        strip_clan = config.get("strip_clan", True)
-        prefer_correction = config.get("prefer_correction", True)
-        lowercase = config.get("lowercase", True)
+        strip_clan = config.get("strip_clan", True) or True
+        prefer_correction = config.get("prefer_correction", True) or True
+        lowercase = config.get("lowercase", True) or True
 
         tiers = run_read_tiers(config.get("tiers", {})) or {}
 
