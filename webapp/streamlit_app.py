@@ -57,7 +57,7 @@ from rascal.run_wrappers import (
 # Streamlit header
 # ------------------------------------------------------------------
 st.title("RASCAL Web App")
-st.caption("Resources for Analyzing Speech in Clinical Aphasiology Labs")
+st.subheader("Resources for Analyzing Speech in Clinical Aphasiology Labs")
 
 # ------------------------------------------------------------------
 # Instruction manual toggle
@@ -116,7 +116,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
         timestamp = start_time.strftime("%y%m%d_%H%M")
         out_dir = (output_dir / f"rascal_output_{timestamp}").resolve()
         out_dir.mkdir(parents=True, exist_ok=True)
-        initialize_logger(start_time, out_dir)
+        initialize_logger(start_time, out_dir, "RASCAL")
 
         # ------------------------------------------------------------------
         # Load config parameters
@@ -209,7 +209,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
                     run_run_corelex(tiers, input_dir, out_dir, exclude_participants)
 
             st.success("✅ All selected functions completed successfully!")
-            terminate_logger(input_dir, out_dir, Path("config.yaml"), config, start_time)
+            terminate_logger(input_dir, out_dir, Path("config.yaml"), config, start_time, "RASCAL")
 
             # --- Create timestamped ZIP for download ---
             timestamp = start_time.strftime("%y%m%d_%H%M")
