@@ -69,7 +69,7 @@ class Tier:
         logger.debug(f"Tier '{self.name}': generated search string from literals: {search_str}")
         return search_str
 
-    def match(self, text: str, return_None: bool = False):
+    def match(self, text: str, return_None: bool = False, must_match: bool = False):
         """
         Applies the compiled regex pattern to a given text.
 
@@ -82,9 +82,11 @@ class Tier:
         if m:
             return m.group(0)
         if return_None:
-            logger.warning(f"No match for tier '{self.name}' in text: {text!r}")
+            if must_match:
+                logger.warning(f"No match for tier '{self.name}' in text: {text!r}")
             return None
-        logger.error(f"No match for tier '{self.name}' in text: {text!r}. Returning tier name.")
+        if must_match:
+            logger.error(f"No match for tier '{self.name}' in text: {text!r}. Returning tier name.")
         return self.name
 
     def make_blind_codes(self):
