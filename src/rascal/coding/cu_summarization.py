@@ -112,11 +112,11 @@ def _process_cu_file(file, utt_df, tiers, input_dir):
 
     # --- Locate related input files ---
     try:
-        cu_by_utt_path = find_files(match_tiers, input_dir, "cu_coding_by_utterance")
-        wc_by_utt_path = find_files(match_tiers, input_dir, "word_counting")
-        cu_by_sample_path = find_files(match_tiers, input_dir, "cu_coding_by_sample")
+        cu_by_utt_paths = find_files(match_tiers, input_dir, "cu_coding_by_utterance")
+        wc_by_utt_paths = find_files(match_tiers, input_dir, "word_counting")
+        cu_by_sample_paths = find_files(match_tiers, input_dir, "cu_coding_by_sample")
 
-        if not all([cu_by_utt_path, wc_by_utt_path, cu_by_sample_path]):
+        if not all([cu_by_utt_paths, wc_by_utt_paths, cu_by_sample_paths]):
             raise FileNotFoundError("One or more corresponding files could not be found.")
     except Exception as e:
         logger.error(f"Missing or invalid related data for {_rel(file)}: {e}")
@@ -124,9 +124,9 @@ def _process_cu_file(file, utt_df, tiers, input_dir):
 
     # --- Read dataframes ---
     try:
-        cu_by_utt = pd.read_excel(cu_by_utt_path)
-        wc_by_utt = pd.read_excel(wc_by_utt_path)
-        cu_by_sample = pd.read_excel(cu_by_sample_path)
+        cu_by_utt = pd.read_excel(cu_by_utt_paths[0])
+        wc_by_utt = pd.read_excel(wc_by_utt_paths[0])
+        cu_by_sample = pd.read_excel(cu_by_sample_paths[0])
         logger.info(f"Loaded CU, WC, and sample data for {_rel(file)}")
     except Exception as e:
         logger.error(f"Error reading related data for {_rel(file)}: {e}")
