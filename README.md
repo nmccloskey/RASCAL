@@ -1,6 +1,6 @@
 # RASCAL - Resources for Analyzing Speech in Clinical Aphasiology Labs
 
-RASCAL is designed to facilitate monologic discourse analysis in clinical aphasiology. It processes CHAT-formatted (.cha) transcriptions, organizes data into structured tiers, and automates key analytical steps in transcription reliability, complete utterance (CU) coding, and core lexicon (CoreLex) analysis.
+> RASCAL was designed to augment rigor and replicability in a variety of monologic discourse analyses common in clinical aphasiology. Initially, the program tabularizes CHAT-formatted (.cha) transcripts with unique identifiers for samples and utterances, facilitating hierarchical organization through filename-derived grouping variables. While structured around our laboratory's workflow, users can run any selection of RASCAL's modules, which include algorithmic transcription reliability evaluation, complete utterance (CU) coding summarization, and batched core lexicon (CoreLex) analysis. The program aims to help researchers and clinicians streamline discourse analysis pipelines, particularly when managing large datasets.
 ---
 
 ## Analysis Pipeline
@@ -25,12 +25,12 @@ RASCAL is designed to facilitate monologic discourse analysis in clinical aphasi
 - **Stage 7 (RASCAL):**
    - **Input:** CU coding files
    - **Output:** CU coding summaries, word count files
-- **Stage 8 (Manual):** Word counting and reliability checks
+- **Stage 8 (Manual):** Word counting and reliability checks, record speaking times
 - **Stage 9 (RASCAL):**
     - **Input:** Manually completed word count files
     - **Output:** Word count reliability analysis, reselected reliability samples
 - **Stage 10 (RASCAL):**
-    - **Input:** Utterance files, CU Coding, speaking time, and word count data
+    - **Input:** Transcript tables (with speaking times), CU Coding summaries & word count files
     - **Output:** Blind & unblind summaries, CoreLex analysis
 ---
 
@@ -90,6 +90,7 @@ You can download the example config file from the repo or create your own like t
 ```yaml
 input_dir: rascal_data/input
 output_dir: rascal_data/output
+random_seed: 8
 reliability_fraction: 0.2
 coders:
 - '1'
@@ -131,6 +132,8 @@ tiers:
 ### Explanation:
 
 - General
+
+  - `random_seed` - ensures deterministic selections for replicability
 
   - `reliability_fraction` - the proportion of data to subset for reliability (default 20%).
 
@@ -324,11 +327,9 @@ I warmly welcome feedback, feature suggestions, or bug reports. Feel free to rea
 
 Thanks for your interest and collaboration!
 
-## Citation
+## Citation (pending)
 
-If using RASCAL in your research, please cite:
-
-> McCloskey, N., et al. (2025, April). *The RASCAL pipeline: User-friendly and time-saving computational resources for coding and analyzing language samples*. Poster presented at the Aphasia Access Leadership Summit, Pittsburgh, PA.
+> (in prep) McCloskey, N., Hoover, E., Vitale, S., Kohen, F., and DeDe, G. *The RASCAL pipeline: User-friendly and time-saving computational resources for coding and analyzing monologic discourse samples*.
 
 ## Acknowledgments
 
