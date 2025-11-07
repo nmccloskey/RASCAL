@@ -179,7 +179,8 @@ def find_files(
     • Searches all provided directories for filenames containing both
       `search_base` and every label in `match_tiers` (case-sensitive).
     • Returns a list[Path] of matches (empty if none found).
-    • Optionally deduplicates identical filenames across directories.
+    • Optionally deduplicates identical filenames across directories,
+      logging which duplicates were removed.
 
     Parameters
     ----------
@@ -225,13 +226,24 @@ def find_files(
 
     if deduplicate:
         seen = {}
+        duplicates = {}
         for f in all_matches:
-            seen.setdefault(f.name, f)
+            if f.name in seen:
+                duplicates.setdefault(f.name, []).append(f)
+            else:
+                seen[f.name] = f
+
         unique_matches = list(seen.values())
-        if len(unique_matches) < len(all_matches):
+
+        if duplicates:
             logger.warning(
-                f"Removed {len(all_matches) - len(unique_matches)} duplicate filename(s) across directories."
+                f"Removed {sum(len(v) for v in duplicates.values())} duplicate filename(s) across directories."
             )
+            for fname, paths in duplicates.items():
+                logger.warning(f"Duplicate filename '{fname}' found in:")
+                for p in [seen[fname], *paths]:
+                    logger.warning(f"  - {_rel(p)}")
+
     else:
         unique_matches = all_matches
 
