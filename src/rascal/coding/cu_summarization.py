@@ -3,7 +3,7 @@ from pathlib import Path
 from rascal.utils.logger import logger, _rel
 from rascal.utils.auxiliary import (
     extract_transcript_data,
-    find_corresponding_file,
+    find_files,
 )
 
 def _apply_blinding(df, tiers):
@@ -112,9 +112,9 @@ def _process_cu_file(file, utt_df, tiers, input_dir):
 
     # --- Locate related input files ---
     try:
-        cu_by_utt_path = find_corresponding_file(match_tiers, input_dir, "cu_coding_by_utterance")
-        wc_by_utt_path = find_corresponding_file(match_tiers, input_dir, "word_counting")
-        cu_by_sample_path = find_corresponding_file(match_tiers, input_dir, "cu_coding_by_sample")
+        cu_by_utt_path = find_files(match_tiers, input_dir, "cu_coding_by_utterance")
+        wc_by_utt_path = find_files(match_tiers, input_dir, "word_counting")
+        cu_by_sample_path = find_files(match_tiers, input_dir, "cu_coding_by_sample")
 
         if not all([cu_by_utt_path, wc_by_utt_path, cu_by_sample_path]):
             raise FileNotFoundError("One or more corresponding files could not be found.")
@@ -216,7 +216,7 @@ def summarize_cus(tiers, input_dir, output_dir):
     logger.info(f"CU summary outputs will be written to {_rel(out_dir)}")
 
     try:
-        transcript_tables = find_corresponding_file(directories=[input_dir, output_dir],
+        transcript_tables = find_files(directories=[input_dir, output_dir],
                                                     search_base="transcript_tables")
         utt_tables = {tt: extract_transcript_data(tt) for tt in transcript_tables}
         unblind_utt_dfs, blind_utt_dfs = [], []

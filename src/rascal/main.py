@@ -11,7 +11,7 @@ from rascal.utils.logger import (
 from rascal.utils.auxiliary import (
     project_path,
     load_config,
-    find_corresponding_file,
+    find_files,
     OMNIBUS_MAP,
     COMMAND_MAP,
     build_arg_parser)
@@ -101,7 +101,7 @@ def main(args):
 
         # Prepare utterance files if needed
         if "4a" not in converted and any(c in ["4b", "7b", "10b"] for c in converted):
-            transcript_tables = find_corresponding_file(directories=[input_dir, out_dir],
+            transcript_tables = find_files(directories=[input_dir, out_dir],
                                                         search_base="transcript_tables")
             if not transcript_tables:
                 logger.info("No input transcript tables detected — creating them automatically.")

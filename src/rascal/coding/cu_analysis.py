@@ -182,7 +182,7 @@ def _write_cu_reliability_outputs(
     cu_rel_sum.to_excel(summary_path, index=False)
     logger.info(f"Wrote CU reliability summary file to {_rel(summary_path)}")
 
-    report_path = output_path / f"{labels_str}{paradigm_str}_cu_reliability_codingReport.txt"
+    report_path = output_path / f"{labels_str}{paradigm_str}_cu_reliability_coding_report.txt"
     write_reliability_report(cu_rel_sum, report_path, partition_labels)
     logger.info(f"Successfully wrote CU reliability report to {_rel(report_path)}")
 

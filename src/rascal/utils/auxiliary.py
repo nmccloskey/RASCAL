@@ -164,7 +164,7 @@ def load_config(config_file: str | Path) -> dict:
 # -------------------------------------------------------------
 # File handling utilities
 # -------------------------------------------------------------
-def find_corresponding_file(
+def find_files(
     match_tiers=None,
     directories=None,
     search_base="",
@@ -172,24 +172,21 @@ def find_corresponding_file(
     deduplicate=True,
 ):
     """
-    Find file(s) across one or more directories matching tier labels and a base pattern.
+    Recursively find files matching tier labels and a base pattern.
 
     Behavior
     --------
-    • Recursively searches each directory for files containing `search_base`
-      and all tier labels from `match_tiers` (case-sensitive).
-    • Returns:
-        - Path if exactly one match,
-        - list[Path] if multiple,
-        - None if none.
-    • Optionally deduplicates identical filenames (warns if removed).
+    • Searches all provided directories for filenames containing both
+      `search_base` and every label in `match_tiers` (case-sensitive).
+    • Returns a list[Path] of matches (empty if none found).
+    • Optionally deduplicates identical filenames across directories.
 
     Parameters
     ----------
     match_tiers : list[str] | None
-        Tier labels (e.g., ["AC", "PreTx"]). None/empty entries ignored.
+        Tier labels (e.g., ["AC", "PreTx"]). None/empty ignored.
     directories : Path | str | list[Path | str] | None
-        One or more directories to search recursively; defaults to CWD.
+        One or more directories to search (default: CWD).
     search_base : str
         Core substring to match in filenames.
     search_ext : str, default ".xlsx"
@@ -199,8 +196,8 @@ def find_corresponding_file(
 
     Returns
     -------
-    Path | list[Path] | None
-        Matching file(s), or None if none found.
+    list[Path]
+        Matching file paths (may be empty).
     """
     match_tiers = [str(mt) for mt in (match_tiers or []) if mt]
     if directories is None:
@@ -224,7 +221,7 @@ def find_corresponding_file(
 
     if not all_matches:
         logger.warning(f"No matches found for base '{search_base}' with tiers {match_tiers}.")
-        return None
+        return []
 
     if deduplicate:
         seen = {}
@@ -239,15 +236,14 @@ def find_corresponding_file(
         unique_matches = all_matches
 
     if len(unique_matches) == 1:
-        match = unique_matches[0]
-        logger.info(f"Matched file for '{search_base}': {_rel(match)}")
-        return match
+        logger.info(f"Matched file for '{search_base}': {_rel(unique_matches[0])}")
+    else:
+        logger.warning(
+            f"Multiple ({len(unique_matches)}) files matched '{search_base}' and {match_tiers}."
+        )
+        for f in unique_matches:
+            logger.debug(f"  - {_rel(f)}")
 
-    logger.warning(
-        f"Multiple ({len(unique_matches)}) files matched '{search_base}' and {match_tiers}; returning list."
-    )
-    for f in unique_matches:
-        logger.debug(f"  - {_rel(f)}")
     return unique_matches
 
 
