@@ -69,7 +69,7 @@ def initialize_logger(start_time: datetime, out_dir: Path, program_name: str):
     log_dir = out_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     timestamp = start_time.strftime("%y%m%d_%H%M")
-    log_path = (log_dir / f"rascal_{timestamp}.log").resolve()
+    log_path = (log_dir / f"{program_name.lower()}_{timestamp}.log").resolve()
 
     file_handler = logging.FileHandler(log_path, encoding="utf-8")
     file_handler.setFormatter(formatter)
@@ -91,6 +91,7 @@ def record_run_metadata(
     config: dict,
     start_time: datetime,
     end_time: datetime,
+    program_name: str
 ) -> Path:
     """Record structured metadata including configuration and directory snapshots."""
     runtime_seconds = round((end_time - start_time).total_seconds(), 2)
@@ -120,7 +121,7 @@ def record_run_metadata(
     }
 
     meta_path = (output_dir / "logs" /
-                 f"rascal_{start_time.strftime('%y%m%d_%H%M')}_metadata.json").resolve()
+                 f"{program_name.lower()}_{start_time.strftime('%y%m%d_%H%M')}_metadata.json").resolve()
     with meta_path.open("w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)
 
@@ -134,6 +135,7 @@ def terminate_logger(
     config_path: Path,
     config: dict,
     start_time: datetime,
+    program_name: str
 ):
     """Finalize logging: record metadata and close file handlers."""
     end_time = datetime.now()
@@ -141,7 +143,7 @@ def terminate_logger(
     logger.info(f"=== RASCAL run completed at {end_time.isoformat()} ===")
     logger.info(f"Total runtime: {elapsed:.2f} seconds")
 
-    record_run_metadata(input_dir, output_dir, config_path, config, start_time, end_time)
+    record_run_metadata(input_dir, output_dir, config_path, config, start_time, end_time, program_name)
 
     for handler in logger.handlers[:]:
         if isinstance(handler, logging.FileHandler):

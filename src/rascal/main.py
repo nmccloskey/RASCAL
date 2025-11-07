@@ -152,7 +152,7 @@ def main(args):
 
     finally:
         # Always finalize logging and metadata
-        terminate_logger(input_dir, out_dir, config_path, config, start_time)
+        terminate_logger(input_dir, out_dir, config_path, config, start_time, "RASCAL")
 
 # -------------------------------------------------------------
 # Direct execution
