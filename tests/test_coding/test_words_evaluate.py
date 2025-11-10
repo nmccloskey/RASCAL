@@ -1,89 +1,81 @@
-from pathlib import Path
-import os
 import pandas as pd
-import pytest
-
-# Import target
-try:
-    from rascal.coding import word_count_reliability_evaluation as wcra
-except Exception as e:
-    pytest.skip(f"Could not import rascal.utterances.word_count_reliability_analyzer: {e}", allow_module_level=True)
+from pathlib import Path
+from rascal.coding.word_count_reliability_evaluation import evaluate_word_count_reliability
 
 
 class MockTier:
-    def __init__(self, idx=0, partition=True):
-        self.idx = idx
+    """Minimal mock tier with .match() and .partition attributes."""
+    def __init__(self, label, partition=True):
+        self.label = label
         self.partition = partition
-    def match(self, filename, return_None=False):
-        base = Path(filename).stem
-        parts = base.split("_")
-        return parts[self.idx] if len(parts) > self.idx else None
+
+    def match(self, fname, return_None=False):
+        # Match if the label appears in the filename
+        return self.label if self.label in fname else None
 
 
-def _make_files(tmp_path):
-    """Create dummy WordCounting + WordCountingReliability files."""
+def _make_excel(df, path):
+    """Helper to write a DataFrame to Excel."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_excel(path, index=False)
+    return path
+
+
+def test_evaluate_word_count_reliability(tmp_path):
+    """Test evaluate_word_count_reliability end-to-end with synthetic data."""
     input_dir = tmp_path / "input"
-    input_dir.mkdir(parents=True, exist_ok=True)
-    (input_dir / "TU_P01_WordCounting.xlsx").write_bytes(b"stub")
-    (input_dir / "TU_P01_WordCountingReliability.xlsx").write_bytes(b"stub")
-    return input_dir
-
-
-def test_analyze_word_count_reliability(tmp_path, monkeypatch):
-    input_dir = _make_files(tmp_path)
     output_dir = tmp_path / "out"
+    input_dir.mkdir()
+    output_dir.mkdir()
 
-    # Build coding and reliability frames
-    WCdf = pd.DataFrame({
-        "utterance_id": ["U1","U2","U3"],
-        "wordCount": [5, 6, 7],
+    # --- Mock tier setup ---
+    tiers = {"group": MockTier("SiteA")}
+
+    # --- Create synthetic coding file ---
+    df_coding = pd.DataFrame({
+        "sample_id": ["S1", "S2", "S3"],
+        "utterance_id": [1, 2, 3],
+        "utterance": ["one", "two", "three"],
+        "word_count": [5, 10, 20]
     })
-    # Reliability has slightly different counts
-    WCreldf = pd.DataFrame({
-        "utterance_id": ["U1","U2","U3"],
-        "WCrelCom": ["ok","ok","ok"],
-        "wordCount": [5, 7, 6],  # small differences
+    coding_path = _make_excel(df_coding, input_dir / "SiteA_word_counting.xlsx")
+
+    # --- Create synthetic reliability file ---
+    df_rel = pd.DataFrame({
+        "sample_id": ["S1", "S2", "S3"],
+        "utterance_id": [1, 2, 3],
+        "word_count": [6, 9, 18],  # small diffs
+        "wc_rel_com": ["ok", "ok", "ok"]
     })
+    rel_path = _make_excel(df_rel, input_dir / "SiteA_word_count_reliability.xlsx")
 
-    captured = {}
-    def fake_read_excel(path, *a, **k):
-        p = os.fspath(path)
-        if p.endswith("Reliability.xlsx"):
-            return WCreldf.copy()
-        return WCdf.copy()
+    # --- Run evaluation ---
+    evaluate_word_count_reliability(tiers, input_dir, output_dir)
 
-    def fake_to_excel(self, path, index=False):
-        if path.endswith("ReliabilityResults.xlsx"):
-            captured["results"] = self.copy()
-        Path(os.fspath(path)).parent.mkdir(parents=True, exist_ok=True)
-        Path(os.fspath(path)).write_bytes(b"stub")
+    # --- Validate outputs ---
+    word_rel_dir = output_dir / "word_count_reliability" / "SiteA"
+    assert word_rel_dir.exists(), "Output directory not created"
 
-    monkeypatch.setattr(pd, "read_excel", fake_read_excel, raising=True)
-    monkeypatch.setattr(pd.DataFrame, "to_excel", fake_to_excel, raising=True)
+    results_files = list(word_rel_dir.glob("*results.xlsx"))
+    report_files = list(word_rel_dir.glob("*report.txt"))
 
-    tiers = {"site": MockTier(idx=0, partition=True)}
+    # Expect both results and report
+    assert len(results_files) == 1, "No results file created"
+    assert len(report_files) == 1, "No report file created"
 
-    wcra.evaluate_word_count_reliability(
-        tiers=tiers,
-        input_dir=str(input_dir),
-        output_dir=str(output_dir),
-    )
+    # Read merged results and check expected columns
+    results_df = pd.read_excel(results_files[0])
+    expected_cols = {
+        "sample_id", "utterance_id", "word_count_org", "word_count_rel",
+        "abs_diff", "perc_diff", "perc_sim", "agmt"
+    }
+    assert expected_cols.issubset(results_df.columns)
 
-    outdir = output_dir / "WordCountReliability" / "TU"
-    results_file = outdir / "TU_WordCountingReliabilityResults.xlsx"
-    report_file = outdir / "TU_WordCountReliabilityReport.txt"
+    # Agreement logic check — all small diffs should yield agreement = 1
+    assert results_df["agmt"].sum() == len(results_df)
 
-    assert results_file.exists()
-    assert report_file.exists()
-    assert "results" in captured
-
-    # Check merged results
-    df = captured["results"]
-    assert set(["utterance_id","wordCount_org","wordCount_rel","AbsDiff","PercDiff","PercSim","AG"]).issubset(df.columns)
-
-    # Check report contents
-    txt = report_file.read_text(encoding="utf-8")
-    assert "Word Count Reliability Report for TU" in txt
-    assert "Intraclass Correlation Coefficient" in txt
-    # At least one utterance agreed (AG==1)
-    assert df["AG"].sum() >= 1
+    # Check ICC and summary report text presence
+    with open(report_files[0]) as f:
+        report_text = f.read()
+    assert "ICC" in report_text
+    assert "agreement" in report_text.lower()
