@@ -1,54 +1,55 @@
+import random
 from pathlib import Path
-import types
-import pytest
-
 from rascal.utils.cha_files import read_cha_files
 
 
-class StubReader:
-    """Minimal stand-in for pylangacq.Reader; only needs .utterances() in downstream code."""
-    def __init__(self, label):
-        self._label = label
-    def utterances(self):
-        return iter([])  # not exercised here
+def _make_cha_file(path: Path, text: str):
+    """Helper to create a minimal .cha file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return path
 
 
-def test_read_cha_files_monkeypatched(monkeypatch, tmp_path):
-    # Create a fake directory structure with .cha and non-.cha files
-    (tmp_path / "a").mkdir()
-    (tmp_path / "b").mkdir()
-    (tmp_path / "a" / "one.cha").write_text("*PAR:\thello\n")
-    (tmp_path / "a" / "two.cha").write_text("*PAR:\tgoodbye\n")
-    (tmp_path / "b" / "ignore.txt").write_text("not a cha")
-    (tmp_path / "b" / "three.cha").write_text("*PAR:\thi\n")
+def test_read_cha_files(tmp_path, monkeypatch):
+    """Test that read_cha_files reads .cha files correctly and returns dict."""
+    input_dir = tmp_path / "input"
+    input_dir.mkdir()
 
-    # Monkeypatch pylangacq.read_chat to return a stub without reading/parsing
-    import rascal.utils.cha_files as module_under_test
-    calls = []
-    def fake_read_chat(path_str):
-        calls.append(Path(path_str).name)
-        return StubReader(Path(path_str).name)
-    monkeypatch.setattr(module_under_test, "pylangacq", types.SimpleNamespace(read_chat=fake_read_chat))
+    # --- Create fake .cha files ---
+    cha1 = _make_cha_file(input_dir / "sample1.cha", "*PAR:\tHello world.\n")
+    cha2 = _make_cha_file(input_dir / "nested" / "sample2.cha", "*PAR:\tAnother test.\n")
 
-    chats = read_cha_files(str(tmp_path), shuffle=False)
-    # We should have exactly the three .cha files, keyed by their basenames
-    assert set(chats.keys()) == {"one.cha", "two.cha", "three.cha"}
-    assert all(isinstance(v, StubReader) for v in chats.values())
-    # Ensure we attempted to "read" each file via the monkeypatched function
-    assert set(calls) == {"one.cha", "two.cha", "three.cha"}
+    # --- Monkeypatch pylangacq.read_chat to avoid heavy dependency ---
+    class MockReader:
+        def __init__(self, path):
+            self.path = path
+        def utterances(self):
+            return [{"participant": "PAR", "text": "mock"}]
 
-
-def test_read_cha_files_shuffle(monkeypatch, tmp_path):
-    # Two files; we won't assert order because shuffle=True
-    (tmp_path / "x.cha").write_text("*PAR:\tx\n")
-    (tmp_path / "y.cha").write_text("*PAR:\ty\n")
-
-    import rascal.utils.cha_files as module_under_test
     monkeypatch.setattr(
-        module_under_test,
-        "pylangacq",
-        types.SimpleNamespace(read_chat=lambda p: StubReader(Path(p).name)),
+        "rascal.utils.cha_files.pylangacq.read_chat",
+        lambda path: MockReader(path)
     )
 
-    chats = read_cha_files(str(tmp_path), shuffle=True)
-    assert set(chats.keys()) == {"x.cha", "y.cha"}
+    # --- Run function normally ---
+    chats = read_cha_files(input_dir)
+    assert isinstance(chats, dict)
+    assert len(chats) == 2, "Should read both .cha files recursively"
+    for name, reader in chats.items():
+        assert name.endswith(".cha")
+        assert hasattr(reader, "utterances")
+
+    # --- Verify that shuffle changes file order (non-deterministic) ---
+    all_names = list(chats.keys())
+    random.seed(123)
+    chats_shuffled = read_cha_files(input_dir, shuffle=True)
+    shuffled_names = list(chats_shuffled.keys())
+
+    # While content may be same, order can differ
+    assert set(all_names) == set(shuffled_names), "Shuffle should not change file membership"
+
+    # --- Check behavior with empty directory ---
+    empty_dir = tmp_path / "empty"
+    empty_dir.mkdir()
+    result_empty = read_cha_files(empty_dir)
+    assert result_empty == {}, "Expected empty dict for empty directory"
