@@ -1,98 +1,84 @@
-import os
-import types
 import pandas as pd
-import pytest
 from pathlib import Path
-
 from rascal.transcripts.transcription_reliability_selection import select_transcription_reliability_samples
 
 
-# ---------- Fakes ----------
-
-class FakeTier:
-    def __init__(self, name, partition, mapping):
-        self.name = name
+class MockTier:
+    """Minimal mock tier with match() and optional partition flag."""
+    def __init__(self, label, partition=True):
+        self.label = label
         self.partition = partition
-        self._map = mapping  # filename -> label
-    def match(self, filename: str):
-        return self._map.get(filename, None)
+        self.name = label
 
-class FakeChat:
-    def __init__(self, header_lines):
-        self._header_lines = header_lines
+    def match(self, fname):
+        # Match if label substring is found in the filename
+        return self.label if self.label in fname else None
+
+
+class MockChat:
+    """Fake CHAT object with to_strs() yielding minimal header text."""
+    def __init__(self, content):
+        self.content = content
     def to_strs(self):
-        # Simulate pylangacq Reader.to_strs() → iterator of transcript strings
-        yield "\n".join(self._header_lines + ["*PAR:\thello", "%com:\tnote"])
+        yield f"@Participants:\tPAR Participant\n@Begin\n{self.content}\n@End"
 
 
-@pytest.fixture
-def sample_data(tmp_path, monkeypatch):
-    f1 = str(tmp_path / "AC_P001.cha")
-    f2 = str(tmp_path / "BU_P002.cha")
-    chats = {
-        f1: FakeChat(["@Begin", "@Participants: PAR Participant"]),
-        f2: FakeChat(["@Begin", "@Participants: PAR Participant"]),
-    }
+def _make_chat_map(base_dir: Path, labels: list[str], content="Fake transcript"):
+    """Create mock CHAT files and a chats dict for the function input."""
+    chats = {}
+    for i, label in enumerate(labels, start=1):
+        fname = f"{label}_P{i:02d}.cha"
+        fpath = base_dir / fname
+        fpath.write_text(content)
+        chats[str(fpath)] = MockChat(content)
+    return chats
 
+
+def test_select_transcription_reliability_samples(tmp_path):
+    """End-to-end test of select_transcription_reliability_samples."""
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    input_dir = tmp_path / "input"
+    input_dir.mkdir()
+
+    # --- Mock tiers ---
     tiers = {
-        "site": FakeTier("site", True, {f1: "AC", f2: "BU"}),
+        "site": MockTier("SiteA", partition=True),
+        "group": MockTier("G1", partition=True),
     }
 
-    # Force random.sample to pick a deterministic subset (always first element)
-    monkeypatch.setattr(
-        "rascal.transcription.transcription_reliability_selector.random.sample",
-        lambda seq, k: seq[:k],
-    )
+    # --- Create mock CHAT files and chats mapping ---
+    labels = ["SiteA_G1", "SiteA_G1", "SiteA_G1"]
+    chats = _make_chat_map(input_dir, labels)
 
-    return f1, f2, chats, tiers, tmp_path
+    # --- Run the function ---
+    select_transcription_reliability_samples(tiers, chats, frac=0.5, output_dir=output_dir)
 
+    # --- Verify output directory structure ---
+    base_dir = output_dir / "transcription_reliability_selection" / "SiteA" / "G1"
+    assert base_dir.exists(), f"Expected partition directory missing: {base_dir}"
 
-def test_select_transcription_reliability_samples_creates_files(sample_data):
-    f1, f2, chats, tiers, tmp_path = sample_data
+    # --- Verify reliability CHA file(s) ---
+    cha_files = list(base_dir.glob("*_reliability.cha"))
+    assert cha_files, "No reliability CHA files were written"
+    # Ensure headers are correctly written
+    cha_text = cha_files[0].read_text()
+    assert cha_text.startswith("@Begin")
+    assert "@End" in cha_text
 
-    outdir = tmp_path / "out"
-    select_transcription_reliability_samples(
-        tiers, chats, frac=0.5, output_dir=str(outdir)
-    )
+    # --- Verify Excel summary ---
+    xlsx_files = list(base_dir.glob("*transcription_reliability_samples.xlsx"))
+    assert xlsx_files, "Expected Excel summary not found"
+    xls = pd.ExcelFile(xlsx_files[0])
+    assert {"reliability_selection", "all_transcripts"} <= set(xls.sheet_names)
 
-    # Should have created partition folders under TranscriptionReliability
-    rel_dir = outdir / "TranscriptionReliability"
-    assert rel_dir.exists()
+    df_all = pd.read_excel(xls, sheet_name="all_transcripts")
+    df_subset = pd.read_excel(xls, sheet_name="reliability_selection")
 
-    # Each partition (AC, BU) should get a subfolder
-    ac_dir = rel_dir / "AC"
-    bu_dir = rel_dir / "BU"
-    assert ac_dir.exists()
-    assert bu_dir.exists()
+    # --- Data validity checks ---
+    assert len(df_all) == len(chats)
+    assert not df_subset.empty
+    assert set(df_all.columns) >= {"file", "site", "group"}
 
-    # Should contain a Reliability .cha file with only header lines
-    ac_files = list(ac_dir.glob("*Reliability.cha"))
-    bu_files = list(bu_dir.glob("*Reliability.cha"))
-    assert len(ac_files) == 1
-    assert len(bu_files) == 1
-
-    # Verify headers were written
-    content = ac_files[0].read_text().splitlines()
-    assert content[0].startswith("@Begin")
-    assert content[-1].startswith("@End")
-
-    # Excel files should also be written
-    ac_xlsx = ac_dir / "AC.xlsx"
-    bu_xlsx = bu_dir / "BU.xlsx"
-    assert ac_xlsx.exists()
-    assert bu_xlsx.exists()
-
-    # Verify Excel has both sheets
-    xls = pd.ExcelFile(ac_xlsx)
-    assert set(xls.sheet_names) == {"Reliability", "AllTranscripts"}
-
-    # DataFrame content should have columns = file + tier(s)
-    df_reliability = pd.read_excel(ac_xlsx, sheet_name="Reliability")
-    df_all = pd.read_excel(ac_xlsx, sheet_name="AllTranscripts")
-    assert "file" in df_reliability.columns
-    assert "site" in df_reliability.columns
-    assert df_reliability["site"].iloc[0] == "AC"
-    # AllTranscripts sheet should include both AC and BU rows
-    assert "file" in df_all.columns
-    assert "site" in df_all.columns
-    assert set(df_all["site"]) == {"AC"}  # for AC.xlsx only contains AC files
+    # Subset rows should all exist in full list
+    assert set(df_subset["file"]).issubset(set(df_all["file"]))
