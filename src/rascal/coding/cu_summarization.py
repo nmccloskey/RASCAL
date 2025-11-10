@@ -51,9 +51,10 @@ def _process_cu_file(file, utt_df, tiers, input_dir):
         (merged_utts, merged_samples) or None on failure.
     """
     match_tiers = [t.match(file.name) for t in tiers.values() if t.partition]
+    # If no partition tiers, default to processing all files
     if not match_tiers:
-        logger.warning(f"No match tiers found for {_rel(file)} — skipping.")
-        return None
+        match_tiers = []
+        logger.info(f"No partition tiers for {_rel(file)} — proceeding ungrouped.")
 
     # Locate related inputs
     try:

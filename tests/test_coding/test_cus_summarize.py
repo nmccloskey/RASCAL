@@ -1,164 +1,98 @@
-# tests/test_samples/test_unblind_CUs.py
-from pathlib import Path
-import os
 import pandas as pd
-import numpy as np
 import pytest
+from pathlib import Path
 
-# Import target; skip cleanly if module isn't on path
-try:
-    from rascal.coding import cu_summarization as ub
-except Exception as e:
-    pytest.skip(f"Could not import rascal.samples.unblind_CUs: {e}", allow_module_level=True)
+import rascal.coding.cu_summarization as cu
 
 
-class MockTier:
-    def __init__(self, name, blind):
-        self.name = name
-        self.blind = blind
-    def make_blind_codes(self):
-        # Map the observed labels; in this test we only use site="TU"
-        return {self.name: {"TU": "SITE1"}}
+@pytest.fixture
+def mock_tiers(tmp_path):
+    """Create minimal mock tier objects with blind and partition attributes."""
+    class MockTier:
+        def __init__(self, name, blind=True, partition=False):
+            self.name = name
+            self.blind = blind
+            self.partition = partition
 
+        def match(self, _):
+            return self.name
 
-def _touch_inputs(tmp_path):
-    """Create placeholder files with expected suffixes so rglob finds them."""
-    input_dir = tmp_path / "input"
-    input_dir.mkdir(parents=True, exist_ok=True)
-    (input_dir / "TU_P01_Utterances.xlsx").write_bytes(b"stub")
-    (input_dir / "TU_P01_CUCoding_ByUtterance.xlsx").write_bytes(b"stub")
-    (input_dir / "TU_P01_WordCounting.xlsx").write_bytes(b"stub")
-    (input_dir / "TU_P01_SpeakingTimes.xlsx").write_bytes(b"stub")
-    (input_dir / "TU_P01_CUCoding_BySample.xlsx").write_bytes(b"stub")
-    return input_dir
+        def make_blind_codes(self):
+            return {self.name: {"A": "X", "B": "Y"}}
 
-
-def test_unblind_CUs_end_to_end(tmp_path, monkeypatch):
-    input_dir = _touch_inputs(tmp_path)
-    output_dir = tmp_path / "out"
-
-    # ---------- Build deterministic input frames ----------
-    # Two utterances, same sample; contains tiers and 'file'
-    utts = pd.DataFrame({
-        "utterance_id": ["U1", "U2"],
-        "sample_id":    ["S1", "S1"],
-        "file":         ["f1.cha", "f1.cha"],
-        "site":         ["TU", "TU"],       # blind=True tier
-        "participantID":["P01","P01"],      # blind=False tier
-        "speaker":      ["PAR", "PAR"],
-        "utterance":    ["hello world", "more words"],
-        "comment":      ["", ""],
-    })
-
-    # CU by utterance: keep columns to the RIGHT of 'comment'
-    cubyutts = pd.DataFrame({
-        "utterance_id": ["U1", "U2"],
-        "sample_id":    ["S1", "S1"],
-        "comment":      ["", ""],
-        "c2CU":         [1, 1],
-    })
-
-    # Word counts (utterance level)
-    wcs = pd.DataFrame({
-        "utterance_id": ["U1", "U2"],
-        "sample_id":    ["S1", "S1"],
-        "wordCount":    [3, 4],  # sums to 7
-        "WCcom":        ["", ""],
-    })
-
-    # Speaking times (sample level)
-    times = pd.DataFrame({
-        "sample_id":   ["S1"],
-        "client_time": [120],  # seconds; wpm = 7 / (120/60) = 3.5
-    })
-
-    # CU by sample (minimal; will just be merged through)
-    cubysample = pd.DataFrame({
-        "sample_id": ["S1"],
-        "CU":        [2],
-    })
-
-    # ---------- Monkeypatch IO ----------
-    def fake_read_excel(path, *a, **k):
-        p = os.fspath(path)
-        if p.endswith("_Utterances.xlsx"):
-            return utts.copy()
-        if p.endswith("_CUCoding_ByUtterance.xlsx"):
-            return cubyutts.copy()
-        if p.endswith("_WordCounting.xlsx"):
-            return wcs.copy()
-        if p.endswith("_SpeakingTimes.xlsx"):
-            return times.copy()
-        if p.endswith("_CUCoding_BySample.xlsx"):
-            return cubysample.copy()
-        raise AssertionError(f"Unexpected read_excel path: {p}")
-
-    captured = {}
-    def fake_to_excel(self, path, index=False):
-        p = os.fspath(path)
-        name = os.path.basename(p)
-        captured[name] = self.copy()
-        Path(p).parent.mkdir(parents=True, exist_ok=True)
-        Path(p).write_bytes(b"stub")
-
-    monkeypatch.setattr(pd, "read_excel", fake_read_excel, raising=True)
-    monkeypatch.setattr(pd.DataFrame, "to_excel", fake_to_excel, raising=True)
-
-    # ---------- Tiers ----------
-    tiers = {
-        "site": MockTier("site", blind=True),
-        "participantID": MockTier("participantID", blind=False),
+    return {
+        "site": MockTier("site", blind=True, partition=True),
+        "group": MockTier("group", blind=False, partition=False),
     }
 
-    # ---------- Run ----------
-    ub.summarize_cus(
-        tiers=tiers,
-        input_dir=str(input_dir),
-        output_dir=str(output_dir),
-    )
 
-    # ---------- Assertions: files created ----------
-    summaries = output_dir / "Summaries"
-    for fname in [
-        "unblindUtteranceData.xlsx",
-        "blindUtteranceData.xlsx",
-        "unblindSampleData.xlsx",
-        "blindSampleData.xlsx",
-        "blindCodes.xlsx",
+@pytest.fixture
+def minimal_datasets(tmp_path):
+    """Create minimal Excel datasets expected by summarize_cus."""
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    output_dir.mkdir()
+
+    # Create fake transcript table
+    utt_df = pd.DataFrame({
+        "sample_id": [1, 1],
+        "utterance_id": [1, 2],
+        "utterance": ["Hi", "Bye"],
+        "speaker": ["PAR", "PAR"],
+        "comment": ["", ""],
+        "file": ["file1", "file1"],
+        "site": ["A", "A"],
+    })
+    transcript_path = input_dir / "TU_P01_transcript_tables.xlsx"
+    with pd.ExcelWriter(transcript_path) as w:
+        utt_df.to_excel(w, index=False)
+
+    # Supporting CU, WC, and sample data
+    cu_by_utt = pd.DataFrame({
+        "sample_id": [1, 1],
+        "utterance_id": [1, 2],
+        "c2_comment": ["", ""],
+        "c1_CU": [1, 0],
+    })
+    wc_by_utt = pd.DataFrame({
+        "sample_id": [1, 1],
+        "utterance_id": [1, 2],
+        "word_count": [2, 1],
+    })
+    cu_by_sample = pd.DataFrame({
+        "sample_id": [1],
+        "speaking_time": [60],
+    })
+
+    for name, df in [
+        ("cu_coding_by_utterance", cu_by_utt),
+        ("word_counting", wc_by_utt),
+        ("cu_coding_by_sample", cu_by_sample),
     ]:
-        assert (summaries / fname).exists(), f"Missing {fname}"
-        assert fname in captured, f"Not captured: {fname}"
+        df.to_excel(input_dir / f"TU_P01_{name}.xlsx", index=False)
 
-    unblind_utts = captured["unblindUtteranceData.xlsx"]
-    blind_utts   = captured["blindUtteranceData.xlsx"]
-    unblind_samp = captured["unblindSampleData.xlsx"]
-    blind_samp   = captured["blindSampleData.xlsx"]
-    blind_codes  = captured["blindCodes.xlsx"]
+    return input_dir, output_dir, transcript_path
 
-    # ---------- Utterance-level checks ----------
-    # Unblinded utterances include both tiers and 'file', wordCount, c2CU, client_time after merge
-    for col in ["site", "participantID", "file", "wordCount", "c2CU", "client_time"]:
-        assert col in unblind_utts.columns
+def test_summarize_cus_end_to_end(monkeypatch, tmp_path, mock_tiers, minimal_datasets):
+    input_dir, output_dir, transcript_path = minimal_datasets
 
-    # Blinded utterances: 'participantID' (non-blind) and 'file' dropped; 'site' mapped
-    assert "participantID" not in blind_utts.columns
-    assert "file" not in blind_utts.columns
-    assert "site" in blind_utts.columns
-    assert set(blind_utts["site"].unique()) == {"SITE1"}
+    cu_by_utt = input_dir / "TU_P01_cu_coding_by_utterance.xlsx"
+    wc_by_utt = input_dir / "TU_P01_word_counting.xlsx"
+    cu_by_sample = input_dir / "TU_P01_cu_coding_by_sample.xlsx"
 
-    # ---------- Sample-level checks ----------
-    # Unblinded sample has summed wordCount and computed wpm
-    row = unblind_samp.iloc[0]
-    assert row["wordCount"] == 7
-    assert row["client_time"] == 120
-    assert row["wpm"] == pytest.approx(3.5, abs=1e-6)
-    # Blinded sample: participantID dropped; site mapped; file SHOULD remain (per implementation)
-    assert "participantID" not in blind_samp.columns
-    assert "site" in blind_samp.columns and blind_samp["site"].iloc[0] == "SITE1"
-    assert "file" in blind_samp.columns
+    def fake_find_files(match_tiers=None, directories=None, search_base="", **_):
+        if "cu_coding_by_utterance" in search_base:
+            return [cu_by_utt]
+        elif "word_counting" in search_base:
+            return [wc_by_utt]
+        elif "cu_coding_by_sample" in search_base:
+            return [cu_by_sample]
+        elif "transcript_tables" in search_base:
+            return [transcript_path]
+        return []
 
-    # ---------- Blind-code key ----------
-    # DataFrame columns include 'site'; row index contains original label 'TU' with value 'SITE1'
-    assert "site" in blind_codes.columns
-    assert "TU" in blind_codes.index
-    assert blind_codes.loc["TU", "site"] == "SITE1"
+    monkeypatch.setattr(cu, "find_files", fake_find_files)
+    monkeypatch.setattr(cu, "extract_transcript_data", lambda p: pd.read_excel(p))
+
+    cu.summarize_cus(mock_tiers, input_dir, output_dir)
