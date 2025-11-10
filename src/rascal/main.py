@@ -106,7 +106,7 @@ def main(args):
             chats = run_read_cha_files(input_dir)
 
         # Prepare utterance files if needed
-        if "4a" not in converted and any(c in ["4b", "7b", "10b"] for c in converted):
+        if "4a" not in converted and any(c in ["4b", "10b"] for c in converted):
             transcript_tables = find_files(directories=[input_dir, out_dir],
                                            search_base="transcript_tables")
             if not transcript_tables:

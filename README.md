@@ -1,6 +1,6 @@
 # RASCAL - Resources for Analyzing Speech in Clinical Aphasiology Labs
 
-> RASCAL was designed to augment rigor and replicability in a variety of monologic discourse analyses common in clinical aphasiology. Initially, the program tabularizes CHAT-formatted (.cha) transcripts with unique identifiers for samples and utterances, facilitating hierarchical organization through filename-derived grouping variables. While structured around our laboratory's workflow, users can run any selection of RASCAL's modules, which include algorithmic transcription reliability evaluation, complete utterance (CU) coding summarization, and batched core lexicon (CoreLex) analysis. The program aims to help researchers and clinicians streamline discourse analysis pipelines, particularly when managing large datasets.
+> RASCAL was designed to enhance efficiency, rigor, and replicability in a variety of monologic discourse analyses common in clinical aphasiology. Initially, the program tabularizes CHAT-formatted (.cha) transcripts with unique identifiers for samples and utterances, facilitating hierarchical organization through filename-derived grouping variables. While structured around our laboratory's workflow, users can run any selection of RASCAL's modules, which include algorithmic transcription reliability evaluation, complete utterance (CU) coding summarization, and batched core lexicon (CoreLex) analysis. The program aims to help researchers and clinicians streamline discourse analysis pipelines, particularly when managing large datasets.
 ---
 
 ## Analysis Pipeline

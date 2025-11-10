@@ -480,7 +480,8 @@ def reselect_cu_wc_reliability(
         return
 
     input_dir, output_dir = Path(input_dir), Path(output_dir)
-    out_dir = output_dir / f"reselected_{rel_type}_reliability"
+    out_dir_str = "cu_coding" if rel_type == "CU" else "word_count"
+    out_dir = output_dir / f"reselected_{out_dir_str}_reliability"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     pairs = _discover_reliability_pairs(tiers, input_dir, rel_type)

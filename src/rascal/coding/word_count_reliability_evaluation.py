@@ -174,8 +174,8 @@ def evaluate_word_count_reliability(tiers, input_dir, output_dir):
                 continue
 
             try:
-                wc_rel_df = wc_rel_df[["utterance_id", "wc_rel_com", "word_count"]].dropna(subset=["word_count"])
-                wc_merged = pd.merge(wc_df, wc_rel_df, on="utterance_id", how="inner",
+                wc_rel_df = wc_rel_df[["sample_id", "utterance_id", "wc_rel_com", "word_count"]].dropna(subset=["word_count"])
+                wc_merged = pd.merge(wc_df, wc_rel_df, on=["sample_id", "utterance_id"], how="inner",
                                      suffixes=("_org", "_rel"))
                 if len(wc_rel_df) != len(wc_merged):
                     logger.warning(f"Row mismatch after merge on {_rel(rel)}")

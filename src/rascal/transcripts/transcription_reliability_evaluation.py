@@ -332,11 +332,16 @@ def _format_alignment_output(alignment, best_score: float, normalized_score: flo
 def _ensure_parent_dir(path: str | Path):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
 
+from pathlib import Path
+from rascal.utils.logger import logger, _rel
+
 def _convert_cha_names(input_dir: str | Path) -> dict[str, list[Path]]:
     """
-    Detect a 'reliability' subdirectory under `input_dir` and create renamed copies
-    of its .cha files (appending '_reliability' before the extension).
-    The renamed files are written to a separate 'reliability/renamed' directory.
+    Recursively detect all 'reliability' subdirectories under `input_dir` and create
+    renamed copies of their .cha files (appending '_reliability' before the extension).
+
+    Renamed files are written into a parallel 'renamed' subdirectory within each
+    reliability directory.
 
     Returns
     -------
@@ -354,41 +359,42 @@ def _convert_cha_names(input_dir: str | Path) -> dict[str, list[Path]]:
     - Intended so the main function can exclude originals and include only the
       renamed copies when collecting .cha files.
     """
-    # input_dir = Path(input_dir).expanduser().resolve()
-    rel_dir = input_dir / "reliability"
+    input_dir = Path(input_dir).expanduser().resolve()
+    renamed, originals = [], []
 
-    if not rel_dir.exists():
-        logger.info("No 'reliability' subdirectory found; skipping _convert_cha_names.")
+    rel_dirs = [p for p in input_dir.rglob("*") if p.is_dir() and p.name == "reliability"]
+    if not rel_dirs:
+        logger.info("No 'reliability' subdirectories found under %s.", _rel(input_dir))
         return {"renamed": [], "originals": []}
 
-    renamed_dir = rel_dir / "renamed"
-    renamed_dir.mkdir(parents=True, exist_ok=True)
+    for rel_dir in rel_dirs:
+        renamed_dir = rel_dir / "renamed"
+        renamed_dir.mkdir(parents=True, exist_ok=True)
 
-    renamed, originals = [], []
-    for cha in rel_dir.rglob("*.cha"):
-        try:
-            if cha.name.endswith("reliability.cha"):
-                continue
+        for cha in rel_dir.rglob("*.cha"):
+            try:
+                if cha.name.endswith("reliability.cha"):
+                    continue
 
-            new_name = f"{cha.stem}_reliability.cha"
-            new_path = renamed_dir / new_name
+                new_name = f"{cha.stem}_reliability.cha"
+                new_path = renamed_dir / new_name
 
-            if new_path.exists():
-                logger.warning("Renamed file already exists, skipping: %s", _rel(new_path))
-                continue
+                if new_path.exists():
+                    logger.warning("Renamed file already exists, skipping: %s", _rel(new_path))
+                    continue
 
-            new_path.write_bytes(cha.read_bytes())
-            renamed.append(new_path)
-            originals.append(cha)
-            logger.info("Created renamed reliability copy: %s → %s", cha.name, new_name)
+                new_path.write_bytes(cha.read_bytes())
+                renamed.append(new_path)
+                originals.append(cha)
+                logger.info("Created renamed reliability copy: %s → %s", cha.name, new_name)
 
-        except Exception as e:
-            logger.error("Failed to process reliability file %s: %s", _rel(cha), e)
+            except Exception as e:
+                logger.error("Failed to process reliability file %s: %s", _rel(cha), e)
 
     logger.info(
-        "Reliability rename complete. %d file(s) copied to '%s'.",
+        "Reliability rename complete. %d file(s) copied from %d reliability dir(s).",
         len(renamed),
-        _rel(renamed_dir),
+        len(rel_dirs),
     )
     return {"renamed": renamed, "originals": originals}
 
