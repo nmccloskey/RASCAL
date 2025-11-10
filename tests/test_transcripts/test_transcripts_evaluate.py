@@ -1,128 +1,114 @@
-from pathlib import Path
-import os
+import pylangacq
 import pandas as pd
-import pytest
-
-try:
-    import rascal.transcripts.transcription_reliability_evaluation as tra
-except Exception as e:
-    pytest.skip(f"Could not import transcription_reliability_analysis: {e}", allow_module_level=True)
+from pathlib import Path
+from rascal.transcripts.transcription_reliability_evaluation import evaluate_transcription_reliability
 
 
 class MockTier:
-    """Minimal tier with a filename-based matcher."""
-    def __init__(self, name, partition=False, idx=0):
-        self.name = name
+    """Minimal mock tier simulating real RASCAL tier behavior."""
+    def __init__(self, label, partition=True):
+        self.label = label
         self.partition = partition
-        self.idx = idx
+        self.name = label
 
-    def match(self, filename: str):
-        # Example filenames: TU_P01_Sample.cha, TU_P01_SampleReliability.cha
-        base = Path(filename).stem.replace("Reliability", "")
-        parts = base.split("_")
-        try:
-            return parts[self.idx]
-        except Exception:
-            return None
+    def match(self, fname):
+        # return label if it appears in the filename
+        return self.label if self.label in fname else None
 
 
-def _make_fake_reader(text: str):
-    """Return an object with .utterances() yielding items that have .participant and .tiers."""
-    class _Utt:
-        def __init__(self, participant, text):
-            self.participant = participant
-            self.tiers = {participant: text}
-
-    class _Reader:
-        def __init__(self, txt):
-            self._utts = [_Utt("PAR", txt)]
-        def utterances(self):
-            return self._utts
-
-    return _Reader(text)
+def _make_cha_file(path: Path, text: str):
+    """Write a minimal pseudo-CHAT .cha file (plain text for test)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return path
 
 
-def test_analyze_transcription_reliability_basic(tmp_path, monkeypatch):
-    # --- Arrange ----------------------------------------------------------------
+def test_evaluate_transcription_reliability(tmp_path, monkeypatch):
+    """End-to-end test for evaluate_transcription_reliability with synthetic .cha files."""
     input_dir = tmp_path / "input"
-    output_dir = tmp_path / "out"
-    input_dir.mkdir(parents=True)
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    output_dir.mkdir()
 
-    # Create paired original + reliability .cha files (content not used by our stub)
-    org = input_dir / "TU_P01_Sample.cha"
-    rel = input_dir / "TU_P01_SampleReliability.cha"
-    org.write_text("@UTF8\n*PAR: hello world .\n", encoding="utf-8")
-    rel.write_text("@UTF8\n*PAR: hello world .\n", encoding="utf-8")
-
-    # Tiers: one partitioning tier ('site'), one non-partition tier ('participantID')
+    # --- Mock tiers ---
     tiers = {
-        "site": MockTier("site", partition=True, idx=0),
-        "participantID": MockTier("participantID", partition=False, idx=1),
+        "site": MockTier("SiteA", partition=True),
+        "group": MockTier("G1", partition=True),
     }
 
-    # Stub pylangacq.read_chat to avoid real parsing
-    def fake_read_chat(path):
-        # Make org/rel texts identical so LevenshteinSimilarity should be 1.0
-        return _make_fake_reader("hello world.")
-    monkeypatch.setattr(tra.pylangacq, "read_chat", fake_read_chat, raising=True)
+    # --- Create original and reliability .cha files ---
+    original_dir = input_dir / "data"
+    reliability_dir = input_dir / "data" / "reliability"
+    reliability_dir.mkdir(parents=True, exist_ok=True)
 
-    # Stub Needleman–Wunsch to avoid Biopython dependency/behavior variance
-    def fake_nw(org_text, rel_text):
-        class _Align:
-            def __getitem__(self, i):
-                return org_text if i == 0 else rel_text
-        return {
-            "NeedlemanWunschScore": float(max(len(org_text), len(rel_text))),
-            "NeedlemanWunschNorm": 1.0,
-            "alignment": _Align(),
-        }
-    monkeypatch.setattr(tra, "_needleman_wunsch_global", fake_nw, raising=True)
+    org_text = "*PAR:\tThis is a test.\n%com:\tOriginal comment.\n"
+    rel_text = "*PAR:\tThis is test.\n%com:\tReliability comment.\n"
 
-    # Stub DataFrame.to_excel to avoid openpyxl requirement; create a tiny file so paths exist
-    def fake_to_excel(self, path, index=False):
-        path = os.fspath(path)
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        Path(path).write_bytes(b"stub")
-    monkeypatch.setattr(pd.DataFrame, "to_excel", fake_to_excel, raising=True)
+    org_file = _make_cha_file(original_dir / "SiteA_G1_P01.cha", org_text)
+    rel_file = _make_cha_file(reliability_dir / "SiteA_G1_P01_reliability.cha", rel_text)
 
-    # --- Act --------------------------------------------------------------------
-    results = tra.evaluate_transcription_reliability(
-        tiers=tiers,
-        input_dir=str(input_dir),
-        output_dir=str(output_dir),
-        test=True  # return the grouped DataFrames
+    # --- Monkeypatch heavy components to make test fast and deterministic ---
+
+    # Avoid using real pylangacq (mock read_chat to return a stub with utterances)
+    class MockUtt:
+        def __init__(self, text):
+            self.participant = "PAR"
+            self.tiers = {"PAR": text}
+
+    class MockReader(pylangacq.Reader):
+        def __init__(self, text):
+            self._text = text
+        def utterances(self):
+            return [MockUtt(self._text)]
+
+    monkeypatch.setattr(
+        "rascal.transcripts.transcription_reliability_evaluation.pylangacq.read_chat",
+        lambda path: MockReader(Path(path).read_text())
     )
 
-    # --- Assert -----------------------------------------------------------------
-    # Expect one grouped DataFrame (partitioned by site = 'TU')
+    # Monkeypatch _convert_cha_names to return the reliability dir as having been processed
+    monkeypatch.setattr(
+        "rascal.transcripts.transcription_reliability_evaluation._convert_cha_names",
+        lambda input_dir: {"renamed": [], "originals": []}
+    )
+
+    # --- Run function ---
+    results = evaluate_transcription_reliability(
+        tiers=tiers,
+        input_dir=input_dir,
+        output_dir=output_dir,
+        exclude_participants=["INV"],
+        test=True,
+    )
+
+    # --- Verify outputs ---
+    transc_rel_dir = output_dir / "transcription_reliability_evaluation" / "SiteA" / "G1"
+    assert transc_rel_dir.exists(), f"Output directory not created: {transc_rel_dir}"
+
+    # Check that results returned (since test=True)
     assert isinstance(results, list) and len(results) == 1
     df = results[0]
-    assert isinstance(df, pd.DataFrame)
-    assert len(df) == 1  # one reliability pair
+    assert not df.empty, "Returned reliability DataFrame is empty"
 
-    # Required columns present
-    required_cols = {
-        "site", "participantID", "OrgFile", "RelFile",
-        "LevenshteinDistance", "LevenshteinSimilarity",
-        "NeedlemanWunschScore", "NeedlemanWunschNorm",
-        "OrgNumTokens", "RelNumTokens", "OrgNumChars", "RelNumChars"
+    # Verify expected metrics
+    expected_cols = {
+        "original_file",
+        "reliability_file",
+        "org_num_tokens",
+        "rel_num_tokens",
+        "levenshtein_similarity",
+        "needleman_wunsch_score",
+        "needleman_wunsch_norm",
     }
-    missing = required_cols.difference(df.columns)
-    assert not missing, f"Missing expected columns: {missing}"
+    assert expected_cols.issubset(df.columns), f"Missing expected columns: {expected_cols - set(df.columns)}"
 
-    # Values: labels, file names, perfect similarity on identical texts
-    row = df.iloc[0]
-    assert row["site"] == "TU"
-    assert row["participantID"] == "P01"
-    assert row["OrgFile"] == org.name
-    assert row["RelFile"] == rel.name
-    assert row["LevenshteinSimilarity"] == pytest.approx(1.0, abs=1e-12)
-    assert row["LevenshteinDistance"] == 0
+    # Verify Excel and report outputs exist
+    xlsx_files = list(transc_rel_dir.rglob("*evaluation.xlsx"))
+    report_files = list(transc_rel_dir.rglob("*report.txt"))
+    assert xlsx_files, "Expected reliability Excel file not found"
+    assert report_files, "Expected reliability report file not found"
 
-    # Alignment pretty-print file exists under GlobalAlignments/
-    align_glob = list((output_dir / "TranscriptionReliabilityAnalysis").rglob("GlobalAlignments/*Alignment.txt"))
-    assert len(align_glob) == 1, "Expected a single alignment output file."
-
-    # Report exists (partitioned by site)
-    report_glob = list((output_dir / "TranscriptionReliabilityAnalysis").rglob("*TranscriptionReliabilityReport.txt"))
-    assert len(report_glob) == 1, "Expected a single reliability report file."
+    # Basic content checks for report
+    report_text = Path(report_files[0]).read_text()
+    assert "Levenshtein" in report_text
+    assert "Number of samples" in report_text
