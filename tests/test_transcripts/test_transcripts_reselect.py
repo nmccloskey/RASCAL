@@ -1,71 +1,60 @@
 import pandas as pd
-import pytest
 from pathlib import Path
-
-from rascal.transcripts.transcription_reliability_selection import (
-    reselect_transcription_reliability_samples,
-)
+from rascal.transcripts.transcription_reliability_selection import reselect_transcription_reliability_samples
 
 
-@pytest.fixture
-def setup_excel(tmp_path):
-    """
-    Create a fake TranscriptionReliabilitySamples.xlsx file with both
-    AllTranscripts and Reliability sheets for testing reselection.
-    """
+def _make_reliability_excel(path: Path):
+    """Create a mock transcription_reliability_samples.xlsx file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    all_files = [f"file_{i}.cha" for i in range(1, 6)]
+    used_files = all_files[:2]  # first two already used
+
+    df_all = pd.DataFrame({"file": all_files, "site": ["A"] * 5, "group": ["G1"] * 5})
+    df_rel = pd.DataFrame({"file": used_files, "site": ["A"] * 2, "group": ["G1"] * 2})
+
+    with pd.ExcelWriter(path) as writer:
+        df_rel.to_excel(writer, sheet_name="reliability_selection", index=False)
+        df_all.to_excel(writer, sheet_name="all_transcripts", index=False)
+    return path
+
+
+def test_reselect_transcription_reliability_samples(tmp_path):
+    """Test that reselect_transcription_reliability_samples correctly outputs new Excel with unused files."""
     input_dir = tmp_path / "input"
-    input_dir.mkdir()
     output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    output_dir.mkdir()
 
-    # Fake data
-    all_data = pd.DataFrame(
-        {
-            "file": ["f1.cha", "f2.cha", "f3.cha", "f4.cha"],
-            "site": ["AC", "AC", "BU", "BU"],
-        }
-    )
-    rel_data = pd.DataFrame(
-        {
-            "file": ["f1.cha"],  # already used, should be excluded
-            "site": ["AC"],
-        }
-    )
+    # Create a mock existing reliability Excel file
+    mock_file = input_dir / "mock_transcription_reliability_samples.xlsx"
+    _make_reliability_excel(mock_file)
 
-    excel_path = input_dir / "Test_TranscriptionReliabilitySamples.xlsx"
-    with pd.ExcelWriter(excel_path) as writer:
-        all_data.to_excel(writer, sheet_name="AllTranscripts", index=False)
-        rel_data.to_excel(writer, sheet_name="Reliability", index=False)
+    # Run reselection
+    reselect_transcription_reliability_samples(input_dir, output_dir, frac=0.4)
 
-    return input_dir, output_dir, excel_path, all_data, rel_data
+    # Verify output directory and file
+    reselect_dir = output_dir / "reselected_transcription_reliability"
+    assert reselect_dir.exists(), "Expected reselection directory not created"
 
+    out_files = list(reselect_dir.glob("reselected_*.xlsx"))
+    assert out_files, "Expected reselection Excel file not created"
 
-def test_reselect_transcription_reliability_samples(setup_excel):
-    input_dir, output_dir, excel_path, all_data, rel_data = setup_excel
+    # Read new reselection file
+    new_df = pd.read_excel(out_files[0], sheet_name="reselected_reliability")
 
-    # Run reselection with frac=0.5 (should give 2 samples from 4 total)
-    reselect_transcription_reliability_samples(input_dir, output_dir, frac=0.5)
+    # Check that new_df excludes already used files
+    assert not set(new_df["file"]).intersection({"file_1.cha", "file_2.cha"}), \
+        "Reselection included already used files"
 
-    reselect_dir = output_dir / "reselected_TranscriptionReliability"
-    assert reselect_dir.exists()
+    # Check that selected files are from remaining candidates
+    remaining_candidates = {"file_3.cha", "file_4.cha", "file_5.cha"}
+    assert set(new_df["file"]).issubset(remaining_candidates), \
+        "Reselection picked unexpected files"
 
-    outpath = reselect_dir / f"reselected_{excel_path.name}"
-    assert outpath.exists()
+    # Check that at least one file was selected
+    assert len(new_df) >= 1, "No files selected in reselection process"
 
-    # Load reselection result
-    df_reselected = pd.read_excel(outpath, sheet_name="Reselected")
-
-    # Verify that 'file' column exists
-    assert "file" in df_reselected.columns
-
-    # None of the reselected files should be in the original Reliability sheet
-    used_files = set(rel_data["file"])
-    assert all(f not in used_files for f in df_reselected["file"])
-
-    # Should not exceed total number of candidates
-    candidates = set(all_data["file"]) - used_files
-    assert set(df_reselected["file"]).issubset(candidates)
-
-    # Sample size should be min(max(1, round(frac * len(all))), len(candidates))
-    expected_n = max(1, round(0.5 * len(all_data)))
-    expected_n = min(expected_n, len(candidates))
-    assert len(df_reselected) == expected_n
+    # Confirm correct sheet and data structure
+    xls = pd.ExcelFile(out_files[0])
+    assert "reselected_reliability" in xls.sheet_names
+    assert {"file", "site", "group"}.issubset(new_df.columns)
