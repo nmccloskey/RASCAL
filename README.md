@@ -335,9 +335,14 @@ I warmly welcome feedback, feature suggestions, or bug reports. Feel free to rea
 
 Thanks for your interest and collaboration!
 
-## Citation (pending)
+## Citation
 
-> (in prep) McCloskey, N., Hoover, E., Vitale, S., Kohen, F., and DeDe, G. *The RASCAL pipeline: User-friendly and time-saving computational resources for coding and analyzing monologic discourse samples*.
+If using RASCAL in your research, please cite:
+
+> McCloskey, N., et al. (2025, April). *The RASCAL pipeline: User-friendly and time-saving computational resources for coding and analyzing language samples*. Poster presented at the Aphasia Access Leadership Summit, Pittsburgh, PA.
+
+There is a formal writeup in preparation.
+> (in prep) McCloskey, N., Hoover, E., Vitale, S., Kohen, F., and DeDe, G. (2025) *The RASCAL pipeline: User-friendly and time-saving computational resources for coding and analyzing monologic discourse samples*.
 
 ## Acknowledgments
 

@@ -2,15 +2,13 @@
 
 ## About RASCAL (Resources for Analyzing Speech in Clinical Aphasiology Labs)
 
-**Version:** 0.2.0  
+**Version:** 1.0.0  
 **Author:** Nick McCloskey, Temple University Speech-Language & Brain Lab  
-**Contact:** [insert email or GitHub issues link]  
 **Repository:** [https://github.com/nmccloskey/rascal](https://github.com/nmccloskey/rascal)    
-**PyPI Distribution:**  
+**Report Issues:** [https://github.com/nmccloskey/rascal/issues](https://github.com/nmccloskey/rascal/issues)    
+**PyPI Distribution:**  [https://pypi.org/project/rascal-speech/](https://pypi.org/project/rascal-speech/)  
 **Web App:** [https://rascal.streamlit.app/](https://rascal.streamlit.app/)  
 **License:** MIT  
-**Suggested Citation:**  
-McCloskey, N. (2025). *RASCAL – Resources for Analyzing Speech in Clinical Aphasiology Labs* (v0.2.0) [Computer software]. Zenodo. https://doi.org/[placeholder]
 
 ---
 
@@ -33,12 +31,11 @@ The program automates or facilitates:
 
 - **Transcription reliability** selection and evaluation  
 - **Complete Utterance (CU)** coding summaries and reliability calculations  
-- **Core Lexicon analysis** via CoreLex norms  
-- **Word count coding** and sampling  
+- **Batched Core Lexicon analysis** with detailed output  
 - **Blinded sample management** for clinical coding teams  
 - **Integrated data organization** for tiered multi-speaker transcripts  
 
-RASCAL’s modular design allows laboratories to adopt only the components that match their workflow while ensuring full compatibility across pipeline stages.
+RASCAL’s modular design allows clinicians and researchers to select only the components that support their workflow while ensuring full compatibility across pipeline stages.
 
 ---
 
@@ -46,11 +43,11 @@ RASCAL’s modular design allows laboratories to adopt only the components that 
 
 | Component | Recommended Specification |
 |------------|---------------------------|
-| **Python** | 3.11 – 3.12 |
+| **Python** | 3.12 |
 | **Operating System** | Windows 10+, macOS 13+, Linux (Ubuntu 20.04+) |
 | **RAM** | ≥ 8 GB recommended for large batches |
 | **Dependencies** | Automatically installed via `pip` (see `requirements.txt`) |
-| **Optional Tools** | CLAN (for transcription), Excel (for manual coding files) |
+| **Other Programs** | CLAN (for transcription), Excel (for manual coding files) |
 
 ---
 
@@ -67,8 +64,8 @@ RASCAL can be used in **two ways**:
 
 1. Visit [**https://rascal.streamlit.app/**](https://rascal.streamlit.app/)  
 2. Upload your `config.yaml` and input files when prompted.  
-3. Follow the on-screen steps that correspond to pipeline stages (4a → 10a etc.).  
-4. Download the generated output Excel files when complete.  
+3. Upload inputs (`.cha` and/or `.xlsx` files).  
+4. Download the zipped output files when complete.  
 
 > **Tip:** The web app saves temporary files in session memory only; export your outputs before closing the tab.
 
@@ -119,7 +116,7 @@ your_project/
                           # RASCAL automatically creates 'output/' on run
 ```
 
-> **Note:** Use consistent participant and file naming across projects to enable cross-run merging.
+> **Note:** Use consistent participant encoding and file naming across projects to enable cross-run merging.
 
 ---
 
@@ -128,9 +125,6 @@ your_project/
 ```bash
 pip install --upgrade rascal-speech
 ```
-
-New versions are backward-compatible with existing config files.  
-Check release notes on GitHub for changes in pipeline behavior.
 
 ---
 
@@ -143,21 +137,15 @@ conda remove --name rascal --all   # optional, removes environment
 
 ---
 
-### 1.6  Next Steps
-
-Proceed to **Section 2 – Configuration File**, which explains how to customize `config.yaml` and launch RASCAL through either CLI or web app interfaces.
-
----
-
 ## 2  Incorporation of ASR Tools
 
 RASCAL is designed to integrate seamlessly with the **Batchalign** and **Whisper AI** automatic speech recognition (ASR) systems to accelerate the transcription phase preceding linguistic analysis.  
 
-The recommended workflow begins by using **Batchalign** to align and process audio or video recordings. Batchalign supports direct integration with **Whisper AI**, an open-source ASR system developed by OpenAI that performs high-accuracy offline transcription. Both tools can be installed locally, allowing all processing to occur **entirely offline**, which ensures compatibility with privacy and clinical data protection standards.  
+The recommended workflow begins by using **Batchalign** with **Whisper AI**, an open-source ASR system developed by OpenAI that performs high-accuracy offline transcription. Both tools can be installed locally, allowing all ASR to occur **entirely offline**, which ensures compatibility with privacy and clinical data protection standards.  
 
-Batchalign generates CHAT-formatted (`.cha`) transcripts that can be imported directly into RASCAL for further processing. Once transcribed, these files can also be coded or annotated in **CLAN** (MacWhinney & Fromm, 2022) and subsequently analyzed through RASCAL’s modular pipeline.
+Batchalign generates CHAT-formatted (`.cha`) transcripts that can be imported directly into RASCAL for further processing. Once transcribed, these files can also be coded or annotated in **CLAN** (MacWhinney & Fromm, 2022) and subsequently analyzed through RASCAL’s modular pipeline (see section 4 for the CHAT coding supported by RASCAL).
 
-While Batchalign’s authors note that its performance may degrade for speech characterized by severe impairments, our experience indicates that the **Batchalign + Whisper** combination provides sufficiently accurate outputs across a wide range of aphasia severities to substantially expedite transcription—reducing both manual workload and turnaround time for large datasets. 
+While Batchalign’s authors note that its performance may degrade for speech characterized by severe impairments, our experience indicates that the **Batchalign + Whisper** combination provides sufficiently accurate outputs across a wide range of aphasia severities to substantially expedite transcription. 
 
 ---
 
@@ -175,13 +163,13 @@ The RASCAL web application runs on **Streamlit Community Cloud**, which processe
 This ensures that all participant or client information remains confidential and is not accessible after a session concludes.
 
 > ⚠️ **Best Practice:**  
-> Even though RASCAL does not require identifying information, we strongly recommend **blinding or pseudonymizing** participant identifiers (e.g., replacing “John_P01” with “TU01P01”) prior to upload. This maintains full compliance with privacy standards in clinical and research settings.
+> We strongly recommend **blinding or pseudonymizing** participant identifiers (e.g., replacing “John_P01” with “TU01P01”) prior to upload. This maintains full compliance with privacy standards in clinical and research settings.
 
-Note that Streamlit flattens directories upon file upload. This matters in particular for the transcription liability functionality (only CLI version supports the `/reliability` directory).
+Note that Streamlit flattens directories upon file upload. This matters in particular for the transcription reliability functionality (only CLI version supports the `/reliability` directory).
 
 ### 3.2 Local Use
 
-When installed and run locally (via the CLI), all data remain within the user’s computer environment. For the CoreLex functionality, normative data for percentile calculation (Cavanaugh et al., 2021) is accessed online using Google Sheet IDs, but otherwise the CLI version runs offline. The program never collects or transmits any user information. RASCAL therefore supports secure use under HIPAA-compliant, IRB-approved, or other institutional privacy frameworks.
+When installed and run locally (via the CLI), all data remain within the user’s computer environment. For the CoreLex functionality, normative data for percentile calculation (Cavanaugh et al., 2021) is accessed online using Google Sheet IDs, but otherwise the CLI version runs offline. The program never collects or transmits any user information. RASCAL therefore supports secure use under HIPAA-compliant privacy frameworks.
 
 ---
 
@@ -196,7 +184,7 @@ This file specifies the following:
 2. Reliability subset fraction (default: 0.2)  
 3. Coder identifiers (for dividing and blinding samples)  
 4. CU coding paradigms (to handle dialectal variants if desired)  
-5. Participants to exclude from reliability analyses  
+5. Speakers in transcripts to exclude from analyses  
 6. Tier definitions for identifying (nested) units of analysis in filenames  
 7. Optional preprocessing settings for transcription reliability
 
@@ -211,6 +199,7 @@ You can download an editable example (`example_config.yaml`) from the GitHub rep
 ```yaml
 input_dir: rascal_data/input
 output_dir: rascal_data/output
+random_seed: 8
 reliability_fraction: 0.2
 coders:
 - '1'
@@ -257,11 +246,12 @@ tiers:
 
 | Key | Description |
 |-----|--------------|
-| **input_dir / output_dir** | Paths for input and output data. The web app presets these automatically. |
+| **input_dir / output_dir** | Paths for input and output data. The web app presets these automatically (the latter is zipped for download). |
+| **random_seed** | Ensures deterministic selections for replicability |
 | **reliability_fraction** | Fraction of samples randomly selected for reliability coding (default = 0.2). |
 | **coders** | List of alphanumeric identifiers (e.g., 1–3). At least 2 are required for word count and 3 for CU coding. RASCAL automatically distributes samples evenly and prevents overlap between coders. |
 | **CU_paradigms** | Defines CU coding systems (e.g., SAE = Standard American English, AAE = African American English). Multiple paradigms generate parallel coding columns. |
-| **exclude_participants** | Excludes specified speakers (e.g., “INV”) from reliability and CU coding. |
+| **exclude_participants** | Excludes specified speakers (e.g., “INV”) from transcription reliability and CU coding. |
 
 #### Transcription Reliability Settings
 
@@ -286,7 +276,7 @@ Each tier has:
 |------------|--------------|
 | **values** | List of literal identifiers or a single regular expression defining possible values in filenames. |
 | **partition** | When `true`, RASCAL creates **separate coding files and reliability subsets** for each value of that tier (e.g., site). |
-| **blind** | When `true`, generates blinding codes for CU coding summaries. |
+| **blind** | When `true`, generates blinding codes for CU coding summaries (function **10a**). |
 
 #### Example: File Naming and Tier Extraction
 
@@ -300,7 +290,7 @@ Example files:
 - `TU88PreTxBrokenWindow.cha`
 - `BU77Maintenance_CatRescue.cha`
 
-Based on the above configuration, RASCAL tabularizes as follows:
+Based on the above configuration (section 4.2), RASCAL tabularizes as follows:
 
 | site | test  | study_id | narrative     |
 |------|-------|---------------|---------------|
@@ -351,7 +341,7 @@ The downloaded file can later be uploaded for use in both the CLI and web app in
   ```
   - *Succinct* commands: numeric/letter codes (e.g., `4b`).  
   - *Expanded* commands: quoted phrases (e.g., `"cus make"`).  
-  - *Omnibus* commands: whole stage (e.g., `4` runs `4a,4b`).
+  - *Omnibus* commands: whole stage (e.g., `4` equivalent to `4a,4b`).
 
 - **Web app:** Streamlit Community Cloud. Use **Part 3: Select functions to run** to choose the same functions listed below.
 
@@ -361,17 +351,17 @@ The downloaded file can later be uploaded for use in both the CLI and web app in
 | Stage (succinct command) | Expanded command | Description | Input | Output | Function name |
 |---------------------------|------------------|--------------|--------|---------|----------------|
 | 1a | transcripts select | Select transcription reliability samples | Raw `.cha` files | Reliability & full sample lists + template `.cha` files | `select_transcription_reliability_samples` |
-| 3a | transcripts evaluate | Evaluate transcription reliability | Reliability `.cha` pairs | Agreement metrics + alignment text reports | `analyze_transcription_reliability` |
+| 3a | transcripts evaluate | Evaluate transcription reliability | Reliability `.cha` pairs | Agreement metrics + alignment text reports | `evaluate_transcription_reliability` |
 | 3b | transcripts reselect | Reselect transcription reliability samples | Original + reliability transcription tables (from **1a**) | New reliability subset(s) | `reselect_transcription_reliability_samples` |
 | 4a | transcripts make | Prepare transcript tables | Raw `.cha` files | Sample & utterance-level spreadsheets | `make_transcript_tables` |
-| 4b | cus make | Make CU coding & reliability files | Utterance tables (from **4a**) | CU coding + reliability spreadsheets | `make_CU_coding_files` |
-| 6a | cus evaluate | Analyze CU reliability | Manually completed CU coding (from **4b**) | Reliability summary tables + reports | `analyze_CU_reliability` |
-| 6b | cus reselect | Reselect CU reliability samples | Manually completed CU coding (from **4b**) | New reliability subset(s) | `reselect_CU_reliability` |
-| 7a | cus analyze | Analyze CU coding | Manually completed CU coding (from **4b**) | Sample- and utterance-level CU summaries | `analyze_CU_coding` |
+| 4b | cus make | Make CU coding & reliability files | Utterance tables (from **4a**) | CU coding + reliability spreadsheets | `make_cu_coding_files` |
+| 6a | cus evaluate | Analyze CU reliability | Manually completed CU coding (from **4b**) | Reliability summary tables + reports | `evaluate_cu_reliability` |
+| 6b | cus reselect | Reselect CU reliability samples | Manually completed CU coding (from **4b**) | New reliability subset(s) | `reselect_cu_wc_reliability` |
+| 7a | cus analyze | Analyze CU coding | Manually completed CU coding (from **4b**) | Sample- and utterance-level CU analyses | `analyze_cu_coding` |
 | 7b | words make | Make word count & reliability files | CU coding tables (from **7a**) | Word count + reliability spreadsheets | `make_word_count_files` |
-| 9a | words evaluate | Evaluate word count reliability | Manually completed word counts (from **7b**) | Reliability summaries + agreement reports | `analyze_word_count_reliability` |
-| 9b | words reselect | Reselect word count reliability samples | Manually completed word counts (from **7b**) | New reliability subset(s) | `reselect_WC_reliability` |
-| 10a | cus summarize | Summarize CU coding & word counts | CU and WC coding results | Blind + unblind utterance and sample summaries + blind codes | `unblind_CUs` |
+| 9a | words evaluate | Evaluate word count reliability | Manually completed word counts (from **7b**) | Reliability summaries + agreement reports | `evaluate_word_count_reliability` |
+| 9b | words reselect | Reselect word count reliability samples | Manually completed word counts (from **7b**) | New reliability subset(s) | `reselect_cu_wc_reliability` |
+| 10a | cus summarize | Summarize CU coding & word counts | CU and WC coding results | Blind + unblind utterance and sample summaries + blind codes | `summarize_cus` |
 | 10b | corelex analyze | Run CoreLex analysis | CU and WC sample summaries | CoreLex coverage and percentile metrics | `run_corelex` |
 
 ---
@@ -392,7 +382,7 @@ The downloaded file can later be uploaded for use in both the CLI and web app in
 
 **Inputs**
 - CHAT transcripts (`.cha`) in `input_dir` (recursive search).  
-- `config.yaml` (tiers, `reliability_fraction`, coders, exclusions).
+- `config.yaml` (tiers, `reliability_fraction`, exclusions).
 
 **Outputs**
 - Excel with **reliability subset** and **full sample list** (tier‑labeled).  
@@ -418,8 +408,7 @@ The downloaded file can later be uploaded for use in both the CLI and web app in
 - `config.yaml` (text normalization settings: `strip_clan`, `prefer_correction`, `lowercase`).
 - Paired `.cha` files (original & reliability) from Stage 2.  
 
-
-In both the CLI and webapp versions, RASCAL function **3a** matches original with reliability transcripts based on common tiers plus a `reliability` tag in the file name, e.g., `TU88_PreTxBrokenWindow.cha` & `TU88PreTxBrokenWindow_reliability.cha`. Function **1a** generates empty `.cha` file templates with the `reliabiilty` tag for the randomly selected samples. In the CLI version, reliability samples can be collected into a `/reliability` subdirectory in the input folder. The tier values must match the originals, but this provides an alternative to tagging filenames.
+In both the CLI and webapp versions, RASCAL function **3a** matches original with reliability transcripts based on common tiers plus a `reliability` tag in the file name, e.g., `TU88_PreTxBrokenWindow.cha` & `TU88PreTxBrokenWindow_reliability.cha`. Function **1a** generates empty `.cha` file templates with the `reliabiilty` tag for the randomly selected samples. In the CLI version, reliability samples can be collected into a `/reliability` subdirectory in the input folder. The tier values still must match the originals, but this provides an alternative to tagging filenames.
 
 **Outputs**
 - Agreement metrics (per sample + summary).  
@@ -440,6 +429,8 @@ In both the CLI and webapp versions, RASCAL function **3a** matches original wit
 ## 3b — Reselect Transcription Reliability Samples
 **Pipeline context:** Stage 3 (fallback).  
 **General purpose:** When thresholds aren’t met, reselect a new reliability subset using 1a’s tables.
+
+If transcription reliability reselection must recur, just append subsequent selections to the original reliability selection.
 
 **Inputs**
 - Reliability tables generated by **1a**.  
@@ -470,7 +461,7 @@ This encoded tabularization:
 - promotes transparency and consistency in text processing
 - minimizes potential bias during manual coding
 
-If not provided, these tables are automatically generated from `.cha` inputs for functions `4b`, `7b`, & `10b`.
+If not provided, these tables are automatically generated from `.cha` inputs for functions `4b` & `10b`.
 
 **Inputs**
 - `.cha` files.  
@@ -495,7 +486,7 @@ If not provided, these tables are automatically generated from `.cha` inputs for
 
 ## 4b — Make CU Coding & Reliability Files
 **Pipeline context:** Stage 4.  
-**General purpose:** Blind samples (per tier if configured), **assign coders**, and generate **CU coding templates** (incl. reliability subset).
+**General purpose:** Blind samples, **assign coders**, and generate **CU primary & reliability coding templates**.
 
 **Inputs**
 - Transcript tables from **4a**.  
@@ -546,7 +537,7 @@ If not provided, these tables are automatically generated from `.cha` inputs for
 **General purpose:** Reselect a new blind reliability subset for CU coding.
 
 **Inputs**
-- Original + reliability CU coding files (from **4b** / **6a** context).
+- Original + reliability CU coding files (from **4b**).
 
 **Outputs**
 - New reliability subset for CU.
@@ -634,7 +625,7 @@ If not provided, these tables are automatically generated from `.cha` inputs for
 **General purpose:** Reselect new WC reliability subset when agreement is insufficient.
 
 **Inputs**
-- Completed WC files (from **7b** / **9a** context).
+- Completed WC files (from **7b**).
 
 **Outputs**
 - New reliability subset for WC.
@@ -657,7 +648,7 @@ If not provided, these tables are automatically generated from `.cha` inputs for
 
 **Inputs**
 - Outputs from **4a** (Samples sheet for speaking_time), **7a**, and **7b**.  
-- `config.yaml` (tiers; which are blinded).
+- `config.yaml` (tiers; which can be selectively blinded in config).
 
 **Outputs**
 - Blinded & unblinded **utterance‑ and sample‑level** summaries.  
@@ -680,8 +671,8 @@ If not provided, these tables are automatically generated from `.cha` inputs for
 **General purpose:** Compute CoreLex coverage and percentiles; optionally incorporate speaking rate (from **4a Samples**).
 
 **Inputs**
-- CU/WC sample summaries (from **10a** or earlier outputs).  
-- Optional speaking_time column.
+1. main path: CU summaries (from **10a**) & transcript tables with speaking times (from **4a**).  
+2. minimal path: analyze CoreLex directly on `cha` inputs, or run **4a** and optionally complete the speaking_time column.
 
 **Outputs**
 - CoreLex analysis tables (coverage, percentile metrics).
@@ -719,6 +710,7 @@ rascal 10b
 - If your lab requires thresholds, document them (e.g., ≥0.80 agreement for CU; ICC(2,1) ≥ 0.90 for WC).  
 - Use **partition** tiers to silo outputs by site or cohort when needed.  
 - The **Streamlit multiselect** mirrors all CLI functions one‑for‑one.
+- Program log messages and in/output files are documented in the automatically generated `logs` directory in the output
 
 ---
 
