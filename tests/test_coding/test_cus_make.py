@@ -4,14 +4,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from rascal.coding.coding_files import make_CU_coding_files
+from rascal.coding.coding_files import make_cu_coding_files
 
 
 class FakeTier:
     def __init__(self, name, mapping):
         self.name = name
-        self.partition = False  # not used by this function
-        self._map = mapping     # filename -> label
+        self.partition = False
+        self._map = mapping
     def match(self, filename, return_None=False):
         if filename in self._map:
             return self._map[filename]
@@ -19,8 +19,7 @@ class FakeTier:
 
 
 def _mk_utt_df():
-    # Minimal columns this function expects downstream
-    # Two sample_ids, three rows (PAR + INV in S0, PAR in S1)
+    """Minimal utterance DataFrame expected downstream."""
     return pd.DataFrame({
         "site": ["AC", "AC", "AC"],
         "test": ["Pre", "Pre", "Pre"],
@@ -33,169 +32,142 @@ def _mk_utt_df():
 
 @pytest.fixture
 def io_tree(tmp_path, monkeypatch):
-    # Create a fake utterances file under input_dir that Path(...).rglob will find
     input_dir = tmp_path / "in"
     output_dir = tmp_path / "out"
     input_dir.mkdir()
     output_dir.mkdir()
 
-    fname = "AC_Pre_Utterances.xlsx"
+    fname = "AC_Pre_transcript_tables.xlsx"
     fake_utt_path = input_dir / fname
-    fake_utt_path.write_text("not really xlsx")  # we monkeypatch read_excel anyway
+    fake_utt_path.write_text("stub")
 
     # Patch read_excel to return our synthetic utterance DF
     monkeypatch.setattr(pd, "read_excel", lambda *a, **k: _mk_utt_df(), raising=False)
+    import rascal.coding.coding_files as mod
+    monkeypatch.setattr(mod, "extract_transcript_data", lambda path: _mk_utt_df())
 
-    # Make random.sample deterministic: always pick first k
     import rascal.coding.coding_files as mod
     monkeypatch.setattr(mod.random, "sample", lambda seq, k: list(seq)[:k])
-
     return input_dir, output_dir, fname
 
 
-def _run_and_collect(io_tree, tiers, coders, CU_paradigms, exclude_participants, monkeypatch):
+def _run_and_collect(io_tree, tiers, coders, cu_paradigms, exclude_participants, monkeypatch):
     input_dir, output_dir, fname = io_tree
-
-    # Intercept DataFrame.to_excel to collect the frames written
     written = []
+
     def fake_to_excel(self, path, index=False):
-        # store a copy to avoid accidental mutation
         written.append((Path(path), self.copy()))
     monkeypatch.setattr(pd.DataFrame, "to_excel", fake_to_excel, raising=False)
 
-    make_CU_coding_files(
+    make_cu_coding_files(
         tiers=tiers,
         frac=0.5,
         coders=coders,
         input_dir=str(input_dir),
         output_dir=str(output_dir),
-        CU_paradigms=CU_paradigms,
+        cu_paradigms=cu_paradigms,
         exclude_participants=exclude_participants,
     )
-    # Return a dict: {"..._CUCoding.xlsx": df, "..._CUReliabilityCoding.xlsx": df}
-    out = {}
-    for p, df in written:
-        out[p.as_posix()] = df
-    return out
+
+    return {p.as_posix(): df for p, df in written}
 
 
-def test_make_CU_coding_files_zero_paradigms(io_tree, monkeypatch):
+def test_make_cu_coding_files_zero_paradigms(io_tree, monkeypatch):
     input_dir, output_dir, fname = io_tree
-
     tiers = OrderedDict([
         ("site", FakeTier("site", {fname: "AC"})),
         ("test", FakeTier("test", {fname: "Pre"})),
     ])
-
     coders = ["A", "B", "C"]
-    CU_paradigms = []          # zero paradigms → base columns kept
+    cu_paradigms = []
     exclude_participants = ["INV"]
 
-    out = _run_and_collect(io_tree, tiers, coders, CU_paradigms, exclude_participants, monkeypatch)
+    out = _run_and_collect(io_tree, tiers, coders, cu_paradigms, exclude_participants, monkeypatch)
 
-    cu_paths = [p for p in out if p.endswith("AC/Pre/AC_Pre_CUCoding.xlsx")]
-    rel_paths = [p for p in out if p.endswith("AC/Pre/AC_Pre_CUReliabilityCoding.xlsx")]
+    cu_paths = [p for p in out if p.endswith("AC/Pre/AC_Pre_cu_coding.xlsx")]
+    rel_paths = [p for p in out if p.endswith("AC/Pre/AC_Pre_cu_reliability_coding.xlsx")]
     assert len(cu_paths) == 1 and len(rel_paths) == 1
 
     cu_df = out[cu_paths[0]]
     rel_df = out[rel_paths[0]]
 
-    # CU file keeps base columns when len(CU_paradigms) == 0
-    for col in ["c1ID", "c2ID", "c1SV", "c1REL", "c1com", "c2SV", "c2REL", "c2com"]:
+    for col in ["c1_id", "c2_id", "c1_sv", "c1_rel", "c1_comment", "c2_sv", "c2_rel", "c2_comment"]:
         assert col in cu_df.columns
 
-    # Reliability file must include third-coder columns
-    for col in ["c3ID", "c3SV", "c3REL", "c3com"]:
+    for col in ["c3_id", "c3_sv", "c3_rel", "c3_comment"]:
         assert col in rel_df.columns
 
 
-def test_make_CU_coding_files_single_paradigm(io_tree, monkeypatch):
+def test_make_cu_coding_files_single_paradigm(io_tree, monkeypatch):
     input_dir, output_dir, fname = io_tree
-
     tiers = OrderedDict([
         ("site", FakeTier("site", {fname: "AC"})),
         ("test", FakeTier("test", {fname: "Pre"})),
     ])
-
     coders = ["A", "B", "C"]
-    CU_paradigms = ["SAE"]          # single paradigm → keeps base SV/REL columns
-    exclude_participants = ["INV"]  # excluded speaker
+    cu_paradigms = ["SAE"]
+    exclude_participants = ["INV"]
 
-    out = _run_and_collect(io_tree, tiers, coders, CU_paradigms, exclude_participants, monkeypatch)
+    out = _run_and_collect(io_tree, tiers, coders, cu_paradigms, exclude_participants, monkeypatch)
 
-    # Find CU and Reliability outputs by filename suffix
-    cu_paths = [p for p in out if p.endswith("AC/Pre/AC_Pre_CUCoding.xlsx")]
-    rel_paths = [p for p in out if p.endswith("AC/Pre/AC_Pre_CUReliabilityCoding.xlsx")]
+    cu_paths = [p for p in out if p.endswith("AC/Pre/AC_Pre_cu_coding.xlsx")]
+    rel_paths = [p for p in out if p.endswith("AC/Pre/AC_Pre_cu_reliability_coding.xlsx")]
     assert len(cu_paths) == 1 and len(rel_paths) == 1
 
     cu_df = out[cu_paths[0]]
     rel_df = out[rel_paths[0]]
 
-    # --- CU coding file checks ---
-    # Should include base coding columns since len(CU_paradigms) == 1
-    for col in ["c1ID", "c2ID", "c1SV", "c1REL", "c1com", "c2SV", "c2REL", "c2com"]:
+    for col in ["c1_id", "c2_id", "c1_sv", "c1_rel", "c1_comment", "c2_sv", "c2_rel", "c2_comment"]:
         assert col in cu_df.columns
 
-    # Excluded participants (INV) get "NA" in coding-value fields
     inv_row = cu_df[cu_df["speaker"] == "INV"].iloc[0]
-    assert inv_row["c1SV"] == "NA"
-    assert inv_row["c1REL"] == "NA"
-    assert inv_row["c2SV"] == "NA"
-    assert inv_row["c2REL"] == "NA"
+    for c in ["c1_sv", "c1_rel", "c2_sv", "c2_rel"]:
+        assert inv_row[c] == "NA"
 
-    # --- Reliability coding file checks ---
-    # c2* columns should be dropped/renamed to c3*
-    assert "c2SV" not in rel_df.columns
-    assert "c2REL" not in rel_df.columns
-    for col in ["c3ID", "c3SV", "c3REL", "c3com"]:
+    assert "c2_sv" not in rel_df.columns
+    assert "c2_rel" not in rel_df.columns
+    for col in ["c3_id", "c3_sv", "c3_rel", "c3_comment"]:
         assert col in rel_df.columns
-
-    # c3ID should be one of the coders
-    assert set(rel_df["c3ID"].unique()).issubset(set(coders))
+    assert set(rel_df["c3_id"].unique()).issubset(set(coders))
 
 
-def test_make_CU_coding_files_multi_paradigm(io_tree, monkeypatch):
+def test_make_cu_coding_files_multi_paradigm(io_tree, monkeypatch):
     input_dir, output_dir, fname = io_tree
-
     tiers = OrderedDict([
         ("site", FakeTier("site", {fname: "AC"})),
         ("test", FakeTier("test", {fname: "Pre"})),
     ])
-
     coders = ["A", "B", "C"]
-    CU_paradigms = ["SAE", "AAE"]   # multi-paradigm → suffixed coding columns
+    cu_paradigms = ["SAE", "AAE"]
     exclude_participants = ["INV"]
 
-    out = _run_and_collect(io_tree, tiers, coders, CU_paradigms, exclude_participants, monkeypatch)
+    out = _run_and_collect(io_tree, tiers, coders, cu_paradigms, exclude_participants, monkeypatch)
 
-    cu_paths = [p for p in out if p.endswith("AC/Pre/AC_Pre_CUCoding.xlsx")]
-    rel_paths = [p for p in out if p.endswith("AC/Pre/AC_Pre_CUReliabilityCoding.xlsx")]
+    cu_paths = [p for p in out if p.endswith("AC/Pre/AC_Pre_cu_coding.xlsx")]
+    rel_paths = [p for p in out if p.endswith("AC/Pre/AC_Pre_cu_reliability_coding.xlsx")]
     assert len(cu_paths) == 1 and len(rel_paths) == 1
 
     cu_df = out[cu_paths[0]]
     rel_df = out[rel_paths[0]]
 
-    # Base columns removed; suffixed columns present
-    for base in ["c1SV", "c1REL", "c2SV", "c2REL"]:
+    for base in ["c1_sv", "c1_rel", "c2_sv", "c2_rel"]:
         assert base not in cu_df.columns
 
-    for paradigm in CU_paradigms:
+    for paradigm in cu_paradigms:
         for prefix in ["c1", "c2"]:
-            for tag in ["SV", "REL"]:
-                assert f"{prefix}{tag}_{paradigm}" in cu_df.columns
+            for tag in ["sv", "rel"]:
+                assert f"{prefix}_{tag}_{paradigm}" in cu_df.columns
 
-    # Excluded participants still get "NA" in the suffixed coding-value fields
     inv_row = cu_df[cu_df["speaker"] == "INV"].iloc[0]
-    for paradigm in CU_paradigms:
-        assert inv_row[f"c1SV_{paradigm}"] == "NA"
-        assert inv_row[f"c2REL_{paradigm}"] == "NA"
+    for paradigm in cu_paradigms:
+        for tag in ["sv", "rel"]:
+            for prefix in ["c1", "c2"]:
+                assert inv_row[f"{prefix}_{tag}_{paradigm}"] == "NA"
 
-    # Reliability file should have c3* suffixed columns present and c2* removed
-    for paradigm in CU_paradigms:
-        for tag in ["SV", "REL"]:
-            assert f"c3{tag}_{paradigm}" in rel_df.columns
-            assert f"c2{tag}_{paradigm}" not in rel_df.columns
+    for paradigm in cu_paradigms:
+        for tag in ["sv", "rel"]:
+            assert f"c3_{tag}_{paradigm}" in rel_df.columns
+            assert f"c2_{tag}_{paradigm}" not in rel_df.columns
 
-    # c3ID assigned to one of the coders
-    assert "c3ID" in rel_df.columns
-    assert set(rel_df["c3ID"].unique()).issubset(set(coders))
+    assert "c3_id" in rel_df.columns
+    assert set(rel_df["c3_id"].unique()).issubset(set(coders))
