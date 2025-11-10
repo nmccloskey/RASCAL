@@ -1,61 +1,135 @@
-import os
 import types
 import pytest
-import yaml
+from pathlib import Path
+from datetime import datetime
 
-# Import target
-try:
-    import rascal.main as mainmod
-except Exception as e:
-    pytest.skip(f"Could not import rascal.main: {e}", allow_module_level=True)
+import rascal.main as main_module
 
 
-class DummyArgs:
-    def __init__(self, step, config):
-        self.step = step
-        self.config = config
-
-
-def test_main_smoke(monkeypatch, tmp_path):
-    """Smoke test for main(): ensures dispatch mapping triggers functions correctly."""
-    # --- Make dummy config file ---
-    config = {
-        "input_dir": str(tmp_path / "in"),
-        "output_dir": str(tmp_path / "out"),
-        "coders": ["1", "2", "3"],
-        "tiers": {"site": {"values": ["TU"], "partition": True, "blind": False}},
-    }
-    config_file = tmp_path / "config.yaml"
-    config_file.write_text(yaml.safe_dump(config))
-
-    # --- Patch all run_* functions to record calls ---
+@pytest.fixture
+def mock_run_functions(monkeypatch):
+    """Patch all run_* functions to lightweight stubs that record calls."""
     called = {}
-    def dummy(name):
-        def _f(*a, **k):
-            called[name] = True
-            return "dummy_return"
-        return _f
 
-    monkeypatch.setattr(mainmod, "run_read_tiers", dummy("tiers"))
-    monkeypatch.setattr(mainmod, "run_read_cha_files", dummy("readcha"))
-    monkeypatch.setattr(mainmod, "run_select_transcription_reliability_samples", dummy("sel"))
-    monkeypatch.setattr(mainmod, "run_prepare_utterance_dfs", dummy("prep"))
-    monkeypatch.setattr(mainmod, "run_make_CU_coding_files", dummy("cucoding"))
-    monkeypatch.setattr(mainmod, "run_analyze_transcription_reliability", dummy("transrel"))
-    monkeypatch.setattr(mainmod, "run_analyze_CU_reliability", dummy("curel"))
-    monkeypatch.setattr(mainmod, "run_analyze_CU_coding", dummy("cucoding2"))
-    monkeypatch.setattr(mainmod, "run_make_word_count_files", dummy("wordcount"))
-    monkeypatch.setattr(mainmod, "run_make_timesheets", dummy("timesheets"))
-    monkeypatch.setattr(mainmod, "run_analyze_word_count_reliability", dummy("wcrel"))
-    monkeypatch.setattr(mainmod, "run_unblind_CUs", dummy("unblind"))
-    monkeypatch.setattr(mainmod, "run_run_corelex", dummy("corelex"))
-    monkeypatch.setattr(mainmod, "run_reselect_CU_reliability", dummy("reselect"))
+    def make_stub(name):
+        def stub(*args, **kwargs):
+            called[name] = {"args": args, "kwargs": kwargs}
+            return name
+        return stub
 
-    # --- Run main with step '5' (mapped to 'ijk') ---
-    args = DummyArgs(step="5", config=str(config_file))
-    mainmod.main(args)
+    run_names = [
+        "run_read_tiers",
+        "run_read_cha_files",
+        "run_select_transcription_reliability_samples",
+        "run_reselect_transcription_reliability_samples",
+        "run_evaluate_transcription_reliability",
+        "run_make_transcript_tables",
+        "run_make_cu_coding_files",
+        "run_evaluate_cu_reliability",
+        "run_analyze_cu_coding",
+        "run_reselect_cu_reliability",
+        "run_make_word_count_files",
+        "run_evaluate_word_count_reliability",
+        "run_reselect_wc_reliability",
+        "run_summarize_cus",
+        "run_run_corelex",
+    ]
+    for name in run_names:
+        monkeypatch.setattr(main_module, name, make_stub(name))
 
-    # --- Verify correct branches executed (i,j,k) ---
-    assert called["wcrel"]
-    assert called["unblind"]
-    assert called["corelex"]
+    return called
+
+
+@pytest.fixture
+def mock_utils(monkeypatch, tmp_path):
+    """Patch file/config/logging utilities to behave deterministically."""
+    # Root setup
+    monkeypatch.setattr(main_module, "set_root", lambda p: None)
+    monkeypatch.setattr(main_module, "get_root", lambda: tmp_path)
+    monkeypatch.setattr(main_module, "initialize_logger", lambda *a, **k: None)
+    monkeypatch.setattr(main_module, "terminate_logger", lambda *a, **k: None)
+
+    # Logger replacement (with dummy info/error/warning)
+    class DummyLogger:
+        def __getattr__(self, name):
+            return lambda *a, **k: None
+    main_module.logger = DummyLogger()
+
+    # Stub project_path to always return tmp_path / requested subdir
+    monkeypatch.setattr(
+        main_module,
+        "project_path",
+        lambda *parts: (tmp_path / Path(*parts)).resolve()
+    )
+
+    # Stub load_config to return a minimal valid config
+    monkeypatch.setattr(
+        main_module,
+        "load_config",
+        lambda path: {
+            "input_dir": str(tmp_path / "input"),
+            "output_dir": str(tmp_path / "output"),
+            "random_seed": 1,
+            "reliability_fraction": 0.5,
+        },
+    )
+
+    # Stub find_files to simulate no transcript tables (forces run_make_transcript_tables)
+    monkeypatch.setattr(main_module, "find_files", lambda **k: [])
+
+    return tmp_path
+
+
+def test_main_executes_basic_command(mock_utils, mock_run_functions, tmp_path):
+    """Test that main() runs a simple command and dispatches correct run_* functions."""
+    args = types.SimpleNamespace(command=["4a"], config=None)
+    main_module.main(args)
+
+    # run_read_tiers and run_make_transcript_tables should have been called
+    assert "run_read_tiers" in mock_run_functions
+    assert "run_make_transcript_tables" in mock_run_functions
+
+    tiers_args = mock_run_functions["run_read_tiers"]["args"]
+    assert isinstance(tiers_args[0], dict)
+
+    make_args = mock_run_functions["run_make_transcript_tables"]["args"]
+    assert len(make_args) == 3
+    assert isinstance(make_args[2], Path)
+    assert make_args[2].name.startswith("rascal_output_")
+
+
+def test_main_handles_expanded_command(mock_utils, mock_run_functions):
+    """Ensure expanded command names map correctly to their succinct codes."""
+    args = types.SimpleNamespace(command=["transcripts make"], config=None)
+    main_module.main(args)
+    assert "run_make_transcript_tables" in mock_run_functions
+
+
+def test_main_handles_omnibus(mock_utils, mock_run_functions):
+    """Omnibus command (e.g., '4') expands into subcommands."""
+    args = types.SimpleNamespace(command=["4"], config=None)
+    main_module.main(args)
+    # OMNIBUS '4' expands to ['4a', '4b']
+    assert "run_make_transcript_tables" in mock_run_functions
+    assert "run_make_cu_coding_files" in mock_run_functions
+
+
+def test_main_skips_unrecognized_command(mock_utils, mock_run_functions):
+    """Unrecognized commands should trigger a warning and not crash."""
+    args = types.SimpleNamespace(command=["xyz"], config=None)
+    # Should exit cleanly without raising
+    main_module.main(args)
+
+    # run_read_tiers is always called early; no other dispatch functions should run
+    called = set(mock_run_functions.keys())
+    assert called == {"run_read_tiers"}
+
+
+def test_main_executes_multiple_commands(mock_utils, mock_run_functions):
+    """Comma-separated commands should run sequentially."""
+    args = types.SimpleNamespace(command=["4a,10a"], config=None)
+    main_module.main(args)
+
+    # Both commands should be executed
+    assert "run_make_transcript_tables" in mock_run_functions
+    assert "run_summarize_cus" in mock_run_functions

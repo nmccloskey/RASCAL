@@ -271,13 +271,15 @@ Below is the current RASCAL pipeline, represented as a flow chart:
 Stages 2, 5, & 8 are entirely manual. Dashed arrows show the alternate inputs to function **10b**: function **4a** output is required, and recording speaking time in the `samples` sheet is optional but recommended.
 
 
-## Notes on Input Transcriptions
+## Notes
+
+### Input Transcriptions
 
 - `.cha` files must be formatted correctly according to CHAT conventions.
 - Ensure filenames match tier values as specified in `config.yaml`.
 - RASCAL searches tier values using exact spelling and capitalization.
 
-## Notes on Transcript Tables (function **4a**)
+### Transcript Tables (function **4a**)
 
 Function **4a** prepares both utterance- and sample-level tabulations of CHAT-formatted transcripts in Excel files, assigning unique alphanumeric identifiers encoding level of analysis – ‘S’ for sample and ‘U’ for utterance – for example, `S008` and `U0246`.
 
@@ -293,9 +295,15 @@ This encoded tabularization:
 
 If not provided, these tables are automatically generated from `.cha` inputs for functions `4b`, `7b`, & `10b`.
 
-## Notes on Transcription Reliability Input (function **3a**)
+### Transcription Reliability Input (function **3a**)
 
 In both the CLI and webapp versions, RASCAL function **3a** matches original with reliability transcripts based on common tiers plus a `reliability` tag in the file name, e.g., `TU88_PreTxBrokenWindow.cha` & `TU88PreTxBrokenWindow_reliability.cha`. Function **1a** generates empty `.cha` file templates with the `reliabiilty` tag for the randomly selected samples. In the CLI version, reliability samples can be collected into a `/reliability` subdirectory in the input folder. The tier values must match the originals, but this provides an alternative to tagging filenames.
+
+### Logs & Metadata
+
+The `logs` subdirectory in the output folder contains two files describing the program run:
+ - `rascal_YYMMDD_HHMM.log` - contains log messages (e.g, runtime, detected files, errors, etc.)
+ - `rascal_YYMMDD_HHMM_metadata.json` - takes a snapshot of input & output directory content just before program terminates
 
 ## 🧪 Testing
 
@@ -314,7 +322,7 @@ pytest -v
 ```
 Run a specific test file:
 ```bash
-pytest tests/test_samples/test_run_corelex.py
+pytest tests/test_coding/test_corelex_analyze.py
 ```
 
 ## Status and Contact
