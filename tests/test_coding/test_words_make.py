@@ -1,99 +1,83 @@
-from pathlib import Path
-import os
 import pandas as pd
-import numpy as np
-import pytest
-
-# Import target
-try:
-    from rascal.coding import coding_files as mcf
-except Exception as e:
-    pytest.skip(f"Could not import rascal.utterances.make_coding_files: {e}", allow_module_level=True)
+from pathlib import Path
+from rascal.coding.coding_files import make_word_count_files
 
 
 class MockTier:
-    """Minimal tier: returns constant label from filename split."""
-    def __init__(self, idx=0, partition=True):
-        self.idx = idx
-        self.partition = partition
-    def match(self, filename, return_None=False):
-        base = Path(filename).stem
-        parts = base.split("_")
-        return parts[self.idx] if len(parts) > self.idx else None
+    """Minimal mock tier that mimics .match() and has no partition requirement."""
+    def __init__(self, label):
+        self.label = label
+    def match(self, fname, return_None=False):
+        return self.label if self.label in fname else None
 
 
-def _write_cu_file(tmp_path):
-    """Create a dummy CU coding utterance-level Excel file."""
+def _make_excel(df, path):
+    """Helper: write DataFrame to Excel."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_excel(path, index=False)
+    return path
+
+
+def test_make_word_count_files(tmp_path, monkeypatch):
+    """End-to-end test of make_word_count_files with a small synthetic dataset."""
     input_dir = tmp_path / "input"
-    input_dir.mkdir(parents=True, exist_ok=True)
-    cu = input_dir / "TU_P01_CUCoding_ByUtterance.xlsx"
-    cu.write_bytes(b"stub")  # content stub, replaced by monkeypatch
-    return input_dir, cu
-
-
-def test_make_word_count_files_basic(tmp_path, monkeypatch):
-    input_dir, cu_file = _write_cu_file(tmp_path)
     output_dir = tmp_path / "out"
+    input_dir.mkdir()
+    output_dir.mkdir()
 
-    # Fake CU coding DataFrame
-    df_cu = pd.DataFrame({
-        "utterance_id": ["U1","U2","U3"],
-        "sample_id":    ["S1","S2","S3"],
-        "utterance":   ["hello world", "foo bar", "baz"],
-        "c2CU":        [1, 1, np.nan],  # one missing -> should produce "NA"
-        "c2SV":        [1, 1, 0],
-        "c2REL":       [1, 1, 0],
+    # --- Mock tiers ---
+    tiers = {"site": MockTier("LabA")}
+
+    # --- Create synthetic CU coding by utterance file ---
+    cu_df = pd.DataFrame({
+        "sample_id": ["S1", "S1", "S2", "S3"],
+        "utterance": ["one two", "three four five", "six", "seven eight nine"],
+        "c2_cu": ["ok", "ok", "ok", "ok"],  # required by _prepare_wc_df
+        "c1_sv": ["", "", "", ""],
+        "c2_sv": ["", "", "", ""],
+        "c1_rel": ["", "", "", ""],
+        "c2_rel": ["", "", "", ""],
+        "c1_comment": ["", "", "", ""],
+        "c2_comment": ["", "", "", ""],
     })
+    _make_excel(cu_df, input_dir / "LabA_cu_coding_by_utterance.xlsx")
 
-    # Capture outputs
-    captured = {}
-    def fake_to_excel(self, path, index=False):
-        p = os.fspath(path)
-        if p.endswith("_WordCounting.xlsx"):
-            captured["coding"] = self.copy()
-        if p.endswith("_WordCountingReliability.xlsx"):
-            captured["reliability"] = self.copy()
-        Path(p).parent.mkdir(parents=True, exist_ok=True)
-        Path(p).write_bytes(b"stub")
-
-    # Monkeypatch dependencies
-    monkeypatch.setattr(pd, "read_excel", lambda path, *a, **k: df_cu.copy())
-    monkeypatch.setattr(pd.DataFrame, "to_excel", fake_to_excel, raising=True)
-
-    # count_words should return 5 regardless of input
-    monkeypatch.setattr(mcf, "count_words", lambda text, d: 5)
-    # assign_CU_coders returns list of assignments [(c1,c2), ...]
-    monkeypatch.setattr(mcf, "assign_CU_coders", lambda coders: [(coders[0], coders[1])])
-    # segment splits sample_ids evenly across coders
-    monkeypatch.setattr(mcf, "segment", lambda ids, n: [ids])
-
-    # Dummy d(word) always True
-    monkeypatch.setattr(mcf, "d", lambda word: True)
-
-    tiers = {"site": MockTier(idx=0, partition=True)}
-    coders = ["1","2"]
-
-    mcf.make_word_count_files(
-        tiers=tiers,
-        frac=0.5,
-        coders=coders,
-        input_dir=str(input_dir),
-        output_dir=str(output_dir),
+    # --- Monkeypatch get_word_checker to skip nltk dependency ---
+    monkeypatch.setattr(
+        "rascal.coding.coding_files.get_word_checker",
+        lambda: (lambda w: True)  # every token is a valid word
     )
 
-    # Check outputs captured
-    assert "coding" in captured, "Coding file not written"
-    assert "reliability" in captured, "Reliability file not written"
+    # --- Run function ---
+    make_word_count_files(tiers, frac=0.5, coders=["A", "B", "C"], input_dir=input_dir, output_dir=output_dir)
 
-    coding_df = captured["coding"]
-    reliability_df = captured["reliability"]
+    # --- Verify outputs ---
+    word_count_dir = output_dir / "word_counts" / "LabA"
+    assert word_count_dir.exists(), "Expected word_counts/LabA directory not created"
 
-    # Coding file should have wordCount col with ints/NA
-    assert "wordCount" in coding_df.columns
-    assert set(coding_df["wordCount"].unique()) >= {5, "NA"}
+    out_files = list(word_count_dir.glob("*.xlsx"))
+    assert len(out_files) == 2, f"Expected 2 Excel outputs (word_counting + reliability), found {len(out_files)}"
 
-    # Reliability file should have c2ID and WCrelCom
-    assert "c2ID" in reliability_df.columns
-    assert "WCrelCom" in reliability_df.columns
-    # Reliability should only contain a subset of samples (frac=0.5 -> at least 1)
-    assert len(set(reliability_df["sample_id"])) >= 1
+    # Identify files
+    wc_file = next(f for f in out_files if "word_counting" in f.name)
+    rel_file = next(f for f in out_files if "word_count_reliability" in f.name)
+
+    wc_df = pd.read_excel(wc_file)
+    rel_df = pd.read_excel(rel_file)
+
+    # --- Structural checks ---
+    assert "word_count" in wc_df.columns, "Missing 'word_count' column"
+    assert "wc_comment" in wc_df.columns, "Missing 'wc_comment' column"
+    assert "sample_id" in rel_df.columns, "Missing 'sample_id' column"
+    assert "wc_rel_com" in rel_df.columns, "Missing 'wc_rel_com' column"
+
+    # --- Content checks ---
+    # word_count should be > 0 since all words are considered valid
+    assert (wc_df["word_count"].astype(str) != "NA").all()
+    assert wc_df["word_count"].astype(int).ge(1).all()
+
+    # reliability subset should contain at least one row
+    assert len(rel_df) >= 1, "Reliability subset unexpectedly empty"
+
+    # coder assignment
+    assert wc_df["c1_id"].notna().all(), "Coders not assigned properly"
