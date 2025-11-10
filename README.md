@@ -238,17 +238,17 @@ rascal "transcripts make"
 | Stage (succinct command) | Expanded command | Description | Input | Output | Function name |
 |---------------------------|------------------|--------------|--------|---------|----------------|
 | 1a | transcripts select | Select transcription reliability samples | Raw `.cha` files | Reliability & full sample lists + template `.cha` files | `select_transcription_reliability_samples` |
-| 3a | transcripts evaluate | Evaluate transcription reliability | Reliability `.cha` pairs | Agreement metrics + alignment text reports | `analyze_transcription_reliability` |
+| 3a | transcripts evaluate | Evaluate transcription reliability | Reliability `.cha` pairs | Agreement metrics + alignment text reports | `evaluate_transcription_reliability` |
 | 3b | transcripts reselect | Reselect transcription reliability samples | Original + reliability transcription tables (from **1a**) | New reliability subset(s) | `reselect_transcription_reliability_samples` |
 | 4a | transcripts make | Prepare transcript tables | Raw `.cha` files | Sample & utterance-level spreadsheets | `make_transcript_tables` |
-| 4b | cus make | Make CU coding & reliability files | Utterance tables (from **4a**) | CU coding + reliability spreadsheets | `make_CU_coding_files` |
-| 6a | cus evaluate | Analyze CU reliability | Manually completed CU coding (from **4b**) | Reliability summary tables + reports | `analyze_CU_reliability` |
-| 6b | cus reselect | Reselect CU reliability samples | Manually completed CU coding (from **4b**) | New reliability subset(s) | `reselect_CU_reliability` |
-| 7a | cus analyze | Analyze CU coding | Manually completed CU coding (from **4b**) | Sample- and utterance-level CU summaries | `analyze_CU_coding` |
+| 4b | cus make | Make CU coding & reliability files | Utterance tables (from **4a**) | CU coding + reliability spreadsheets | `make_cu_coding_files` |
+| 6a | cus evaluate | Analyze CU reliability | Manually completed CU coding (from **4b**) | Reliability summary tables + reports | `evaluate_cu_reliability` |
+| 6b | cus reselect | Reselect CU reliability samples | Manually completed CU coding (from **4b**) | New reliability subset(s) | `reselect_cu_wc_reliability` |
+| 7a | cus analyze | Analyze CU coding | Manually completed CU coding (from **4b**) | Sample- and utterance-level CU analyses | `analyze_cu_coding` |
 | 7b | words make | Make word count & reliability files | CU coding tables (from **7a**) | Word count + reliability spreadsheets | `make_word_count_files` |
-| 9a | words evaluate | Evaluate word count reliability | Manually completed word counts (from **7b**) | Reliability summaries + agreement reports | `analyze_word_count_reliability` |
-| 9b | words reselect | Reselect word count reliability samples | Manually completed word counts (from **7b**) | New reliability subset(s) | `reselect_WC_reliability` |
-| 10a | cus summarize | Summarize CU coding & word counts | CU and WC coding results | Blind + unblind utterance and sample summaries + blind codes | `unblind_CUs` |
+| 9a | words evaluate | Evaluate word count reliability | Manually completed word counts (from **7b**) | Reliability summaries + agreement reports | `evaluate_word_count_reliability` |
+| 9b | words reselect | Reselect word count reliability samples | Manually completed word counts (from **7b**) | New reliability subset(s) | `reselect_cu_wc_reliability` |
+| 10a | cus summarize | Summarize CU coding & word counts | CU and WC coding results | Blind + unblind utterance and sample summaries + blind codes | `summarize_cus` |
 | 10b | corelex analyze | Run CoreLex analysis | CU and WC sample summaries | CoreLex coverage and percentile metrics | `run_corelex` |
 
 ---
