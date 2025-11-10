@@ -640,7 +640,13 @@ def run_corelex(tiers, input_dir, output_dir, exclude_participants=None):
     all_columns = [base_columns[0]] + partition_tiers + base_columns[1:] + token_columns
     rows = []
 
-    for tup, subdf in utt_df.groupby(by=partition_tiers):
+    # --- Handle no partition tiers gracefully ---
+    if partition_tiers:
+        grouped = utt_df.groupby(by=partition_tiers)
+    else:
+        grouped = [((), utt_df)]  # single group representing all data
+
+    for tup, subdf in grouped:
         for sample in tqdm(sorted(subdf["sample_id"].dropna().unique()), desc="Computing CoreLex"):
             sample_df = subdf[subdf["sample_id"] == sample]
             if sample_df.empty:
