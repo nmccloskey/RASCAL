@@ -96,7 +96,7 @@ def _process_cu_file(file, utt_df, tiers, input_dir):
     # Sample-level (still UNBLIND)
     try:
         merged_samples = _aggregate_sample_level(
-            merged_utts, wc_by_utt, cu_by_sample, tiers, file
+            merged_utts, wc_by_utt, cu_by_sample, file
         )
     except Exception as e:
         logger.error(f"Sample-level aggregation failed for {_rel(file)}: {e}")

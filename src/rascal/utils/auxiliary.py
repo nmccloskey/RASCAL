@@ -250,7 +250,7 @@ def find_files(
     if len(unique_matches) == 1:
         logger.info(f"Matched file for '{search_base}': {_rel(unique_matches[0])}")
     else:
-        logger.warning(
+        logger.info(
             f"Multiple ({len(unique_matches)}) files matched '{search_base}' and {match_tiers}."
         )
         for f in unique_matches:
