@@ -3,6 +3,8 @@ import logging
 from datetime import datetime
 from pathlib import Path
 import json
+from rascal import __version__
+
 
 # ---------------------------------------------------------------------
 # Globals
@@ -76,7 +78,7 @@ def initialize_logger(start_time: datetime, out_dir: Path, program_name: str):
     file_handler.setLevel(logging.INFO)
     logger.addHandler(file_handler)
 
-    logger.info(f"=== {program_name} run initialized at {start_time.isoformat()} ===")
+    logger.info(f"=== {program_name} (version {__version__}) run initialized at {start_time.isoformat()} ===")
     logger.info(f"{program_name} root directory set to: {get_root()} (all paths relative to this root)")
     logger.info(f"Log file created: {_rel(log_path)}")
 

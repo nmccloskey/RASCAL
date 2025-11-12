@@ -12,7 +12,7 @@
 
 ---
 
-## 📊 RASCAL Workflow
+## RASCAL Workflow
 
 Below is the current RASCAL pipeline, represented as a flow chart:
 
@@ -116,8 +116,9 @@ your_project/
                           # RASCAL automatically creates 'output/' on run
 ```
 
-> **Note:** Use consistent participant encoding and file naming across projects to enable cross-run merging.
-
+#### notes
+> - Ensure that any directories synchronized to cloud storage (e.g., OneDrive, Google Drive) are HIPAA-compliant if they contain real clinical data.  
+> - Use consistent participant encoding and file naming across projects to enable cross-run merging.
 ---
 
 ### 1.4  Updating RASCAL
@@ -162,7 +163,7 @@ The RASCAL web application runs on **Streamlit Community Cloud**, which processe
 
 This ensures that all participant or client information remains confidential and is not accessible after a session concludes.
 
-> ⚠️ **Best Practice:**  
+> **Best Practice:**  
 > We strongly recommend **blinding or pseudonymizing** participant identifiers (e.g., replacing “John_P01” with “TU01P01”) prior to upload. This maintains full compliance with privacy standards in clinical and research settings.
 
 Note that Streamlit flattens directories upon file upload. This matters in particular for the transcription reliability functionality (only CLI version supports the `/reliability` directory).
@@ -714,7 +715,36 @@ rascal 10b
 
 ---
 
-## References
+## 6 Example Data
+
+RASCAL is distributed with a folder of **example data** to support hands-on exploration and verification of the pipeline. All included materials are synthetic and non-identifiable. Users can safely test every functionality without access to clinical data.
+
+### Folder Structure
+```
+rascal_files/
+  example_data/
+    toy_data/
+      toy_narratives/
+      toy_cu_codes/
+      toy_transcript_tables/
+      toy_transcription_reliability/
+    function_1a/
+      rascal_output_YYYYMM_DD_HHMM/
+    ...
+```
+
+- **toy_data/** provides minimal inputs for trial runs.
+- **function_xx/** folders each contain a timestamped output directory from a complete RASCAL operation (e.g., `rascal_output_YYYYMMDD_HHMM/`).  
+  These runs illustrate expected outputs, internal metadata, and file naming conventions without repeating inputs unnecessarily.
+
+### Usage Notes
+- Example data can be used as templates for preparing new projects.  
+- Metadata files within each output directory specify the exact input paths and parameters used.  
+- Users handling real participant data must ensure all paths and directories are **HIPAA-compliant**; avoid auto-synchronized cloud folders (e.g., OneDrive, Google Drive) unless institutional data-security approval has been obtained.
+
+---
+
+## 7 References
 
 > - Cavanaugh, R., Dalton, S. G., & Richardson, J. (2021). coreLexicon: *An open-source web-app for scoring core lexicon analysis*. R package version 0.0.1.0000. https://github.com/aphasia-apps/coreLexicon
 > - Python Software Foundation. (n.d.). *re — Regular expression operations.* https://docs.python.org/3/library/re.html  
