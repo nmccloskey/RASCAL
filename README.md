@@ -1,7 +1,10 @@
 # RASCAL - Resources for Analyzing Speech in Clinical Aphasiology Labs
 
-> RASCAL was designed to enhance efficiency, rigor, and replicability in a variety of monologic discourse analyses common in clinical aphasiology. Initially, the program tabularizes CHAT-formatted (.cha) transcripts with unique identifiers for samples and utterances, facilitating hierarchical organization through filename-derived grouping variables. While structured around our laboratory's workflow, users can run any selection of RASCAL's modules, which include algorithmic transcription reliability evaluation, complete utterance (CU) coding summarization, and batched core lexicon (CoreLex) analysis. The program aims to help researchers and clinicians streamline discourse analysis pipelines, particularly when managing large datasets.
+> RASCAL is an open-source Python package designed to enhance efficiency, rigor, and replicability in a variety of monologic discourse analyses common in clinical aphasiology. Initially, the program tabularizes CHAT-formatted (.cha) transcripts with unique identifiers for samples and utterances, facilitating hierarchical organization through filename-derived grouping variables. While structured around our laboratory's workflow, users can run any selection of RASCAL's modules, which include algorithmic transcription reliability evaluation, complete utterance (CU) coding summarization, and batched core lexicon (CoreLex) analysis. The program aims to help researchers and clinicians streamline discourse analysis pipelines, particularly when managing large datasets.
 ---
+
+### Current Version
+v1.0.0
 
 ## Analysis Pipeline
 
@@ -34,11 +37,34 @@
     - **Output:** Blind & unblind summaries, CoreLex analysis
 ---
 
-## Web App
+## External Links
 
-You can use RASCAL in your browser — no installation required:
+### Web App
+Run RASCAL directly in your browser — no installation required:
 
-👉 [Launch the RASCAL Web App](https://rascal.streamlit.app/)
+👉 [RASCAL Web App](https://rascal.streamlit.app/)
+
+
+### PyPI Distribution
+RASCAL is available on the Python Package Index (installation instructions below):
+
+👉 [rascal-speech on PyPI](https://pypi.org/project/rascal-speech/)
+
+### Zenodo Archival Release
+
+A fully versioned, citable archive of RASCAL (v1.0.0) is available on Zenodo, including:
+ - RASCAL Instruction Manual (PDF)
+ - Synthetic example data for all major functionalities
+ - MIT license text
+ - Release-specific README
+
+The example data comprise fully synthetic, non-identifiable files to represent output from each major RASCAL function.  
+- `toy_data/` holds CHAT-formatted inputs.  
+- `function_*` folders show representative output directories with metadata.  
+Please ensure HIPAA compliance when analyzing real data.
+
+👉 [Access the Zenodo record](https://zenodo.org/records/17624074)  
+📌 DOI: 10.5281/zenodo.17624073
 
 ---
 

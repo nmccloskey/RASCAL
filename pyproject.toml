@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rascal-speech"
-version = "0.2.0"
+version = "1.0.0"
 description = "Resources for Analyzing Speech in Clinical Aphasiology Labs"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Nick McCloskey" }]
 classifiers = [
