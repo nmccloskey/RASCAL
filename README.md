@@ -4,7 +4,7 @@
 ---
 
 ### Current Version
-v1.0.0
+v1.0.1
 
 ## Analysis Pipeline
 
@@ -36,35 +36,45 @@ v1.0.0
     - **Input:** Transcript tables (with speaking times), CU Coding summaries & word count files
     - **Output:** Blind & unblind summaries, CoreLex analysis
 ---
+## Links
 
-## External Links
+### GitHub Repository
+Access the full RASCAL source code, issue tracker, and development history:
+
+👉 **[RASCAL on GitHub](https://github.com/nmccloskey/RASCAL)**
+
+---
 
 ### Web App
-Run RASCAL directly in your browser — no installation required:
+Run RASCAL directly in your browser — no local installation required:
 
-👉 [RASCAL Web App](https://rascal.streamlit.app/)
+👉 **[RASCAL Web App](https://rascal.streamlit.app/)**
 
+---
 
 ### PyPI Distribution
-RASCAL is available on the Python Package Index (installation instructions below):
+Install the stable RASCAL package from the Python Package Index:
 
-👉 [rascal-speech on PyPI](https://pypi.org/project/rascal-speech/)
+👉 **[rascal-speech on PyPI](https://pypi.org/project/rascal-speech/)**
+
+```bash
+pip install rascal-speech
+```
 
 ### Zenodo Archival Release
-
 A fully versioned, citable archive of RASCAL (v1.0.0) is available on Zenodo, including:
  - RASCAL Instruction Manual (PDF)
- - Synthetic example data for all major functionalities
+ - Synthetic, non-identifiable example data for all major functionalities
  - MIT license text
- - Release-specific README
+ - A release-specific README
 
-The example data comprise fully synthetic, non-identifiable files to represent output from each major RASCAL function.  
-- `toy_data/` holds CHAT-formatted inputs.  
-- `function_*` folders show representative output directories with metadata.  
-Please ensure HIPAA compliance when analyzing real data.
+The example data include:  
+- `toy_data/`: minimal example inputs.  
+- `function_*`: representative output directories with metadata.  
+Please ensure HIPAA compliance when analyzing real clinical data.
 
-👉 [Access the Zenodo record](https://zenodo.org/records/17624074)  
-📌 DOI: 10.5281/zenodo.17624073
+👉 **[Zenodo record](https://zenodo.org/records/17624074)**  
+📌 **DOI:** 10.5281/zenodo.17624073
 
 ---
 
@@ -292,7 +302,13 @@ rascal "transcripts make"
 
 Below is the current RASCAL pipeline, represented as a flow chart:
 
-![RASCAL Flowchart](images/RASCAL_workflowchart.drawio.svg)
+<!-- ![RASCAL Flowchart](images/RASCAL_workflowchart.drawio.svg) -->
+
+<picture>
+  <source srcset="images/RASCAL_workflowchart.svg" type="image/svg+xml">
+  <img src="images/RASCAL_workflowchart.png" alt="RASCAL Workflow Chart">
+</picture>
+
 
 Stages 2, 5, & 8 are entirely manual. Dashed arrows show the alternate inputs to function **10b**: function **4a** output is required, and recording speaking time in the `samples` sheet is optional but recommended.
 

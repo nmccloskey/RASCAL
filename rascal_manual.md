@@ -1,20 +1,24 @@
+::: only-pdf
 ---
 title: "RASCAL Instruction Manual"
 subtitle: "Resources for Analyzing Speech in Clinical Aphasiology Labs"
 author: "Nick McCloskey"
-date: "Version 1.0.0"
+date: "Version 1.0.1"
 geometry: margin=3cm
 titlepage: true
 titlepage-color: "FFFFFF"
 titlepage-text-color: "000000"
 titlepage-rule-height: 1
 toc: false
-...
-\newpage
+---
+
+\pagebreak
 
 \tableofcontents
 
 \pagebreak
+:::
+
 ## Section 0: About RASCAL  
 **Version:** manual written for version 1.0.0; will be edited as needed.  
 **Author:** Nick McCloskey, M.S. | Temple University | Speech, Language & Brain Lab  
@@ -22,6 +26,8 @@ toc: false
 **Report Issues:** [https://github.com/nmccloskey/rascal/issues](https://github.com/nmccloskey/rascal/issues)    
 **PyPI Distribution:**  [https://pypi.org/project/rascal-speech/](https://pypi.org/project/rascal-speech/)  
 **Web App:** [https://rascal.streamlit.app/](https://rascal.streamlit.app/)  
+**Zenodo record:** [https://zenodo.org/records/17624074](https://zenodo.org/records/17624074)  
+**Zenodo DOI:** 10.5281/zenodo.17624073  
 **License:** MIT  
 
 ---
@@ -55,7 +61,9 @@ RASCAL’s modular design allows clinicians and researchers to select only the c
 
 ---
 
-\newpage
+::: only-pdf
+\pagebreak
+:::
 ## Section 1: Installation and Access
 
 RASCAL can be used in **two ways**:
@@ -156,7 +164,9 @@ While Batchalign’s authors note that its performance may degrade for speech ch
 
 ---
 
+::: only-pdf
 \pagebreak
+:::
 ## Section 3: Privacy and Data Security
 
 RASCAL adheres to ethical and technical standards that prioritize **participant confidentiality** and **data integrity**.
@@ -339,7 +349,9 @@ The downloaded file can later be uploaded for use in both the CLI and web app in
 
 ---
 
+::: only-pdf
 \pagebreak
+:::
 ## Section 5: Operation
 
 > This section is organized by **functionality**. For each function you’ll find: purpose (in the RASCAL pipeline and in general), inputs, outputs, CLI commands (succinct & expanded), Streamlit selection, and any associated **manual** procedures. See the `README.md` on GitHub for a tabular summary of RASCAL functions.
@@ -763,7 +775,9 @@ rascal 10b
 
 ---
 
+::: only-pdf
 \pagebreak
+:::
 ## Section 6: Example Data
 
 RASCAL is distributed with a folder of **example data** to support hands-on exploration and verification of the pipeline. All included materials are synthetic and non-identifiable. Users can safely test every functionality without access to clinical data.
@@ -793,7 +807,9 @@ rascal_files/
 
 ---
 
+::: only-pdf
 \pagebreak
+:::
 ## Section 7: References
 
 - Cavanaugh, R., Dalton, S. G., & Richardson, J. (2021). coreLexicon: *An open-source web-app for scoring core lexicon analysis*. R package version 0.0.1.0000.
