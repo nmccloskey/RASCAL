@@ -301,7 +301,7 @@ rascal "transcripts make"
 
 Below is the current RASCAL pipeline.
 
-![RASCAL Workflow Chart](images/RASCAL_workflowchart.png)
+![RASCAL Workflow Chart](https://raw.githubusercontent.com/nmccloskey/RASCAL/main/images/RASCAL_workflowchart.png)
 
 Stages 2, 5, & 8 are entirely manual. Dashed arrows show the alternate inputs to function **10b**: function **4a** output is required, and recording speaking time in the `samples` sheet is optional but recommended.
 
