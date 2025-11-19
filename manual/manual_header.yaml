@@ -1,0 +1,18 @@
+---
+title: "RASCAL Instruction Manual"
+subtitle: "Resources for Analyzing Speech in Clinical Aphasiology Labs"
+author: "Nick McCloskey"
+date: "Version 1.0.1"
+geometry: margin=3cm
+titlepage: true
+titlepage-color: "FFFFFF"
+titlepage-text-color: "000000"
+titlepage-rule-height: 1
+toc: false
+---
+
+\newpage
+
+\tableofcontents
+
+\newpage
