@@ -302,12 +302,14 @@ rascal "transcripts make"
 
 Below is the current RASCAL pipeline, represented as a flow chart:
 
-<!-- ![RASCAL Flowchart](images/RASCAL_workflowchart.drawio.svg) -->
-
+<!-- GitHub SVG -->
 <picture>
-  <source srcset="images/RASCAL_workflowchart.svg" type="image/svg+xml">
+  <source media="(min-width: 0px)" srcset="images/RASCAL_workflowchart.svg">
   <img src="images/RASCAL_workflowchart.png" alt="RASCAL Workflow Chart">
 </picture>
+
+<!-- PyPI fallback -->
+![RASCAL Workflow Chart](images/RASCAL_workflowchart.png)
 
 
 Stages 2, 5, & 8 are entirely manual. Dashed arrows show the alternate inputs to function **10b**: function **4a** output is required, and recording speaking time in the `samples` sheet is optional but recommended.

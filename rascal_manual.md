@@ -1,4 +1,4 @@
-::: only-pdf
+<!-- PANDOC-ONLY
 ---
 title: "RASCAL Instruction Manual"
 subtitle: "Resources for Analyzing Speech in Clinical Aphasiology Labs"
@@ -17,7 +17,7 @@ toc: false
 \tableofcontents
 
 \pagebreak
-:::
+PANDOC-ONLY -->
 
 ## Section 0: About RASCAL  
 **Version:** manual written for version 1.0.0; will be edited as needed.  
@@ -61,9 +61,9 @@ RASCAL’s modular design allows clinicians and researchers to select only the c
 
 ---
 
-::: only-pdf
+<!-- PANDOC-ONLY
 \pagebreak
-:::
+PANDOC-ONLY -->
 ## Section 1: Installation and Access
 
 RASCAL can be used in **two ways**:
@@ -164,9 +164,9 @@ While Batchalign’s authors note that its performance may degrade for speech ch
 
 ---
 
-::: only-pdf
+<!-- PANDOC-ONLY
 \pagebreak
-:::
+PANDOC-ONLY -->
 ## Section 3: Privacy and Data Security
 
 RASCAL adheres to ethical and technical standards that prioritize **participant confidentiality** and **data integrity**.
@@ -349,9 +349,9 @@ The downloaded file can later be uploaded for use in both the CLI and web app in
 
 ---
 
-::: only-pdf
+<!-- PANDOC-ONLY
 \pagebreak
-:::
+PANDOC-ONLY -->
 ## Section 5: Operation
 
 > This section is organized by **functionality**. For each function you’ll find: purpose (in the RASCAL pipeline and in general), inputs, outputs, CLI commands (succinct & expanded), Streamlit selection, and any associated **manual** procedures. See the `README.md` on GitHub for a tabular summary of RASCAL functions.
@@ -775,9 +775,9 @@ rascal 10b
 
 ---
 
-::: only-pdf
+<!-- PANDOC-ONLY
 \pagebreak
-:::
+PANDOC-ONLY -->
 ## Section 6: Example Data
 
 RASCAL is distributed with a folder of **example data** to support hands-on exploration and verification of the pipeline. All included materials are synthetic and non-identifiable. Users can safely test every functionality without access to clinical data.
@@ -807,9 +807,9 @@ rascal_files/
 
 ---
 
-::: only-pdf
+<!-- PANDOC-ONLY
 \pagebreak
-:::
+PANDOC-ONLY -->
 ## Section 7: References
 
 - Cavanaugh, R., Dalton, S. G., & Richardson, J. (2021). coreLexicon: *An open-source web-app for scoring core lexicon analysis*. R package version 0.0.1.0000.
