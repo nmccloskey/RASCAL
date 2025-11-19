@@ -299,13 +299,8 @@ rascal "transcripts make"
 
 ## RASCAL Workflow
 
-Below is the current RASCAL pipeline:
-<!-- no blank line above or below this comment -->
+Below is the current RASCAL pipeline.
 
-<picture>
-  <source srcset="images/RASCAL_workflowchart.svg" type="image/svg+xml">
-  <img src="images/RASCAL_workflowchart.png" alt="RASCAL Workflow Chart">
-</picture>
 ![RASCAL Workflow Chart](images/RASCAL_workflowchart.png)
 
 Stages 2, 5, & 8 are entirely manual. Dashed arrows show the alternate inputs to function **10b**: function **4a** output is required, and recording speaking time in the `samples` sheet is optional but recommended.
