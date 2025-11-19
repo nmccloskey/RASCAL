@@ -332,9 +332,6 @@ def _format_alignment_output(alignment, best_score: float, normalized_score: flo
 def _ensure_parent_dir(path: str | Path):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
 
-from pathlib import Path
-from rascal.utils.logger import logger, _rel
-
 def _convert_cha_names(input_dir: str | Path) -> dict[str, list[Path]]:
     """
     Recursively detect all 'reliability' subdirectories under `input_dir` and create
@@ -587,7 +584,7 @@ def evaluate_transcription_reliability(
     m = re.compile(r'reliability', re.IGNORECASE)
 
     rel_chats = [p for p in cha_files if m.search(p.name)]
-    org_chats = [p for p in cha_files if not m.search("reliability")]
+    org_chats = [p for p in cha_files if not m.search(p.name)]
 
     def _labels_for(path: Path):
         return tuple(t.match(path.name) for t in tiers.values())
