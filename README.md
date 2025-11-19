@@ -3,7 +3,7 @@
 > RASCAL is an open-source Python package designed to enhance efficiency, rigor, and replicability in a variety of monologic discourse analyses common in clinical aphasiology. Initially, the program tabularizes CHAT-formatted (.cha) transcripts with unique identifiers for samples and utterances, facilitating hierarchical organization through filename-derived grouping variables. While structured around our laboratory's workflow, users can run any selection of RASCAL's modules, which include algorithmic transcription reliability evaluation, complete utterance (CU) coding summarization, and batched core lexicon (CoreLex) analysis. The program aims to help researchers and clinicians streamline discourse analysis pipelines, particularly when managing large datasets.
 ---
 
-**Current version:** v1.0.3
+**Current version:** v1.0.2
 
 ## Analysis Pipeline
 
@@ -299,13 +299,8 @@ rascal "transcripts make"
 
 ## RASCAL Workflow
 
-Below is the current RASCAL pipeline:
-<!-- no blank line above or below this comment -->
+Below is the current RASCAL pipeline.
 
-<picture>
-  <source srcset="images/RASCAL_workflowchart.svg" type="image/svg+xml">
-  <img src="images/RASCAL_workflowchart.png" alt="RASCAL Workflow Chart">
-</picture>
 ![RASCAL Workflow Chart](images/RASCAL_workflowchart.png)
 
 Stages 2, 5, & 8 are entirely manual. Dashed arrows show the alternate inputs to function **10b**: function **4a** output is required, and recording speaking time in the `samples` sheet is optional but recommended.
