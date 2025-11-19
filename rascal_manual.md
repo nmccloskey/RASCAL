@@ -1,4 +1,4 @@
-<!-- PANDOC-ONLY
+<div class="pdf-only">
 ---
 title: "RASCAL Instruction Manual"
 subtitle: "Resources for Analyzing Speech in Clinical Aphasiology Labs"
@@ -17,7 +17,7 @@ toc: false
 \tableofcontents
 
 \pagebreak
-PANDOC-ONLY -->
+</div>
 
 ## Section 0: About RASCAL  
 **Version:** manual written for version 1.0.0; will be edited as needed.  
