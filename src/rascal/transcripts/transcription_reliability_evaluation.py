@@ -584,8 +584,10 @@ def evaluate_transcription_reliability(
     ]
     logger.info(f"Found {len(cha_files)} .cha files in the input directory.")
 
-    rel_chats = [p for p in cha_files if "reliability" in p.name]
-    org_chats = [p for p in cha_files if "reliability" not in p.name]
+    m = re.compile(r'reliability', re.IGNORECASE)
+
+    rel_chats = [p for p in cha_files if m.search(p.name)]
+    org_chats = [p for p in cha_files if not m.search("reliability")]
 
     def _labels_for(path: Path):
         return tuple(t.match(path.name) for t in tiers.values())
