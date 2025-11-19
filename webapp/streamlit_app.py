@@ -63,7 +63,7 @@ st.subheader("Resources for Analyzing Speech in Clinical Aphasiology Labs")
 # ------------------------------------------------------------------
 # Instruction manual toggle
 # ------------------------------------------------------------------
-manual_path = Path(__file__).resolve().parent.parent / "rascal_manual.md"
+manual_path = Path(__file__).resolve().parent.parent / "manual" / "rascal_manual.md"
 if manual_path.exists():
     with st.expander("📘 Show / Hide Instruction Manual"):
         st.markdown(manual_path.read_text(encoding="utf-8"))
