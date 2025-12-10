@@ -52,6 +52,7 @@ from rascal.run_wrappers import (
     run_make_word_count_files, run_evaluate_word_count_reliability,
     run_reselect_wc_reliability, run_summarize_cus, run_run_corelex
 )
+from rascal import __version__
 
 
 # ------------------------------------------------------------------
@@ -117,7 +118,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
         timestamp = start_time.strftime("%y%m%d_%H%M")
         out_dir = (output_dir / f"rascal_output_{timestamp}").resolve()
         out_dir.mkdir(parents=True, exist_ok=True)
-        initialize_logger(start_time, out_dir, "RASCAL")
+        initialize_logger(start_time, out_dir, program_name="RASCAL", version=__version__)
 
         # ------------------------------------------------------------------
         # Load config parameters
@@ -215,7 +216,14 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
                     run_run_corelex(tiers, input_dir, out_dir, exclude_participants)
 
             st.success("✅ All selected functions completed successfully!")
-            terminate_logger(input_dir, out_dir, Path("config.yaml"), config, start_time, "RASCAL")
+            terminate_logger(
+                input_dir=input_dir,
+                output_dir=out_dir,
+                config=config,
+                start_time=start_time,
+                program_name="RASCAL",
+                version=__version__,
+            )
 
             # --- Create timestamped ZIP for download ---
             timestamp = start_time.strftime("%y%m%d_%H%M")
