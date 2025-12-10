@@ -3,13 +3,11 @@ import logging
 from datetime import datetime
 from pathlib import Path
 import json
-from rascal import __version__
-
 
 # ---------------------------------------------------------------------
 # Globals
 # ---------------------------------------------------------------------
-logger = logging.getLogger("RASCALLogger")
+logger = logging.getLogger("RunLogger")
 logger.setLevel(logging.INFO)
 
 formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
@@ -27,28 +25,32 @@ _root_dir: Path | None = None
 # Helpers
 # ---------------------------------------------------------------------
 def set_root(path: Path):
-    """Set the global RASCAL root directory (usually project root)."""
+    """Set the global project root directory (usually repo root)."""
     global _root_dir
     _root_dir = path.resolve()
 
+
 def get_root() -> Path:
-    """Return the current RASCAL root directory."""
+    """Return the current project root directory."""
     if _root_dir is None:
         return Path.cwd().resolve()
     return _root_dir
 
+
 def _rel(path: Path) -> str:
-    """Safely return path relative to RASCAL root (absolute fallback)."""
+    """Safely return path relative to project root (absolute fallback)."""
     root = get_root()
     try:
         return str(path.resolve().relative_to(root))
     except Exception:
         return str(path.resolve())
 
+
 def early_log(level: str, message: str):
     """Queue a log message before the file logger is initialized."""
     _early_logs.append((level, message))
     print(f"[{level.upper()}] {message}")  # still visible on console
+
 
 def flush_early_logs():
     """Replay buffered early logs into the main logger."""
@@ -60,9 +62,14 @@ def flush_early_logs():
 # ---------------------------------------------------------------------
 # Initialization and termination
 # ---------------------------------------------------------------------
-def initialize_logger(start_time: datetime, out_dir: Path, program_name: str):
+def initialize_logger(
+    start_time: datetime,
+    out_dir: Path,
+    program_name: str,
+    version: str | None = None,
+) -> Path:
     """
-    Initialize file-based logging for a RASCAL run.
+    Initialize file-based logging for a program run.
     """
     global _root_dir
     if _root_dir is None:
@@ -78,8 +85,14 @@ def initialize_logger(start_time: datetime, out_dir: Path, program_name: str):
     file_handler.setLevel(logging.INFO)
     logger.addHandler(file_handler)
 
-    logger.info(f"=== {program_name} (version {__version__}) run initialized at {start_time.isoformat()} ===")
-    logger.info(f"{program_name} root directory set to: {get_root()} (all paths relative to this root)")
+    version_str = f" (version {version})" if version else ""
+    logger.info(
+        f"=== {program_name}{version_str} run initialized at {start_time.isoformat()} ==="
+    )
+    logger.info(
+        f"{program_name} root directory set to: {get_root()} "
+        "(all paths relative to this root)"
+    )
     logger.info(f"Log file created: {_rel(log_path)}")
 
     flush_early_logs()
@@ -93,7 +106,8 @@ def record_run_metadata(
     config: dict,
     start_time: datetime,
     end_time: datetime,
-    program_name: str
+    program_name: str,
+    version: str | None = None,
 ) -> Path:
     """Record structured metadata including configuration and directory snapshots."""
     runtime_seconds = round((end_time - start_time).total_seconds(), 2)
@@ -106,7 +120,11 @@ def record_run_metadata(
         return {"base": _rel(base), "folders": folders, "files": files}
 
     metadata = {
-        "header": f"RASCAL run {start_time.strftime('%Y-%m-%d %H:%M:%S')}",
+        "program": {
+            "name": program_name,
+            "version": version,
+        },
+        "header": f"{program_name} run {start_time.strftime('%Y-%m-%d %H:%M:%S')}",
         "timestamp": end_time.isoformat(timespec="seconds"),
         "runtime_seconds": runtime_seconds,
         "root_directory": str(_root_dir),
@@ -122,8 +140,11 @@ def record_run_metadata(
         },
     }
 
-    meta_path = (output_dir / "logs" /
-                 f"{program_name.lower()}_{start_time.strftime('%y%m%d_%H%M')}_metadata.json").resolve()
+    meta_path = (
+        output_dir
+        / "logs"
+        / f"{program_name.lower()}_{start_time.strftime('%y%m%d_%H%M')}_metadata.json"
+    ).resolve()
     with meta_path.open("w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)
 
@@ -137,15 +158,27 @@ def terminate_logger(
     config_path: Path,
     config: dict,
     start_time: datetime,
-    program_name: str
+    program_name: str,
+    version: str | None = None,
 ):
     """Finalize logging: record metadata and close file handlers."""
     end_time = datetime.now()
     elapsed = (end_time - start_time).total_seconds()
-    logger.info(f"=== RASCAL run completed at {end_time.isoformat()} ===")
+    logger.info(
+        f"=== {program_name} run completed at {end_time.isoformat()} ==="
+    )
     logger.info(f"Total runtime: {elapsed:.2f} seconds")
 
-    record_run_metadata(input_dir, output_dir, config_path, config, start_time, end_time, program_name)
+    record_run_metadata(
+        input_dir=input_dir,
+        output_dir=output_dir,
+        config_path=config_path,
+        config=config,
+        start_time=start_time,
+        end_time=end_time,
+        program_name=program_name,
+        version=version,
+    )
 
     for handler in logger.handlers[:]:
         if isinstance(handler, logging.FileHandler):

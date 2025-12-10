@@ -27,6 +27,7 @@ from rascal.run_wrappers import (
     run_make_word_count_files, run_evaluate_word_count_reliability,
     run_reselect_wc_reliability, run_summarize_cus, run_run_corelex
 )
+from rascal import __version__
 
 
 def main(args):
@@ -53,7 +54,7 @@ def main(args):
         # -----------------------------------------------------------------
         # Initialize logger once output folder is ready
         # -----------------------------------------------------------------
-        initialize_logger(start_time, out_dir, "RASCAL")
+        initialize_logger(start_time, out_dir, program_name="RASCAL", version=__version__)
         logger.info("Logger initialized and early logs flushed.")
 
         random_seed = config.get("random_seed", 8) or 8
@@ -158,7 +159,15 @@ def main(args):
 
     finally:
         # Always finalize logging and metadata
-        terminate_logger(input_dir, out_dir, config_path, config, start_time, "RASCAL")
+        terminate_logger(
+            input_dir=input_dir,
+            output_dir=out_dir,
+            config_path=config_path,
+            config=config,
+            start_time=start_time,
+            program_name="RASCAL",
+            version=__version__,
+        )
 
 # -------------------------------------------------------------
 # Direct execution
