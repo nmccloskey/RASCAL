@@ -118,6 +118,23 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
         timestamp = start_time.strftime("%y%m%d_%H%M")
         out_dir = (output_dir / f"rascal_output_{timestamp}").resolve()
         out_dir.mkdir(parents=True, exist_ok=True)
+
+        # --- Save the effective config into the output folder ---
+        config_path = out_dir / "config.yaml"
+        if config_file:
+            # Preserve uploaded config
+            with config_path.open("wb") as f:
+                f.write(config_file.getbuffer())
+        else:
+            # Save the UI-built config
+            with config_path.open("w", encoding="utf-8") as f:
+                yaml.safe_dump(config, f, sort_keys=False)
+
+        # Set root for nicer relative paths in logs
+        from rascal.utils.logger import set_root
+        set_root(root_dir)
+
+        # Initialize the logger
         initialize_logger(start_time, out_dir, program_name="RASCAL", version=__version__)
 
         # ------------------------------------------------------------------
@@ -163,67 +180,90 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
             if not selected_funcs:
                 st.warning("Please select at least one function.")
                 st.stop()
-            logger.info(f"Running selected functions: {selected_funcs}")
 
-            # --- Read .cha if needed ---
-            chats = None
-            if any(f.startswith(("1a", "4a")) for f in selected_funcs):
-                chats = run_read_cha_files(input_dir)
+            try:
+                logger.info(f"Running selected functions: {selected_funcs}")
 
-            # --- Prepare utterance files if needed ---
-            needs_utt = any(f.startswith(x) for x in ("4b", "7b", "10b") for f in selected_funcs)
-            if needs_utt and not any(f.startswith("4a") for f in selected_funcs):
-                transcript_tables = find_files(directories=[input_dir, out_dir],
-                                               search_base="transcript_tables")
-                if not transcript_tables:
-                    logger.info("No utterance files detected — creating automatically.")
-                    chats = chats or run_read_cha_files(input_dir)
-                    run_make_transcript_tables(tiers, chats, out_dir)
+                # --- Read .cha if needed ---
+                chats = None
+                if any(f.startswith(("1a", "4a")) for f in selected_funcs):
+                    chats = run_read_cha_files(input_dir)
 
-            # --- Execute selected functions ---
-            for func in selected_funcs:
-                if func.startswith("1a."):
-                    run_select_transcription_reliability_samples(tiers, chats, frac, out_dir)
-                elif func.startswith("3a."):
-                    run_evaluate_transcription_reliability(
-                        tiers, input_dir, out_dir,
-                        exclude_participants, strip_clan, prefer_correction, lowercase
+                # --- Prepare utterance files if needed ---
+                needs_utt = any(
+                    f.startswith(x)
+                    for x in ("4b", "7b", "10b")
+                    for f in selected_funcs
+                )
+                if needs_utt and not any(f.startswith("4a") for f in selected_funcs):
+                    transcript_tables = find_files(
+                        directories=[input_dir, out_dir],
+                        search_base="transcript_tables",
                     )
-                elif func.startswith("3b."):
-                    run_reselect_transcription_reliability_samples(input_dir, out_dir, frac)
-                elif func.startswith("4a."):
-                    run_make_transcript_tables(tiers, chats, out_dir)
-                elif func.startswith("4b."):
-                    run_make_cu_coding_files(
-                        tiers, frac, coders, input_dir, out_dir,
-                        CU_paradigms, exclude_participants
-                    )
-                elif func.startswith("6a."):
-                    run_evaluate_cu_reliability(tiers, input_dir, out_dir, CU_paradigms)
-                elif func.startswith("6b."):
-                    run_reselect_cu_reliability(tiers, input_dir, out_dir, "CU", frac)
-                elif func.startswith("7a."):
-                    run_analyze_cu_coding(tiers, input_dir, out_dir, CU_paradigms)
-                elif func.startswith("7b."):
-                    run_make_word_count_files(tiers, frac, coders, input_dir, out_dir)
-                elif func.startswith("9a."):
-                    run_evaluate_word_count_reliability(tiers, input_dir, out_dir)
-                elif func.startswith("9b."):
-                    run_reselect_wc_reliability(tiers, input_dir, out_dir, "WC", frac)
-                elif func.startswith("10a."):
-                    run_summarize_cus(tiers, input_dir, out_dir)
-                elif func.startswith("10b."):
-                    run_run_corelex(tiers, input_dir, out_dir, exclude_participants)
+                    if not transcript_tables:
+                        logger.info("No utterance files detected — creating automatically.")
+                        chats = chats or run_read_cha_files(input_dir)
+                        run_make_transcript_tables(tiers, chats, out_dir)
 
-            st.success("✅ All selected functions completed successfully!")
-            terminate_logger(
-                input_dir=input_dir,
-                output_dir=out_dir,
-                config=config,
-                start_time=start_time,
-                program_name="RASCAL",
-                version=__version__,
-            )
+                # --- Execute selected functions ---
+                for func in selected_funcs:
+                    if func.startswith("1a."):
+                        run_select_transcription_reliability_samples(tiers, chats, frac, out_dir)
+                    elif func.startswith("3a."):
+                        run_evaluate_transcription_reliability(
+                            tiers, input_dir, out_dir,
+                            exclude_participants, strip_clan, prefer_correction, lowercase
+                        )
+                    elif func.startswith("3b."):
+                        run_reselect_transcription_reliability_samples(input_dir, out_dir, frac)
+                    elif func.startswith("4a."):
+                        run_make_transcript_tables(tiers, chats, out_dir)
+                    elif func.startswith("4b."):
+                        run_make_cu_coding_files(
+                            tiers, frac, coders, input_dir, out_dir,
+                            CU_paradigms, exclude_participants
+                        )
+                    elif func.startswith("6a."):
+                        run_evaluate_cu_reliability(tiers, input_dir, out_dir, CU_paradigms)
+                    elif func.startswith("6b."):
+                        run_reselect_cu_reliability(tiers, input_dir, out_dir, "CU", frac)
+                    elif func.startswith("7a."):
+                        run_analyze_cu_coding(tiers, input_dir, out_dir, CU_paradigms)
+                    elif func.startswith("7b."):
+                        run_make_word_count_files(tiers, frac, coders, input_dir, out_dir)
+                    elif func.startswith("9a."):
+                        run_evaluate_word_count_reliability(tiers, input_dir, out_dir)
+                    elif func.startswith("9b."):
+                        run_reselect_wc_reliability(tiers, input_dir, out_dir, "WC", frac)
+                    elif func.startswith("10a."):
+                        run_summarize_cus(tiers, input_dir, out_dir)
+                    elif func.startswith("10b."):
+                        run_run_corelex(tiers, input_dir, out_dir, exclude_participants)
+
+                st.success("✅ All selected functions completed successfully!")
+
+            except Exception as e:
+                logger.exception("Unhandled error during RASCAL web run.")
+                st.error(
+                    "❌ An unexpected error occurred while running RASCAL. "
+                    "Please check the logs in the downloaded ZIP for details."
+                )
+
+            finally:
+                # Only terminate if out_dir + config_path has been set up
+                try:
+                    terminate_logger(
+                        input_dir=input_dir,
+                        output_dir=out_dir,
+                        config_path=config_path,
+                        config=config,
+                        start_time=start_time,
+                        program_name="RASCAL",
+                        version=__version__,
+                    )
+                except Exception:
+                    # Last-resort: don’t crash Streamlit while shutting down logging
+                    logger.exception("Error while terminating logger.")
 
             # --- Create timestamped ZIP for download ---
             timestamp = start_time.strftime("%y%m%d_%H%M")
