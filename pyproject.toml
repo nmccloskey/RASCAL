@@ -29,7 +29,6 @@ dependencies = [
     "PyYAML>=6.0.2",
     "tqdm>=4.67.1",
     "openpyxl>=3.1.5",
-    "streamlit>=1.45.1",
     "scipy>=1.16.0",
     "xlsxwriter>=3.2.5",
 ]
@@ -40,3 +39,4 @@ streamlit_rascal = "webapp.streamlit_app:main"
 
 [project.optional-dependencies]
 dev = ["pytest"]
+web = ["streamlit>=1.45.1"]
