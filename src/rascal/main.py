@@ -70,7 +70,7 @@ def main(args):
         prefer_correction = config.get("prefer_correction", True) or True
         lowercase = config.get("lowercase", True) or True
 
-        tiers = run_read_tiers(config.get("tiers", {})) or {}
+        tiers = run_read_tiers(config) or {}
 
         # ---------------------------------------------------------
         # Expand omnibus & comma-separated commands

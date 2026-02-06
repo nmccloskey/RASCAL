@@ -1,9 +1,10 @@
 from rascal.utils.logger import logger
 
 
-def run_read_tiers(config_tiers):
-    from rascal.utils.tier_parsing import read_tiers
-    tiers = read_tiers(config_tiers)
+def run_read_tiers(config):
+    from rascal.utils.tiers import TierManager
+    TM = TierManager(config)
+    tiers = TM.tiers
     if tiers:
         logger.info("Successfully parsed tiers from config.")
     else:
