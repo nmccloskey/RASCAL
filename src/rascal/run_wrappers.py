@@ -56,9 +56,9 @@ def run_evaluate_word_count_reliability(tiers, input_dir, output_dir):
     from rascal.coding.word_count_reliability_evaluation import evaluate_word_count_reliability
     evaluate_word_count_reliability(tiers=tiers, input_dir=input_dir, output_dir=output_dir)
 
-def run_summarize_cus(tiers, input_dir, output_dir, seed):
+def run_summarize_cus(tiers, input_dir, output_dir, seed, TM):
     from rascal.coding.cu_summarization import summarize_cus
-    summarize_cus(tiers=tiers, input_dir=input_dir, output_dir=output_dir, seed=seed)
+    summarize_cus(tiers=tiers, input_dir=input_dir, output_dir=output_dir, seed=seed, TM=TM)
 
 def run_run_corelex(tiers, input_dir, output_dir, exclude_participants):
     from rascal.coding.corelex import run_corelex
