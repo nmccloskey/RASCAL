@@ -154,7 +154,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
         prefer_correction = config.get("prefer_correction", True)
         lowercase = config.get("lowercase", True)
 
-        tiers = run_read_tiers(config.get("tiers", {})) or {}
+        tiers, TM = run_read_tiers(config.get("tiers", {})) or {}
 
         # ---------------------------------------------------------------
         # PART 3: FUNCTION SELECTION

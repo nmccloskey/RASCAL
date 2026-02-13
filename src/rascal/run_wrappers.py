@@ -14,7 +14,7 @@ def run_read_tiers(config):
     else:
         logger.warning("Adapted tiers are empty or malformed.")
 
-    return adapted_tiers
+    return adapted_tiers, TM
 
 def run_read_cha_files(input_dir, shuffle=False):
     from rascal.utils.cha_files import read_cha_files

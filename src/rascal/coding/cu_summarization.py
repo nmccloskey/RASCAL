@@ -106,54 +106,131 @@ def _process_cu_file(file, utt_df, tiers, input_dir):
     return merged_utts, merged_samples
 
 
-def _apply_blinding(df, tiers, seed):
+def _apply_blinding(df, tiers, seed, TM, id_cols=None):
     """
-    Apply tier-based blind codes to a merged utterance dataframe (concatenated).
+    Apply tier-based blind codes to a concatenated dataframe.
+
+    Blind output keeps:
+      - id_cols (if present)
+      - all non-tier columns (metrics, etc.)
+      - blind tier columns only (coded)
+    Drops:
+      - 'file'
+      - non-blind tier columns
 
     Returns
     -------
     blind_df : pd.DataFrame
     blind_codes : dict  # {tier_name: {raw_label: blind_code}}
     """
+    if id_cols is None:
+        id_cols = ["sample_id", "utterance_id"]
+
     blind_df = df.copy()
-    blind_codes = {}
 
-    remove_tiers = [t.name for t in tiers.values() if not t.blind]
-    blind_df.drop(columns=["file"] + remove_tiers, errors="ignore", inplace=True)
+    # Tier columns present in the dataframe
+    tier_cols = [t.name for t in tiers.values()]
+    tier_cols_present = [c for c in tier_cols if c in blind_df.columns]
 
-    blind_columns = [t.name for t in tiers.values() if t.blind]
-    for tier_name in blind_columns:
-        tier = tiers[tier_name]
-        try:
-            codes = tier.make_blind_codebook(seed=seed)
-            col = tier.name
-            if col in blind_df:
-                blind_df[col] = blind_df[col].map(codes[tier.name])
-                blind_codes.update(codes)
-            logger.debug(f"Applied blinding to {col}")
-        except Exception as e:
-            logger.warning(f"Failed to blind column {tier_name}: {e}")
+    # Source of truth for which tiers are blind
+    blind_tiers = TM.tiers_in_group("blind") if TM else [t.name for t in tiers.values() if getattr(t, "blind", False)]
+    blind_tiers = [t for t in blind_tiers if t in tier_cols_present]
 
-    logger.info(f"Blinding applied; total columns blinded: {len(blind_columns)}")
+    # Non-blind tiers are tier columns not in blind group
+    nonblind_tiers = [t for t in tier_cols_present if t not in blind_tiers]
+
+    # Drop file + non-blind tiers (keep everything else)
+    drop_cols = ["file"] + nonblind_tiers
+    blind_df.drop(columns=drop_cols, errors="ignore", inplace=True)
+
+    # Ensure ID columns are retained if present (they should be, but guard against earlier drops)
+    for c in id_cols:
+        if c in df.columns and c not in blind_df.columns:
+            blind_df[c] = df[c]
+
+    # Build codebook ONCE
+    blind_codes = TM.make_blind_codebook(seed=seed) if TM else {}
+
+    if not blind_tiers:
+        logger.info("No blind tiers configured or present in df — returning df with non-blind tiers removed.")
+        return blind_df, blind_codes
+
+    # Apply codes to blind tier columns
+    applied = 0
+    for tier_name in blind_tiers:
+        if tier_name not in blind_df.columns:
+            logger.warning(f"Blind tier column '{tier_name}' not present after dropping — skipping.")
+            continue
+
+        mapping = blind_codes.get(tier_name)
+        if not mapping:
+            # Expected for regex/default tiers: TM cannot enumerate → no mapping
+            logger.warning(
+                f"No blind-code mapping available for tier '{tier_name}'. "
+                "Expected for regex/default tiers; column will remain unblinded."
+            )
+            continue
+
+        blind_df[tier_name] = blind_df[tier_name].map(mapping)
+        applied += 1
+        logger.debug(f"Applied blinding codes to '{tier_name}'")
+
+    logger.info(
+        f"Blinding applied. Blind tiers requested/present: {len(blind_tiers)}; "
+        f"successfully coded: {applied}. Dropped non-blind tier cols: {nonblind_tiers}"
+    )
     return blind_df, blind_codes
 
 
-def _apply_blind_codes_to_samples(samples_df, tiers, blind_codes):
+def _apply_blind_codes_to_samples(samples_df, tiers, blind_codes, TM, id_cols=None):
     """
     Apply precomputed blind codes to a concatenated sample-level dataframe.
 
-    Returns
-    -------
-    blind_samples : pd.DataFrame
+    Keeps:
+      - id_cols (default: ['sample_id'])
+      - all non-tier columns (metrics)
+      - blind tier columns only (coded)
+    Drops:
+      - 'file'
+      - non-blind tier columns
     """
-    remove_tiers = [t.name for t in tiers.values() if not t.blind]
-    blind_cols = [t.name for t in tiers.values() if t.blind]
+    if id_cols is None:
+        id_cols = ["sample_id"]
 
-    blind_samples = samples_df.drop(columns=["file"] + remove_tiers, errors="ignore").copy()
-    for tier_name in blind_cols:
-        col = tiers[tier_name].name
-        if col in blind_samples:
-            blind_samples[col] = blind_samples[col].map(blind_codes.get(col, {}))
+    blind_samples = samples_df.copy()
+
+    tier_cols = [t.name for t in tiers.values()]
+    tier_cols_present = [c for c in tier_cols if c in blind_samples.columns]
+
+    blind_tiers = TM.tiers_in_group("blind") if TM else [t.name for t in tiers.values() if getattr(t, "blind", False)]
+    blind_tiers = [t for t in blind_tiers if t in tier_cols_present]
+    nonblind_tiers = [t for t in tier_cols_present if t not in blind_tiers]
+
+    # Drop file + non-blind tiers
+    drop_cols = ["file"] + nonblind_tiers
+    blind_samples.drop(columns=drop_cols, errors="ignore", inplace=True)
+
+    # Re-ensure ID columns are present
+    for c in id_cols:
+        if c in samples_df.columns and c not in blind_samples.columns:
+            blind_samples[c] = samples_df[c]
+
+    # Apply codes to blind tiers
+    for tier_name in blind_tiers:
+        if tier_name not in blind_samples.columns:
+            logger.warning(f"Blind tier column '{tier_name}' not present in samples df — skipping.")
+            continue
+
+        mapping = blind_codes.get(tier_name)
+        if not mapping:
+            logger.warning(
+                f"No blind-code mapping available for sample tier '{tier_name}'. "
+                "Expected for regex/default tiers; column will remain unblinded."
+            )
+            continue
+
+        blind_samples[tier_name] = blind_samples[tier_name].map(mapping)
+
     return blind_samples
 
 
@@ -190,7 +267,7 @@ def _write_cu_summary_outputs(out_dir, unblind_utts, blind_utts, unblind_samples
         logger.error(f"Failed writing blind codes to {_rel(out_dir)}: {e}")
 
 
-def summarize_cus(tiers, input_dir, output_dir, seed):
+def summarize_cus(tiers, input_dir, output_dir, seed, TM):
     """
     Produce CU summary tables with proper blinding workflow.
 
@@ -231,8 +308,21 @@ def summarize_cus(tiers, input_dir, output_dir, seed):
         all_unblind_samples = pd.concat(unblind_sample_dfs, ignore_index=True)
 
         # 3) One blinding pass; reuse codes for samples
-        blind_utts, blind_codes_output = _apply_blinding(all_unblind_utts, tiers, seed)
-        blind_samples = _apply_blind_codes_to_samples(all_unblind_samples, tiers, blind_codes_output)
+        blind_utts, blind_codes_output = _apply_blinding(
+            all_unblind_utts,
+            tiers,
+            seed,
+            TM,
+            id_cols=["sample_id", "utterance_id"],   # utterance-level identifiers
+        )
+
+        blind_samples = _apply_blind_codes_to_samples(
+            all_unblind_samples,
+            tiers,
+            blind_codes_output,
+            TM,
+            id_cols=["sample_id"],                   # sample-level identifier
+        )
 
         # 4) Write
         _write_cu_summary_outputs(
