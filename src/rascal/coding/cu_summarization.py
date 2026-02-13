@@ -106,7 +106,7 @@ def _process_cu_file(file, utt_df, tiers, input_dir):
     return merged_utts, merged_samples
 
 
-def _apply_blinding(df, tiers):
+def _apply_blinding(df, tiers, seed):
     """
     Apply tier-based blind codes to a merged utterance dataframe (concatenated).
 
@@ -125,7 +125,7 @@ def _apply_blinding(df, tiers):
     for tier_name in blind_columns:
         tier = tiers[tier_name]
         try:
-            codes = tier.make_blind_codes()
+            codes = tier.make_blind_codebook(seed=seed)
             col = tier.name
             if col in blind_df:
                 blind_df[col] = blind_df[col].map(codes[tier.name])
@@ -190,7 +190,7 @@ def _write_cu_summary_outputs(out_dir, unblind_utts, blind_utts, unblind_samples
         logger.error(f"Failed writing blind codes to {_rel(out_dir)}: {e}")
 
 
-def summarize_cus(tiers, input_dir, output_dir):
+def summarize_cus(tiers, input_dir, output_dir, seed):
     """
     Produce CU summary tables with proper blinding workflow.
 
@@ -231,7 +231,7 @@ def summarize_cus(tiers, input_dir, output_dir):
         all_unblind_samples = pd.concat(unblind_sample_dfs, ignore_index=True)
 
         # 3) One blinding pass; reuse codes for samples
-        blind_utts, blind_codes_output = _apply_blinding(all_unblind_utts, tiers)
+        blind_utts, blind_codes_output = _apply_blinding(all_unblind_utts, tiers, seed)
         blind_samples = _apply_blind_codes_to_samples(all_unblind_samples, tiers, blind_codes_output)
 
         # 4) Write

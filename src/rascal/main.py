@@ -135,7 +135,7 @@ def main(args):
             "7b": lambda: run_make_word_count_files(tiers, frac, coders, input_dir, out_dir),
             "9a": lambda: run_evaluate_word_count_reliability(tiers, input_dir, out_dir),
             "9b": lambda: run_reselect_wc_reliability(tiers, input_dir, out_dir, "WC", frac),
-            "10a": lambda: run_summarize_cus(tiers, input_dir, out_dir),
+            "10a": lambda: run_summarize_cus(tiers, input_dir, out_dir, random_seed),
             "10b": lambda: run_run_corelex(tiers, input_dir, out_dir, exclude_participants),
         }
 

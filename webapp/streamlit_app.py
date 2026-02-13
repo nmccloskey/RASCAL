@@ -140,19 +140,21 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
         # ------------------------------------------------------------------
         # Load config parameters
         # ------------------------------------------------------------------
-        random_seed = config.get("random_seed", 8) or 8
+        random_seed = config.get("random_seed", 99) or 99
         random.seed(random_seed)
         np.random.seed(random_seed)
         logger.info(f"Random seed set to {random_seed}")
 
-        tiers = run_read_tiers(config.get("tiers", {})) or {}
         frac = config.get("reliability_fraction", 0.2)
+        shuffle_samples = config.get("shuffle_samples", True) or True
         coders = config.get("coders", []) or []
-        CU_paradigms = config.get("CU_paradigms", []) or []
+        cu_paradigms = config.get("cu_paradigms", []) or []
         exclude_participants = config.get("exclude_participants", []) or []
         strip_clan = config.get("strip_clan", True)
         prefer_correction = config.get("prefer_correction", True)
         lowercase = config.get("lowercase", True)
+
+        tiers = run_read_tiers(config.get("tiers", {})) or {}
 
         # ---------------------------------------------------------------
         # PART 3: FUNCTION SELECTION
@@ -221,14 +223,14 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
                     elif func.startswith("4b."):
                         run_make_cu_coding_files(
                             tiers, frac, coders, input_dir, out_dir,
-                            CU_paradigms, exclude_participants
+                            cu_paradigms, exclude_participants
                         )
                     elif func.startswith("6a."):
-                        run_evaluate_cu_reliability(tiers, input_dir, out_dir, CU_paradigms)
+                        run_evaluate_cu_reliability(tiers, input_dir, out_dir, cu_paradigms)
                     elif func.startswith("6b."):
                         run_reselect_cu_reliability(tiers, input_dir, out_dir, "CU", frac)
                     elif func.startswith("7a."):
-                        run_analyze_cu_coding(tiers, input_dir, out_dir, CU_paradigms)
+                        run_analyze_cu_coding(tiers, input_dir, out_dir, cu_paradigms)
                     elif func.startswith("7b."):
                         run_make_word_count_files(tiers, frac, coders, input_dir, out_dir)
                     elif func.startswith("9a."):
