@@ -205,7 +205,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
                     if not transcript_tables:
                         logger.info("No utterance files detected — creating automatically.")
                         chats = chats or run_read_cha_files(input_dir)
-                        run_make_transcript_tables(tiers, chats, out_dir)
+                        run_make_transcript_tables(tiers, chats, out_dir, shuffle_samples, random_seed)
 
                 # --- Execute selected functions ---
                 for func in selected_funcs:
@@ -219,7 +219,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
                     elif func.startswith("3b."):
                         run_reselect_transcription_reliability_samples(input_dir, out_dir, frac)
                     elif func.startswith("4a."):
-                        run_make_transcript_tables(tiers, chats, out_dir)
+                        run_make_transcript_tables(tiers, chats, out_dir, shuffle_samples, random_seed)
                     elif func.startswith("4b."):
                         run_make_cu_coding_files(
                             tiers, frac, coders, input_dir, out_dir,
@@ -238,7 +238,7 @@ if (config_file or st.session_state.confirmed_config) and cha_files:
                     elif func.startswith("9b."):
                         run_reselect_wc_reliability(tiers, input_dir, out_dir, "WC", frac)
                     elif func.startswith("10a."):
-                        run_summarize_cus(tiers, input_dir, out_dir)
+                        run_summarize_cus(tiers, input_dir, out_dir, random_seed, TM)
                     elif func.startswith("10b."):
                         run_run_corelex(tiers, input_dir, out_dir, exclude_participants)
 
