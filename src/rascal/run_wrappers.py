@@ -3,13 +3,18 @@ from rascal.utils.logger import logger
 
 def run_read_tiers(config):
     from rascal.utils.tiers import TierManager
+    from rascal.utils.rascal_tier_adapter import adapt_tiers_for_rascal
+
     TM = TierManager(config)
-    tiers = TM.tiers
-    if tiers:
-        logger.info("Successfully parsed tiers from config.")
+
+    adapted_tiers = adapt_tiers_for_rascal(TM)
+
+    if adapted_tiers:
+        logger.info("Successfully parsed and adapted tiers for RASCAL.")
     else:
-        logger.warning("Tiers are empty or malformed.")
-    return tiers
+        logger.warning("Adapted tiers are empty or malformed.")
+
+    return adapted_tiers
 
 def run_read_cha_files(input_dir, shuffle=False):
     from rascal.utils.cha_files import read_cha_files
