@@ -161,7 +161,7 @@ def make_cu_coding_files(
 
     for file, uttdf in tqdm(zip(transcript_tables, utt_dfs), desc="Generating CU coding files"):
         try:
-            labels = [t.match(file.name, return_None=True) for t in tiers.values()]
+            labels = [t.match(file.name, return_none=True) for t in tiers.values()]
             labels = [l for l in labels if l]
             label_path = Path(cu_coding_dir, *labels)
             label_path.mkdir(parents=True, exist_ok=True)
@@ -173,7 +173,7 @@ def make_cu_coding_files(
               subdfs.append(subdf)
             random.shuffle(subdfs)
             shuffled_utt_df = pd.concat(subdfs, ignore_index=True)
-            drop_cols = [ col for col in ['file', 'speaking_time'] \
+            drop_cols = [col for col in ['file', 'speaking_time'] \
                          + [t for t in tiers if t.lower() not in stim_cols] if col in shuffled_utt_df.columns ]
             cu_df = shuffled_utt_df.drop(columns=drop_cols).copy()
 
@@ -328,7 +328,7 @@ def make_word_count_files(tiers, frac, coders, input_dir, output_dir):
     for file in tqdm(cu_files, desc="Generating word count files"):
         try:
             wc_df = _read_cu_file(file)
-            labels = [t.match(file.name, return_None=True) for t in tiers.values() if t.match(file.name, return_None=True)]
+            labels = [t.match(file.name, return_none=True) for t in tiers.values() if t.match(file.name, return_none=True)]
             wc_df = _prepare_wc_df(wc_df, d)
             wc_df, wc_rel_df = _assign_wc_coders(wc_df, coders, frac)
             _write_wc_outputs(wc_df, wc_rel_df, word_count_dir, labels)
