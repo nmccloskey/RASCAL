@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import Dict, List
+
+from typing import Dict, List, Tuple
 import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
@@ -59,10 +60,29 @@ def partition_cha(chats: Dict[str, object], tiers: Dict[str, object]) -> Dict[st
     return cha_chunks
 
 
+def _count_utterances_in_chunk(chats: Dict[str, object], file_list: List[str]) -> int:
+    """
+    Count total utterances across all files in a partition chunk.
+    Used to set a consistent utterance_id padding width per output file.
+    """
+    total = 0
+    for chat_file in file_list:
+        try:
+            chat_data = chats[chat_file]
+            utterances = getattr(chat_data, "utterances", lambda: [])()
+            total += len(utterances)
+        except Exception as e:
+            logger.warning(f"Could not count utterances in {_rel(chat_file)}: {e}")
+    return total
+
+
 def make_transcript_tables(
     tiers: Dict[str, object],
     chats: Dict[str, object],
     output_dir: Path,
+    *,
+    shuffle: bool = False,
+    random_seed: int | None = 99,
 ) -> List[str]:
     """
     Create and write transcript tables (samples + utterances) to Excel.
@@ -75,6 +95,8 @@ def make_transcript_tables(
         CHAT file readers indexed by filename.
     output_dir : Path
         Directory to create a 'transcript_tables' subfolder within.
+    shuffle: bool
+        Disrupt automated file order when assigning sample identifiers.
 
     Returns
     -------
@@ -89,46 +111,110 @@ def make_transcript_tables(
     """
     transcript_dir = output_dir / "transcript_tables"
     transcript_dir.mkdir(parents=True, exist_ok=True)
+
     cha_chunks = partition_cha(chats, tiers)
     written: List[str] = []
 
-    sample_cols = ["sample_id", "file"] + list(tiers.keys())
-    utt_cols = ["sample_id", "utterance_id", "speaker", "utterance", "comment"]
+    sample_cols = ["sample_id", "file", "input_order", "shuffled_order"] + list(tiers.keys())
+    utt_cols = [
+        "sample_id",
+        "utterance_id",
+        "position",
+        "position_sub",
+        "speaker",
+        "utterance",
+        "comment",
+    ]
+
+    rng = np.random.default_rng(random_seed) if shuffle else None
 
     for chunk_str, file_list in tqdm(cha_chunks.items(), desc="Building transcript tables"):
         if not file_list:
             logger.warning(f"Partition '{chunk_str}' has no files; skipping.")
             continue
 
-        sample_rows, utt_rows = [], []
-        s_pad = zero_pad(len(file_list), 3)
-        partition_str = f"{chunk_str}_" if chunk_str != "NO_PARTITION_LABELS" else ""
+        # Deterministic base ordering by filename for readability + reproducibility.
+        file_list_sorted = sorted(file_list)
 
-        for i, chat_file in enumerate(sorted(file_list)):
+        # Build a shuffled order (only used to assign sample_ids), but keep output rows file-sorted.
+        if shuffle:
+            shuffled = file_list_sorted.copy()
+            rng.shuffle(shuffled)
+            file_to_shuffled_order = {f: i + 1 for i, f in enumerate(shuffled)}
+            logger.info(
+                f"Shuffling enabled for partition '{chunk_str}' (seed={random_seed})."
+            )
+        else:
+            file_to_shuffled_order = {}
+
+        # sample_id padding determined by number of samples in this output file.
+        s_pad = zero_pad(len(file_list_sorted), 3)
+
+        # utterance_id padding determined once per output file (concatenated utterances).
+        total_utts = _count_utterances_in_chunk(chats, file_list_sorted)
+        u_pad = zero_pad(total_utts, 4)
+
+        partition_str = f"{chunk_str}_" if chunk_str != "NO_PARTITION_LABELS" else ""
+        sample_rows: List[list] = []
+        utt_rows: List[list] = []
+
+        # Assign sample_ids:
+        # - if shuffle=True, sample_id reflects shuffled order
+        # - otherwise sample_id reflects file_list_sorted order
+        if shuffle:
+            # sample_id index is the shuffled_order
+            file_to_sample_id = {
+                f: f"S{file_to_shuffled_order[f]:0{s_pad}d}" for f in file_list_sorted
+            }
+        else:
+            file_to_sample_id = {
+                f: f"S{i + 1:0{s_pad}d}" for i, f in enumerate(file_list_sorted)
+            }
+
+        for input_idx, chat_file in enumerate(file_list_sorted, start=1):
             try:
                 labels_all = [t.match(chat_file) for t in tiers.values()]
-                sample_id = f"S{i+1:0{s_pad}d}"
-                sample_rows.append([sample_id, chat_file] + labels_all)
+                sample_id = file_to_sample_id[chat_file]
+                shuffled_order = file_to_shuffled_order.get(chat_file, np.nan)
+
+                sample_rows.append(
+                    [sample_id, chat_file, input_idx, shuffled_order] + labels_all
+                )
 
                 chat_data = chats[chat_file]
                 utterances = getattr(chat_data, "utterances", lambda: [])()
-                u_pad = zero_pad(len(utterances), 4)
 
-                for j, line in enumerate(utterances):
+                # position resets per sample (1..n). position_sub starts at 0.
+                for j, line in enumerate(utterances, start=1):
                     speaker = getattr(line, "participant", None)
-                    tiers_map = getattr(line, "tiers", {})
-                    utterance = tiers_map.get(speaker, "")
+                    tiers_map = getattr(line, "tiers", {}) or {}
+                    utterance_text = tiers_map.get(speaker, "")
                     comment = tiers_map.get("%com", None)
-                    utt_id = f"U{j+1:0{u_pad}d}"
-                    utt_rows.append([sample_id, utt_id, speaker, utterance, comment])
+
+                    utt_id = f"U{j:0{u_pad}d}"
+                    position = j
+                    position_sub = 0
+
+                    utt_rows.append(
+                        [
+                            sample_id,
+                            utt_id,
+                            position,
+                            position_sub,
+                            speaker,
+                            utterance_text,
+                            comment,
+                        ]
+                    )
             except Exception as e:
                 logger.error(f"Error processing {_rel(chat_file)}: {e}")
                 continue
 
         sample_df = pd.DataFrame(sample_rows, columns=sample_cols)
-        sample_df["speaking_time"] = np.nan
+        sample_df["speaking_time"] = np.nan  # preserve your existing placeholder
         utt_df = pd.DataFrame(utt_rows, columns=utt_cols)
 
+        # Write artifacts
         filepath = transcript_dir.joinpath(*partition_str.strip("_").split("_"))
         filepath.mkdir(parents=True, exist_ok=True)
         filename = filepath / f"{partition_str}transcript_tables.xlsx"
@@ -143,3 +229,4 @@ def make_transcript_tables(
             logger.error(f"Failed to write {_rel(filename)}: {e}")
 
     logger.info(f"Successfully wrote {len(written)} transcript table(s).")
+    return written

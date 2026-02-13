@@ -114,7 +114,7 @@ def main(args):
             if not transcript_tables:
                 logger.info("No input transcript tables detected — creating them automatically.")
                 chats = chats or run_read_cha_files(input_dir)
-                run_make_transcript_tables(tiers, chats, out_dir)
+                run_make_transcript_tables(tiers, chats, out_dir, shuffle_samples, random_seed)
 
         # ---------------------------------------------------------
         # Dispatch dictionary
@@ -125,7 +125,7 @@ def main(args):
                 tiers, input_dir, out_dir, exclude_participants, strip_clan, prefer_correction, lowercase
             ),
             "3b": lambda: run_reselect_transcription_reliability_samples(input_dir, out_dir, frac),
-            "4a": lambda: run_make_transcript_tables(tiers, chats, out_dir),
+            "4a": lambda: run_make_transcript_tables(tiers, chats, out_dir, shuffle_samples, random_seed),
             "4b": lambda: run_make_cu_coding_files(
                 tiers, frac, coders, input_dir, out_dir, cu_paradigms, exclude_participants
             ),
