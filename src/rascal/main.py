@@ -57,12 +57,13 @@ def main(args):
         initialize_logger(start_time, out_dir, program_name="RASCAL", version=__version__)
         logger.info("Logger initialized and early logs flushed.")
 
-        random_seed = config.get("random_seed", 8) or 8
+        random_seed = config.get("random_seed", 99) or 99
         random.seed(random_seed)
         np.random.seed(random_seed)
         logger.info(f"Random seed set to {random_seed}")
 
         frac = config.get("reliability_fraction", 0.2) or 0.2
+        shuffle_samples = config.get("shuffle_samples", True) or True
         coders = config.get("coders", []) or []
         cu_paradigms = config.get("cu_paradigms", []) or []
         exclude_participants = config.get("exclude_participants", []) or []
