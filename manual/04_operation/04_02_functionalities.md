@@ -1,3 +1,7 @@
+## Individual Functions
+
+> This section is organized by **functionality**. For each function you’ll find: purpose (in the RASCAL pipeline and in general), inputs, outputs, CLI commands (succinct & expanded), Streamlit selection, and any associated **manual** procedures. See the `README.md` on GitHub for a tabular summary of RASCAL functions.
+
 ### 5.1 Function 1a — Select Transcription Reliability Samples
 *Pipeline context:* Stage 1 (after semi-automated & edited CHAT transcripts are ready).  
 *General purpose:* Randomly subset transcripts for *reliability* transcription from scratch; produce a complete sample list and templates.

@@ -1,7 +1,5 @@
 ## Operation
 
-> This section is organized by **functionality**. For each function you’ll find: purpose (in the RASCAL pipeline and in general), inputs, outputs, CLI commands (succinct & expanded), Streamlit selection, and any associated **manual** procedures. See the `README.md` on GitHub for a tabular summary of RASCAL functions.
-
 ### 5.0 Command & App Basics
 
 - **CLI pattern:**  

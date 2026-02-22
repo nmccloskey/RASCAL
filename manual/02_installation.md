@@ -1,4 +1,4 @@
-## Section 1: Installation and Access
+## 1: Installation and Access
 
 RASCAL can be used in **two ways**:
 

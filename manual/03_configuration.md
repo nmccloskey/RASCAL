@@ -1,4 +1,4 @@
-## Section 4: Configuration
+## 4: Configuration
 
 ### 4.1  Purpose
 
