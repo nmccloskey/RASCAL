@@ -54,7 +54,7 @@ from rascal.run_wrappers import (
 )
 from rascal import __version__
 
-from manual_viewer import render_manual_ui
+from manual_viewer import render_manual_ui_single_pane  
 
 
 # ------------------------------------------------------------------
@@ -68,13 +68,12 @@ st.subheader("Resources for Analyzing Speech in Clinical Aphasiology Labs")
 # ------------------------------------------------------------------
 REPO_ROOT = Path(__file__).resolve().parents[1]  # webapp/ -> REPO/
 
-render_manual_ui(
+render_manual_ui_single_pane(
     repo_root=REPO_ROOT,
     manual_rel_dir="manual",
     outline_filename="00_outline.md",
-    app_title="📘 IRIDIC Manual",
+    expander_label="📘 Show / Hide IRIDIC Manual",
 )
-
 
 # ---------------------------------------------------------------
 # PART 1: CONFIG
