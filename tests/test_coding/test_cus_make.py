@@ -12,10 +12,10 @@ class FakeTier:
         self.name = name
         self.partition = False
         self._map = mapping
-    def match(self, filename, return_None=False):
+    def match(self, filename, return_none=False):
         if filename in self._map:
             return self._map[filename]
-        return None if return_None else ""
+        return None if return_none else ""
 
 
 def _mk_utt_df():
