@@ -1,0 +1,39 @@
+# ==========================================================
+# RASCAL Instruction Manual – PDF Compilation Config
+# ==========================================================
+
+title: "RASCAL Instruction Manual"
+subtitle: "Resources for Analyzing Speech in Clinical Aphasiology Labs"
+author: "Nick McCloskey"
+date: "Version 1.0.7"
+
+geometry: margin=3cm
+fontsize: 11pt
+linestretch: 1.15
+papersize: letter
+
+titlepage: true
+titlepage-color: "FFFFFF"
+titlepage-text-color: "000000"
+titlepage-rule-height: 1
+
+toc: true
+toc-depth: 3
+numbersections: true
+
+header-includes:
+  - \usepackage{etoolbox}
+  - \apptocmd{\tableofcontents}{\clearpage}{}{}
+  - \usepackage{fancyhdr}
+  - \pagestyle{fancy}
+  - \fancyfoot[C]{\thepage}
+  - \fancyhead[L]{IRIDIC Manual}
+  - \fancyhead[R]{Version 0.1.0}
+  - \usepackage{fvextra}
+  - \fvset{breaklines=true,breakanywhere=true}
+
+colorlinks: true
+linkcolor: blue
+urlcolor: blue
+
+highlight-style: tango
