@@ -63,15 +63,15 @@ def build_manual_index(manual_dir: str) -> Tuple[TreeNode, Dict[str, ManualFile]
     )
 
     for abs_path in md_paths:
+
+        if abs_path.name == "00_outline.md":
+            continue
+ 
         rel_path = abs_path.relative_to(manual_root)
         rel_str = rel_path.as_posix()
 
         text = read_text_safely(abs_path)
-        # title = extract_md_title(text, fallback=abs_path.name)
-        title = abs_path.stem
-
-        if abs_path.name == "00_outline.md":
-            continue
+        title = extract_md_title(text, fallback=abs_path.name)
 
         mf = ManualFile(rel_path=rel_path, abs_path=abs_path, title=title, text=text)
         flat[rel_str] = mf
@@ -135,13 +135,15 @@ def search_manual(flat: Dict[str, ManualFile], q: str, limit: int = 25) -> List[
 # -----------------------------
 def _toggle_selected(rel_str: str) -> None:
     """
-    Click once -> open (select).
-    Click again -> close (clear selection).
+    Click once -> open (select) and immediately show ▶.
+    Click again -> close (clear selection) and immediately remove ▶.
     """
     if st.session_state.get("manual_selected") == rel_str:
         st.session_state.manual_selected = None
     else:
         st.session_state.manual_selected = rel_str
+
+    st.rerun()
 
 
 # -----------------------------
@@ -185,8 +187,9 @@ def render_manual_ui_single_pane(
             )
         with c2:
             # Hide Manual button clears the selection (so nothing shows below)
-            if st.button("Hide manual", key="manual_hide"):
+            if st.button("Hide section", key="section_hide"):
                 st.session_state.manual_selected = None
+                st.rerun()
         with c3:
             st.session_state.manual_search = st.text_input(
                 "Search",
@@ -239,7 +242,7 @@ def render_manual_ui_single_pane(
 
                 # Visual hint when selected
                 if st.session_state.manual_selected == rel_str:
-                    label = f"✅ {label}"
+                    label = f"▶ {label}"
 
                 if st.button(label, key=f"root_open_{rel_str}"):
                     _toggle_selected(rel_str)
@@ -289,7 +292,7 @@ def _render_folder_accordion(
                 label = f"📄 {name} — {mf.title}"
 
             if st.session_state.get("manual_selected") == rel_str:
-                label = f"✅ {label}"
+                label = f"▶ {label}"
 
             if st.button(label, key=f"open_{rel_str}"):
                 _toggle_selected(rel_str)
