@@ -7,7 +7,7 @@ class MockTier:
     """Minimal mock tier that mimics .match() and has no partition requirement."""
     def __init__(self, label):
         self.label = label
-    def match(self, fname, return_None=False):
+    def match(self, fname, return_none=False):
         return self.label if self.label in fname else None
 
 
