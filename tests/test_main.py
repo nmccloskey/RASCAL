@@ -14,7 +14,15 @@ def mock_run_functions(monkeypatch):
     def make_stub(name):
         def stub(*args, **kwargs):
             called[name] = {"args": args, "kwargs": kwargs}
+
+            # IMPORTANT: run_read_tiers now returns (tiers, TM)
+            if name == "run_read_tiers":
+                dummy_tiers = {}  # or {"file_name": "file"} if you need non-empty
+                dummy_tm = object()
+                return dummy_tiers, dummy_tm
+
             return name
+
         return stub
 
     run_names = [
