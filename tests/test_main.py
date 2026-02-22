@@ -101,7 +101,7 @@ def test_main_executes_basic_command(mock_utils, mock_run_functions, tmp_path):
     assert isinstance(tiers_args[0], dict)
 
     make_args = mock_run_functions["run_make_transcript_tables"]["args"]
-    assert len(make_args) == 3
+    assert len(make_args) == 5
     assert isinstance(make_args[2], Path)
     assert make_args[2].name.startswith("rascal_output_")
 
