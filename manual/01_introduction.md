@@ -1,4 +1,6 @@
-## 0: About RASCAL  
+# Introduction to RASCAL
+
+## 1: About RASCAL  
 **Version:** manual written for version 1.0.0; will be edited as needed.  
 **Author:** Nick McCloskey, M.S. | Temple University | Speech, Language & Brain Lab  
 **Repository:** [https://github.com/nmccloskey/rascal](https://github.com/nmccloskey/rascal)    
@@ -11,7 +13,7 @@
 
 ---
 
-### 0.1 Program Overview
+### 1.1 Program Overview
 
 **RASCAL** is an open-source system that streamlines the preparation and analysis of discourse data from people with aphasia.  
 It supports both command-line and web-based operation, enabling efficient, reproducible, and scalable processing of hundreds or thousands of CHAT-formatted transcripts.
@@ -28,7 +30,7 @@ RASCAL’s modular design allows clinicians and researchers to select only the c
 
 ---
 
-### 0.2 System Requirements
+### 1.2 System Requirements
 
 | Component | Recommended Specification |
 |------------|---------------------------|

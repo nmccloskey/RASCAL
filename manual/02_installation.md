@@ -1,3 +1,5 @@
+# How to access the program
+
 ## 1: Installation and Access
 
 RASCAL can be used in **two ways**:
@@ -51,7 +53,7 @@ If the command runs and lists available stages, installation is complete.
 
 ---
 
-### 1.3  Project Directory Setup
+### 1.3 Project Directory Setup
 
 Create a working folder for each analysis project:
 
@@ -69,7 +71,7 @@ your_project/
 
 ---
 
-### 1.4  Updating RASCAL
+### 1.4 Updating RASCAL
 
 ```bash
 pip install --upgrade rascal-speech
@@ -77,7 +79,7 @@ pip install --upgrade rascal-speech
 
 ---
 
-### 1.5  Uninstalling
+### 1.5 Uninstalling
 
 ```bash
 pip uninstall rascal-speech

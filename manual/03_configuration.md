@@ -1,6 +1,6 @@
-## 4: Configuration
+# Setting up the config file
 
-### 4.1  Purpose
+## 1. Purpose
 
 RASCAL requires a **configuration file** (e.g., `config.yaml`) to define how the program interprets, organizes, and processes your data.  
 This file specifies the following:
@@ -17,14 +17,14 @@ RASCAL reads this configuration at runtime for both the **CLI** and **web app**,
 
 ---
 
-### 4.2  Example Configuration File
+## 2. Example Configuration File
 
 You can download an editable example (`example_config.yaml`) from the GitHub repository or create your own using the format below:
 
 ```yaml
 input_dir: rascal_data/input
 output_dir: rascal_data/output
-random_seed: 8
+random_seed: 99
 reliability_fraction: 0.2
 coders:
 - '1'
@@ -65,9 +65,9 @@ tiers:
 
 ---
 
-### 4.3  Explanation of Parameters
+## 3. Explanation of Parameters
 
-#### General Settings
+### 3.1 General Settings
 
 | Key | Description |
 |-----|--------------|
@@ -78,7 +78,7 @@ tiers:
 | **CU_paradigms** | Defines CU coding systems (e.g., SAE = Standard American English, AAE = African American English). Multiple paradigms generate parallel coding columns. |
 | **exclude_participants** | Excludes specified speakers (e.g., “INV”) from transcription reliability and CU coding. |
 
-#### Transcription Reliability Settings
+### 3.2 Transcription Reliability Settings
 
 | Key | Description |
 |-----|--------------|
@@ -88,14 +88,14 @@ tiers:
 
 ---
 
-### 4.4  Tiers: Structuring Units of Analysis
+## 4. Tiers: Structuring Units of Analysis
 
 Tiers define the **metadata dimensions** (e.g., site, test phase, participant ID, narrative) that RASCAL extracts from transcript filenames.  
 Each tier has:  
 - A set of **values** (either listed explicitly or expressed as a regular expression)  
 - Optional **partition** and **blind** flags that control analysis grouping and CU summary anonymization.
 
-#### Tier Attributes
+### 4.1 Tier Attributes
 
 | Attribute | Description |
 |------------|--------------|
@@ -103,7 +103,7 @@ Each tier has:
 | **partition** | When `true`, RASCAL creates **separate coding files and reliability subsets** for each value of that tier (e.g., site). |
 | **blind** | When `true`, generates blinding codes for CU coding summaries (function **10a**). |
 
-#### Example: File Naming and Tier Extraction
+### 4.2 Example: File Naming and Tier Extraction
 
 Suppose transcript filenames follow this pattern:
 
@@ -128,14 +128,14 @@ See [Python - re](https://docs.python.org/3/library/re.html) for more informatio
 
 ---
 
-### 4.5  Dialectal CU Paradigms
+## 5. Dialectal CU Paradigms
 
 Including multiple CU paradigms (e.g., `SAE`, `AAE`) allows RASCAL to automatically produce **parallel CU coding columns**.  
 This is useful when coding across dialectal or sociolectal variations while maintaining consistent reliability analysis.
 
 ---
 
-### 4.6  Building the Config File Online
+## 6. Building the Config File Online
 
 Users may create a custom configuration file directly from the **RASCAL web application** using its interactive Config Builder:
 1. Launch the web app: [https://rascal.streamlit.app/](https://rascal.streamlit.app/)  
@@ -147,7 +147,7 @@ The downloaded file can later be uploaded for use in both the CLI and web app in
 
 ---
 
-### 4.7  Recommendations
+## 7. Recommendations
 
 - Keep the configuration file alongside your project data (e.g., in `your_project/`).
 - Use descriptive, consistent naming for sites, tests, and narratives.
