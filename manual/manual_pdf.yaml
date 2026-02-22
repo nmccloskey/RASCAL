@@ -28,7 +28,7 @@ header-includes:
   - \pagestyle{fancy}
   - \fancyfoot[C]{\thepage}
   - \fancyhead[L]{IRIDIC Manual}
-  - \fancyhead[R]{Version 0.1.0}
+  - \fancyhead[R]{Version 1.0.7}
   - \usepackage{fvextra}
   - \fvset{breaklines=true,breakanywhere=true}
 
