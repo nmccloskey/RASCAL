@@ -84,17 +84,6 @@ def build_manual_index(manual_dir: str) -> Tuple[TreeNode, Dict[str, ManualFile]
     return tree, flat
 
 
-def extract_tree_block(outline_text: str) -> Optional[str]:
-    idx = outline_text.find("## Manual Map (Tree)")
-    if idx == -1:
-        return None
-    after = outline_text[idx:]
-    m = re.search(r"```([\s\S]*?)```", after)
-    if not m:
-        return None
-    return m.group(1).strip("\n")
-
-
 def render_generated_tree_text(tree: TreeNode) -> str:
     lines: List[str] = ["Manual Map (Tree)"]
 
@@ -138,18 +127,30 @@ def search_manual(flat: Dict[str, ManualFile], q: str, limit: int = 25) -> List[
 
 
 # -----------------------------
+# Selection toggle behavior
+# -----------------------------
+def _toggle_selected(rel_str: str) -> None:
+    """
+    Click once -> open (select).
+    Click again -> close (clear selection).
+    """
+    if st.session_state.get("manual_selected") == rel_str:
+        st.session_state.manual_selected = None
+    else:
+        st.session_state.manual_selected = rel_str
+
+
+# -----------------------------
 # Single-pane accordion UI
 # -----------------------------
 def render_manual_ui_single_pane(
     *,
     repo_root: Union[str, Path],
     manual_rel_dir: Union[str, Path] = "manual",
-    outline_filename: str = "00_outline.md",
     expander_label: str = "📘 Show / Hide Instruction Manual",
 ) -> None:
     repo_root = Path(repo_root).resolve()
     manual_root = (repo_root / manual_rel_dir).resolve()
-    outline_path = manual_root / outline_filename
 
     if "manual_selected" not in st.session_state:
         st.session_state.manual_selected = None
@@ -167,11 +168,6 @@ def render_manual_ui_single_pane(
         st.warning(f"No markdown files found under: {manual_root}")
         return
 
-    # Pull pretty tree from outline (if present)
-    pretty_tree_block = None
-    if outline_path.exists():
-        pretty_tree_block = extract_tree_block(read_text_safely(outline_path))
-
     # -------------------------
     # Top-level manual expander
     # -------------------------
@@ -184,23 +180,21 @@ def render_manual_ui_single_pane(
                 value=st.session_state.manual_expand_all,
             )
         with c2:
-            if st.button("Open outline", key="manual_open_outline"):
-                if outline_path.exists():
-                    st.session_state.manual_selected = outline_path.relative_to(manual_root).as_posix()
+            # Hide Manual button clears the selection (so nothing shows below)
+            if st.button("Hide manual", key="manual_hide"):
+                st.session_state.manual_selected = None
         with c3:
             st.session_state.manual_search = st.text_input(
                 "Search",
                 value=st.session_state.manual_search,
                 placeholder="Search titles + content…",
-                label_visibility="visible",
             )
 
-        # Tree map preview
+        st.caption("Tip: Click a file once to show it below. Click it again to hide it.")
+
+        # Tree map preview (always available)
         with st.expander("🗂 Manual Map (Tree)", expanded=False):
-            if pretty_tree_block:
-                st.code(pretty_tree_block, language="text")
-            else:
-                st.code(render_generated_tree_text(tree), language="text")
+            st.code(render_generated_tree_text(tree), language="text")
 
         # Search results (optional)
         q = st.session_state.manual_search.strip()
@@ -212,11 +206,13 @@ def render_manual_ui_single_pane(
                 else:
                     for rel_str, _score in results:
                         mf = flat[rel_str]
-                        if st.button(f"📄 {mf.rel_path.as_posix()} — {mf.title}", key=f"sr_{rel_str}"):
-                            st.session_state.manual_selected = rel_str
+                        if st.button(
+                            f"📄 {mf.rel_path.as_posix()} — {mf.title}",
+                            key=f"sr_{rel_str}",
+                        ):
+                            _toggle_selected(rel_str)
 
-        # Highest-level sections accordion:
-        # root-level items become expanders (folders) or file buttons (files)
+        # Highest-level sections accordion
         st.markdown("### 📚 Manual Sections")
 
         root_keys = sorted(tree.keys(), key=numeric_sort_key)
@@ -236,15 +232,20 @@ def render_manual_ui_single_pane(
                 label = f"📄 {name}"
                 if mf and mf.title and mf.title != name:
                     label = f"📄 {name} — {mf.title}"
+
+                # Visual hint when selected
+                if st.session_state.manual_selected == rel_str:
+                    label = f"✅ {label}"
+
                 if st.button(label, key=f"root_open_{rel_str}"):
-                    st.session_state.manual_selected = rel_str
+                    _toggle_selected(rel_str)
 
     # -------------------------
     # Content area (below)
     # -------------------------
     rel_selected: Optional[str] = st.session_state.manual_selected
     if not rel_selected:
-        st.info("Select a manual section above to view it here.")
+        st.info("No manual section selected.")
         return
 
     if rel_selected not in flat:
@@ -265,9 +266,6 @@ def _render_folder_accordion(
     flat: Dict[str, ManualFile],
     expand_all: bool,
 ) -> None:
-    """
-    Recursively render folder contents as nested expanders (subfolders) + buttons (files).
-    """
     keys = sorted(node.keys(), key=numeric_sort_key)
     for name in keys:
         child = node[name]
@@ -285,5 +283,9 @@ def _render_folder_accordion(
             label = f"📄 {name}"
             if mf and mf.title and mf.title != name:
                 label = f"📄 {name} — {mf.title}"
+
+            if st.session_state.get("manual_selected") == rel_str:
+                label = f"✅ {label}"
+
             if st.button(label, key=f"open_{rel_str}"):
-                st.session_state.manual_selected = rel_str
+                _toggle_selected(rel_str)

@@ -71,8 +71,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]  # webapp/ -> REPO/
 render_manual_ui_single_pane(
     repo_root=REPO_ROOT,
     manual_rel_dir="manual",
-    outline_filename="00_outline.md",
-    expander_label="📘 Show / Hide IRIDIC Manual",
+    expander_label="📘 Show / Hide IRIDIC Manual Menu",
 )
 
 # ---------------------------------------------------------------
