@@ -54,6 +54,8 @@ from rascal.run_wrappers import (
 )
 from rascal import __version__
 
+from manual_viewer import render_manual_ui
+
 
 # ------------------------------------------------------------------
 # Streamlit header
@@ -64,10 +66,14 @@ st.subheader("Resources for Analyzing Speech in Clinical Aphasiology Labs")
 # ------------------------------------------------------------------
 # Instruction manual toggle
 # ------------------------------------------------------------------
-manual_path = Path(__file__).resolve().parent.parent / "manual" / "rascal_manual.md"
-if manual_path.exists():
-    with st.expander("📘 Show / Hide Instruction Manual"):
-        st.markdown(manual_path.read_text(encoding="utf-8"))
+REPO_ROOT = Path(__file__).resolve().parents[1]  # webapp/ -> REPO/
+
+render_manual_ui(
+    repo_root=REPO_ROOT,
+    manual_rel_dir="manual",
+    outline_filename="00_outline.md",
+    app_title="📘 IRIDIC Manual",
+)
 
 
 # ---------------------------------------------------------------
