@@ -67,7 +67,11 @@ def build_manual_index(manual_dir: str) -> Tuple[TreeNode, Dict[str, ManualFile]
         rel_str = rel_path.as_posix()
 
         text = read_text_safely(abs_path)
-        title = extract_md_title(text, fallback=abs_path.name)
+        # title = extract_md_title(text, fallback=abs_path.name)
+        title = abs_path.stem
+
+        if abs_path.name == "00_outline.md":
+            continue
 
         mf = ManualFile(rel_path=rel_path, abs_path=abs_path, title=title, text=text)
         flat[rel_str] = mf
