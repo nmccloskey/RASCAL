@@ -252,7 +252,7 @@ def render_manual_ui_single_pane(
     # -------------------------
     rel_selected: Optional[str] = st.session_state.manual_selected
     if not rel_selected:
-        st.info("No manual section selected.")
+        st.info("Select from the above menu to view instructions.")
         return
 
     if rel_selected not in flat:

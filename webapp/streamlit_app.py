@@ -71,7 +71,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]  # webapp/ -> REPO/
 render_manual_ui_single_pane(
     repo_root=REPO_ROOT,
     manual_rel_dir="manual",
-    expander_label="📘 Show / Hide IRIDIC Manual Menu",
+    expander_label="📘 Show / Hide RASCAL Manual Menu",
 )
 
 # ---------------------------------------------------------------
