@@ -3,6 +3,7 @@ import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
 from rascal.utils.logger import logger, _rel
+from rascal.utils.auxiliary import calc_subset_size
 
 
 def select_transcription_reliability_samples(tiers, chats, frac, output_dir):
@@ -54,7 +55,7 @@ def select_transcription_reliability_samples(tiers, chats, frac, output_dir):
         partition_path = Path(transc_rel_dir, *partition_tiers) if partition_tiers else transc_rel_dir
         partition_path.mkdir(parents=True, exist_ok=True)
 
-        subset_size = max(1, round(frac * len(cha_files)))
+        subset_size = calc_subset_size(frac=frac, samples=cha_files)
         subset = random.sample(cha_files, k=subset_size)
         logger.info(f"Selected {subset_size} files for partition {partition_tiers or 'root'}.")
 
@@ -130,17 +131,27 @@ def reselect_transcription_reliability_samples(input_dir, output_dir, frac):
 
             df_all = pd.read_excel(filepath, sheet_name="all_transcripts")
             df_rel = pd.read_excel(filepath, sheet_name="reliability_selection")
+
             used_files = set(df_rel["file"])
             candidates = df_all[~df_all["file"].isin(used_files)]
+
             if candidates.empty:
                 logger.info(f"No remaining candidates in {_rel(filepath)}, skipping.")
                 continue
 
-            n_samples = max(1, round(frac * len(df_all)))
-            n_samples = min(n_samples, len(candidates))
+            n_target = calc_subset_size(frac, df_all)
+            n_samples = min(n_target, len(candidates)) # cap by availability
+
+            if n_samples < n_target:
+                logger.warning(
+                    f"Only {n_samples}/{n_target} candidates available for {_rel(filepath)} "
+                    f"(candidates exhausted; cannot meet frac={frac})."
+                )
+
             sample_df = candidates.sample(n=n_samples)
             outpath = reselect_dir / f"reselected_{filepath.name}"
             sample_df.to_excel(outpath, index=False, sheet_name="reselected_reliability")
             logger.info(f"Reselected {n_samples} files → {_rel(outpath)}")
+
         except Exception as e:
             logger.error(f"Failed to reselect samples for {_rel(filepath)}: {e}")
