@@ -1,3 +1,6 @@
+from __future__ import annotations
+import math
+from typing import Sequence, Any
 import yaml
 from pathlib import Path
 import pandas as pd
@@ -327,3 +330,70 @@ def extract_transcript_data(
     except Exception as e:
         logger.error(f"Failed to read {path}: {e}")
         raise
+
+
+def calc_subset_size(frac: float, samples: Sequence[Any]) -> int:
+    """
+    Calculate the minimum subset size required to satisfy a fractional
+    sampling threshold.
+
+    This function guarantees that the returned subset size is:
+        • At least ceil(frac * len(samples))
+        • Never less than 1 (if samples is non-empty)
+
+    It is intended for reliability sampling workflows where the protocol
+    requires selecting *at least* a given proportion of available samples
+    (e.g., ≥ 20% for reliability coding).
+
+    Parameters
+    ----------
+    frac : float
+        Fractional proportion to sample. Must satisfy 0 < frac <= 1.
+
+    samples : Sequence[Any]
+        Collection of available samples (e.g., list of transcript paths).
+        Must be non-empty.
+
+    Returns
+    -------
+    int
+        Minimum required subset size.
+
+    Raises
+    ------
+    TypeError
+        If frac is not a float or int, or samples is not a sequence.
+
+    ValueError
+        If frac is not within (0, 1], or if samples is empty.
+
+    Examples
+    --------
+    >>> calc_subset_size(0.2, list(range(21)))
+    5  # ensures ≥ 20% (ceil(4.2))
+
+    >>> calc_subset_size(0.2, list(range(5)))
+    1
+    """
+    # ---- Type validation ----
+    if not isinstance(frac, (float, int)):
+        raise TypeError(f"frac must be a float between 0 and 1; got {type(frac)}")
+
+    if not isinstance(samples, Sequence):
+        raise TypeError(f"samples must be a sequence; got {type(samples)}")
+
+    # ---- Value validation ----
+    if not (0 < float(frac) <= 1):
+        raise ValueError(f"frac must satisfy 0 < frac <= 1; got {frac}")
+
+    n_samples = len(samples)
+
+    if n_samples == 0:
+        raise ValueError("samples must be non-empty")
+
+    # ---- Core calculation ----
+    required = float(frac) * n_samples
+    subset_size = math.ceil(required)
+
+    # Safety: guarantee at least 1
+    return max(1, subset_size)
