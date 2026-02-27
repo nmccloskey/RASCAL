@@ -9,7 +9,7 @@ import num2words as n2w
 from pathlib import Path
 from functools import lru_cache
 from rascal.utils.logger import logger, _rel
-from rascal.utils.auxiliary import find_files, extract_transcript_data
+from rascal.utils.auxiliary import find_files, extract_transcript_data, calc_subset_size
 
 stim_cols = ["narrative", "scene", "story", "stimulus"]
 
@@ -89,7 +89,9 @@ def _assign_coding_columns(df, base_cols, cu_paradigms, exclude_participants):
 
 def _prepare_reliability_subset(cu_df, seg, ass, frac, cu_paradigms):
     """Generate the reliability subset dataframe for a given coder assignment."""
-    rel_samples = random.sample(seg, k=max(1, round(len(seg) * frac)))
+    n_rel_samples = calc_subset_size(frac=frac, samples=seg)
+    rel_samples = random.sample(seg, k=n_rel_samples)
+
     relsegdf = cu_df[cu_df['sample_id'].isin(rel_samples)].copy()
     relsegdf.drop(columns=['c1_id', 'c1_comment'], inplace=True, errors='ignore')
 
@@ -269,7 +271,10 @@ def _assign_wc_coders(df: pd.DataFrame, coders: list[str], frac: float):
     rel_subsets = []
     for seg, ass in zip(segments, assignments):
         df.loc[df["sample_id"].isin(seg), "c1_id"] = ass[0]
-        rel_samples = random.sample(seg, k=max(1, round(len(seg) * frac)))
+
+        n_rel_samples = calc_subset_size(frac=frac, samples=seg)
+        rel_samples = random.sample(seg, k=n_rel_samples)
+
         relsegdf = df[df["sample_id"].isin(rel_samples)].copy()
         relsegdf.rename(columns={"c1_id": "c2_id", "wc_comment": "wc_rel_com"}, inplace=True)
         relsegdf["c2_id"] = ass[1]
@@ -411,7 +416,7 @@ def _select_new_samples(df_org, used_ids, frac):
     if not available:
         logger.warning("No unused samples available.")
         return []
-    n = max(1, round(len(all_ids) * frac))
+    n = calc_subset_size(frac=frac, samples=all_ids)
     if len(available) < n:
         n = len(available)
     return random.sample(available, n)
