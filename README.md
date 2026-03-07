@@ -1,9 +1,50 @@
 # RASCAL - Resources for Analyzing Speech in Clinical Aphasiology Labs
 
-> RASCAL is an open-source Python package designed to enhance efficiency, rigor, and replicability in a variety of monologic discourse analyses common in clinical aphasiology. Initially, the program tabularizes CHAT-formatted (.cha) transcripts with unique identifiers for samples and utterances, facilitating hierarchical organization through filename-derived grouping variables. While structured around our laboratory's workflow, users can run any selection of RASCAL's modules, which include algorithmic transcription reliability evaluation, complete utterance (CU) coding summarization, and batched core lexicon (CoreLex) analysis. The program aims to help researchers and clinicians streamline discourse analysis pipelines, particularly when managing large datasets.
+![PyPI version](https://img.shields.io/pypi/v/rascal-speech)
+![Python](https://img.shields.io/pypi/pyversions/rascal-speech)
+![License](https://img.shields.io/github/license/nmccloskey/RASCAL)
+![Zenodo DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17624073.svg)
+
+> Open-source Python infrastructure for reproducible discourse analysis in clinical aphasiology.
+
 ---
 
-**Current version:** v1.0.7
+⚠️ **Development Notice**
+
+Active development of the generalized discourse-analysis engine now continues
+under the **DIAAD** project.
+
+This repository remains available for historical continuity and may later serve
+as a wrapper or specialized extension of DIAAD.
+
+---
+
+## Description
+
+RASCAL is an open-source Python package designed to enhance efficiency, rigor, and replicability in a variety of monologic discourse analyses common in clinical aphasiology. Initially, the program tabularizes CHAT-formatted (.cha) transcripts with unique identifiers for samples and utterances, facilitating hierarchical organization through filename-derived grouping variables. While structured around our laboratory's workflow, users can run any selection of RASCAL's modules, which include algorithmic transcription reliability evaluation, complete utterance (CU) coding summarization, and batched core lexicon (CoreLex) analysis. The program aims to help researchers and clinicians streamline discourse analysis pipelines, particularly when managing large datasets.
+
+---
+
+## Installation
+
+We recommend installing RASCAL into a dedicated virtual environment using Anaconda:
+
+### 1. Create and activate your environment:
+
+```bash
+conda create --name rascal python=3.12
+conda activate rascal
+```
+
+### 2. Download RASCAL:
+```bash
+# directly from PyPI
+pip install rascal-speech
+
+# or from GitHub
+pip install git+https://github.com/nmccloskey/rascal.git@main
+```
+---
 
 ## Analysis Pipeline
 
@@ -34,7 +75,9 @@
 - **Stage 10 (RASCAL):**
     - **Input:** Transcript tables (with speaking times), CU Coding summaries & word count files
     - **Output:** Blind & unblind summaries, CoreLex analysis
+
 ---
+
 ## Links
 
 ### GitHub Repository
@@ -52,6 +95,7 @@ Run RASCAL directly in your browser — no local installation required:
 ---
 
 ### PyPI Distribution
+
 Install the stable RASCAL package from the Python Package Index:
 
 👉 **[rascal-speech on PyPI](https://pypi.org/project/rascal-speech/)**
@@ -75,27 +119,6 @@ Please ensure HIPAA compliance when analyzing real clinical data.
 👉 **[Zenodo record](https://zenodo.org/records/17624074)**  
 📌 **DOI:** 10.5281/zenodo.17624073
 
----
-
-## Installation
-
-We recommend installing RASCAL into a dedicated virtual environment using Anaconda:
-
-### 1. Create and activate your environment:
-
-```bash
-conda create --name rascal python=3.12
-conda activate rascal
-```
-
-### 2. Download RASCAL:
-```bash
-# directly from PyPI
-pip install rascal-speech
-
-# or from GitHub
-pip install git+https://github.com/nmccloskey/rascal.git@main
-```
 ---
 
 ## Setup
