@@ -4,6 +4,7 @@
 ![Python](https://img.shields.io/pypi/pyversions/rascal-speech)
 ![License](https://img.shields.io/github/license/nmccloskey/RASCAL)
 ![Zenodo DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17624073.svg)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://rascal.streamlit.app/)
 
 > Open-source Python infrastructure for reproducible discourse analysis in clinical aphasiology.
 
