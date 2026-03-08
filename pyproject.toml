@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rascal-speech"
 version = "1.0.7"
-description = "Resources for Analyzing Speech in Clinical Aphasiology Labs"
+description = "Laboratory-specific discourse analysis tools in the DIAAD lineage"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
