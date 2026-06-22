@@ -12,6 +12,7 @@ dist/
 build/
 *.egg-info/
 src/rascal.egg-info/
+*manual.pdf
 
 # RASCAL-specific
 test_data/
@@ -24,7 +25,12 @@ rascal_data/input/
 # Temporary files
 *.xlsx
 *.cha
+tmp*/
+.rascal_examples_tmp_*/
+_dx_*/
+manual_prep/
 
+# Google creds
 google_creds.json
 
 # Jupyter notebooks checkpoints
@@ -34,13 +40,17 @@ google_creds.json
 *.log
 
 # Configs
+config/
 config.yaml
+project.yaml
+advanced.yaml
 *.secrets.yaml
 
 # Cache dirs (used by tools)
 .cache/
 .mypy_cache/
 .pytest_cache/
+pytest-cache-files-*/
 .tox/
 .coverage
 htmlcov/
@@ -49,3 +59,9 @@ htmlcov/
 .vscode/
 .idea/
 *.swp
+.devcontainer/
+.devcontainer.json
+.codex-local/
+
+# Example files
+example_files/
