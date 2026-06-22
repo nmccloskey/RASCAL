@@ -2,6 +2,8 @@
 
 > The below represents an archive; code is not expected to run as presented. The current version of DIAAD would enable such a workflow, although not as directly/explicitly. When the deprecated system is referenced, this indicates one of DIAAD's precursors (see [lineage](https://github.com/nmccloskey/DIAAD/blob/main/docs/lineage.md) for full details).
 
+> NB: This is a no-data workflow archive and does not include private clinical data, identifiable transcripts, or lab-internal spreadsheets.
+
 ## Profile of Word Errors and Retrieval in Speech (POWERS) coding - specific measures
 
 The POWERS coding system addresses the need to assess language abilities (particularly lexical retrieval) in conversation for people with aphasia. This deprecated system facilitated quantification of the following subset of POWERS variables for both the clinician and client (see the [POWERS](https://doi.org/10.3233/ACS-2013-20107) manual for full details): 
