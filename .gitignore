@@ -63,6 +63,7 @@ htmlcov/
 .devcontainer/
 .devcontainer.json
 .codex-local/
+.agents/
 
 # Example files
 example_files/
