@@ -1,0 +1,47 @@
+workflow_id: asr_vs_clinical_measures_2025
+name: ASR vs Clinical Measures
+status: archived-project-specific
+purpose: >
+  Prepare CHAT files for ASR/transcription reliability analysis and compare
+  participant-level transcription reliability with clinical measures.
+archive_scope: >
+  No-data workflow archive preserved for reproducibility and documentation;
+  not expected to generalize without path, schema, and project-specific review.
+inputs:
+  - CHAT transcript files with .cha extensions
+  - Debulletized CLAN export files ending in .chstr.cex
+  - RASCAL/DIAAD transcription reliability output workbook
+  - Clinical measures CSV with study_id, WAB, aphasia syndrome, and CAT Naming fields
+outputs:
+  - Normalized CHAT filenames using CATGrandpa naming
+  - Debulletized and reliability-ready .cha files
+  - Participant-level transcription-reliability summaries
+  - Plots such as wab_vs_accuracy.png and cat_naming_vs_accuracy.png
+human_review:
+  - Review dry-run filename changes before applying them
+  - Confirm .chstr.cex files are the intended debulletized replacements
+  - Inspect files skipped because investigator speech is present
+  - Review hard-coded clinical-measure and reliability-output paths before reuse
+dependencies:
+  - Python standard library: argparse, logging, os, pathlib, re, shutil
+  - pandas
+  - matplotlib
+  - seaborn
+  - scipy
+  - optional: pylangacq
+privacy:
+  data_included: none
+  notes: Private transcripts, clinical data, lab spreadsheets, and generated outputs are excluded.
+key_docs:
+  - README_technical.md
+  - README_procedural.txt
+key_scripts:
+  - src/normalize_narrative_names.py
+  - src/cex_to_cha.py
+  - src/prep_cha_files.py
+  - src/WABvsLS.py
+maintenance_notes:
+  - Utility scripts use dry-run behavior where available and should be reviewed before applying changes.
+  - WABvsLS.py is a script-style analysis file with project-specific paths, not a reusable CLI.
+  - The archived DIAAD precursor configuration is preserved as a record of the reliability-analysis setup.
+intended_reuse: Documentation and adaptable project-specific reference.

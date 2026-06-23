@@ -1,0 +1,59 @@
+workflow_id: transcript_conversion_2026
+name: Monologic Narrative Transcript Conversion
+status: archived-lab-specific
+purpose: >
+  Preserve a four-stage, semi-automated protocol for converting cycle 2 and
+  cycle 3 monologic narrative transcript materials into CHAT files for final
+  CLAN validation.
+archive_scope: >
+  No-data workflow archive documenting staged conversion from legacy CU coding
+  materials to reviewed transcript tables, DIAAD-generated CHAT files, and
+  manually validated CHAT outputs.
+inputs:
+  - Legacy CU coding utterance workbooks
+  - Cycle metadata workbooks
+  - Stage 2 reviewed proto-transcript-table workbooks
+  - DIAAD transcript-to-CHAT configuration
+  - CLAN for final CHAT validation
+outputs:
+  - Proto-transcript-table workbooks with samples and utterances sheets
+  - Reviewed transcript-table workbooks from manual Stage 2 review
+  - Reformatted DIAAD-ready transcript_tables.xlsx files
+  - Sorted final-review .cha files
+  - CLAN-validated .cha files after Stage 4 review
+human_review:
+  - Stage 2 review of utterance text, speaker labels, removal flags, and CHAT annotations
+  - Resolution of review_row flags and reviewer comments before conversion
+  - Inspection of DIAAD commands and sorted CHAT outputs
+  - Stage 4 CLAN Esc+L validation until files report no errors
+dependencies:
+  - DIAAD
+  - CLAN
+  - pandas
+  - openpyxl
+  - num2words
+  - Python standard library: argparse, dataclasses, datetime, pathlib, re, shutil, subprocess
+privacy:
+  data_included: none
+  notes: Private source transcripts, Teams folders, working spreadsheets, and generated clinical outputs are excluded.
+key_docs:
+  - README.md
+  - stages/stage1/README_technical.md
+  - stages/stage1/README_procedural.txt
+  - stages/stage2/README.md
+  - stages/stage3/README_technical.md
+  - stages/stage3/README_procedural.txt
+  - stages/stage4/README.md
+key_scripts:
+  - stages/stage1/src/main.py
+  - stages/stage1/src/sample_sheets.py
+  - stages/stage1/src/proto_utterances.py
+  - stages/stage3/src/main.py
+  - stages/stage3/src/tt_processor.py
+  - stages/stage3/src/diaad_runner.py
+  - stages/stage3/src/cha_sorter.py
+maintenance_notes:
+  - Stage 1 and Stage 3 path assumptions should be reviewed before reuse.
+  - Automatic CHAT-oriented transformations are conservative and require Stage 2 review.
+  - Stage 4 CLAN validation remains required even when DIAAD export succeeds.
+intended_reuse: Protocol reference and adaptable staged conversion pattern.

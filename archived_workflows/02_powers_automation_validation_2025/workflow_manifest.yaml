@@ -1,0 +1,40 @@
+workflow_id: powers_automation_validation_2025
+name: POWERS Automation Validation
+status: archived-deprecated-precursor
+purpose: >
+  Preserve the validation workflow used to compare automated POWERS coding
+  against manually coded samples in a deprecated RASCAL/DIAAD precursor system.
+archive_scope: >
+  No-data workflow archive retained as documentation of validation design,
+  sampling, and agreement results; code is not expected to run as presented.
+inputs:
+  - Dialogic CHAT files or utterance/coding tables prepared by the deprecated workflow
+  - Automatically generated POWERS coding files under Auto/
+  - Manually coded POWERS validation files under Manual/
+  - Optional validation-selection workbook with stratum_no assignments
+outputs:
+  - POWERS_validation_selection_<timestamp>.xlsx
+  - Coding files labeled with stratum_no when source tables are available
+  - AutomationValidation/POWERS_Coding_Auto_vs_Manual.xlsx
+  - Agreement summaries for selected automated POWERS measures
+human_review:
+  - Manually code the selected validation samples
+  - Inspect automatic and manual codes after merge
+  - Evaluate reliability and add more strata if agreement is insufficient
+  - Interpret automated-measure accuracy in relation to aphasia severity and local coding rules
+dependencies:
+  - Deprecated RASCAL/DIAAD precursor utilities
+  - pandas
+  - spaCy en_core_web_trf in the original automatic-coding system
+  - Manual POWERS coding protocol
+privacy:
+  data_included: none
+  notes: Private clinical data, identifiable transcripts, and lab-internal spreadsheets are excluded.
+key_docs:
+  - README.md
+key_scripts:
+  - src/automation_validation.py
+maintenance_notes:
+  - The current DIAAD package supports related workflows differently than this deprecated system.
+  - This archive is most useful as a record of sampling, validation, and interpretation decisions.
+intended_reuse: Documentation and reference for validating automated language-coding measures.

@@ -1,0 +1,50 @@
+workflow_id: powers_analysis_and_reliability_evaluation_2026
+name: POWERS Analysis and Reliability Evaluation
+status: archived-lab-specific
+purpose: >
+  Prepare manually coded POWERS Excel files for DIAAD analysis by cleaning,
+  validating, aggregating, and running reliability-oriented DIAAD commands
+  after human revision.
+archive_scope: >
+  No-data workflow archive for a semi-automated preparation mini-program;
+  preserved for reproducibility and not guaranteed to generalize outside the
+  original cycle/site file structure.
+inputs:
+  - Raw POWERS coding Excel files under data/00_raw_files/<cycle>/<site>/
+  - Primary coding, frozen reliability-evaluation, and reliability subset files
+  - DIAAD configuration for POWERS analysis
+  - Manually corrected source files after revision review
+outputs:
+  - Timestamped revisions/powers_cleaning_revisions_YYYYMMDD_HHMMSS.xlsx workbooks
+  - Cleaned partition-level Excel files under data/01_cleaned_files/
+  - Aggregate POWERS files under data/01_cleaned_files/aggregated/
+  - Timestamped logs under logs/
+  - DIAAD outputs under data/02_diaad_output/
+human_review:
+  - Review revision workbooks before accepting cleaned files
+  - Correct raw coding files or transcript-related issues when needed
+  - Repeat clean/review cycles until no revision rows remain
+  - Dry-run DIAAD commands and inspect outputs before downstream analysis
+dependencies:
+  - DIAAD
+  - pandas
+  - openpyxl
+  - Python standard library: argparse, dataclasses, datetime, logging, pathlib, subprocess
+privacy:
+  data_included: none
+  notes: Raw coding files, transcripts, clinical data, and generated outputs are excluded.
+key_docs:
+  - README_technical.md
+  - README_procedural.txt
+key_scripts:
+  - src/main.py
+  - src/file_cleaning.py
+  - src/cleaning_utils.py
+  - src/revision_utils.py
+  - src/aggregation_utils.py
+  - src/diaad_running.py
+maintenance_notes:
+  - Cleaning and DIAAD execution are intentionally separate to preserve manual review.
+  - Cycle/site folder assumptions are part of the archived project design.
+  - Aggregate reliability evaluation distinguishes frozen and reconciled primary coding.
+intended_reuse: Adaptable lab-specific data-preparation pattern for manual coding workflows.
