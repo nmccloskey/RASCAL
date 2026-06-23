@@ -2,7 +2,10 @@
 
 This mini-program prepares manually coded POWERS Excel files for DIAAD analysis. It is designed for a semi-automated workflow in which raw manual coding files are cleaned, validation issues are reviewed and corrected by human coders, cleaned files are regenerated, and DIAAD is run only after the data are ready.
 
-> NB: This is a no-data workflow archive and does not include private clinical data, identifiable transcripts, or lab-internal spreadsheets.
+> NB: This is a no-data workflow archive and does not include private 
+> clinical data, identifiable transcripts, or lab-internal spreadsheets.
+> Furthermore, it was preserved for reproducibility and documentation and is
+> not guaranteed to generalize outside the original data structure.
 
 ## Purpose
 

@@ -6,7 +6,8 @@ Purpose
 
 This archived workflow documents a 2025 analysis connecting automatic speech
 recognition/transcription reliability outputs with participant-level clinical
-measures.
+measures. It was preserved for reproducibility and documentation and is 
+not guaranteed to generalize outside the original data structure.
 
 In plain terms, the workflow prepared CHAT files for ASR-only vs twice-edited 
 transcription reliability evaluation with a DIAAD precursor, and then

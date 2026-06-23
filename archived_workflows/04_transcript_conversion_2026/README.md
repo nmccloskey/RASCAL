@@ -1,7 +1,9 @@
 # Monologic Narrative Transcript Conversion Workflow
 
 > NB: This is a no-data workflow archive and does not include private clinical
-> data, identifiable transcripts, or lab-internal spreadsheets.
+> data, identifiable transcripts, or lab-internal spreadsheets. Furthermore, 
+> it was preserved for reproducibility and documentation and is
+> not guaranteed to generalize outside the original data structure.
 
 ## Procedural Overview
 

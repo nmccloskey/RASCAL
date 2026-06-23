@@ -4,7 +4,7 @@ May 14, 2026
 TL;DR
 -----
 
-NB: This is a no-data workflow archive and does not include private clinical data, identifiable transcripts, or lab-internal spreadsheets.
+NB: This is a no-data workflow archive and does not include private clinical data, identifiable transcripts, or lab-internal spreadsheets. Furthermore, it was preserved for reproducibility and documentation and is not guaranteed to generalize outside the original data structure.
 
 Timestamped powers_cleaning_revisions_YYYYMMDD_HHMMSS.xlsx files under revisions/ contain auto-tabulated warnings/errors from processing raw manual POWERS coding with the below blank-handling policy.
 
