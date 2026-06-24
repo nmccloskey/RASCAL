@@ -139,6 +139,110 @@ def test_asr_subcommands_appear_in_help(capsys):
     assert "combine-chat-parts" in help_text
 
 
+def test_asr_split_audio_options_parse():
+    args = parse_args(
+        [
+            "asr",
+            "split-audio",
+            "--input",
+            "raw",
+            "--output",
+            "chunks",
+            "--max-seconds",
+            "45",
+        ]
+    )
+
+    assert args.command == "asr"
+    assert args.asr_command == "split-audio"
+    assert args.input == "raw"
+    assert args.output == "chunks"
+    assert args.max_seconds == 45
+
+
+def test_asr_combine_chat_options_parse():
+    args = parse_args(
+        [
+            "asr",
+            "combine-chat-parts",
+            "--input",
+            "parts",
+            "--output",
+            "combined",
+        ]
+    )
+
+    assert args.command == "asr"
+    assert args.asr_command == "combine-chat-parts"
+    assert args.input == "parts"
+    assert args.output == "combined"
+
+
+def test_main_for_asr_combine_chat_runs_helper(monkeypatch, capsys, tmp_path):
+    calls = []
+
+    class Result:
+        base_name = "sample"
+        part_paths = (tmp_path / "sample_part1.cha", tmp_path / "sample_part2.cha")
+        output_path = tmp_path / "sample_combined.cha"
+
+    def fake_combine(input_dir, output_dir):
+        calls.append((input_dir, output_dir))
+        return (Result(),)
+
+    monkeypatch.setattr("rascal.cli.combine_chat_parts", fake_combine)
+
+    exit_code = main(
+        [
+            "asr",
+            "combine-chat-parts",
+            "--input",
+            "parts",
+            "--output",
+            "combined",
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert calls == [("parts", "combined")]
+    assert "Combined CHAT files: 1" in output
+    assert "sample: 2 part(s) -> sample_combined.cha" in output
+
+
+def test_main_for_asr_split_audio_runs_helper(monkeypatch, capsys, tmp_path):
+    calls = []
+
+    class Result:
+        input_path = tmp_path / "audio.wav"
+        output_paths = (tmp_path / "audio_part1.wav",)
+
+    def fake_split(input_dir, output_dir, *, max_seconds):
+        calls.append((input_dir, output_dir, max_seconds))
+        return (Result(),)
+
+    monkeypatch.setattr("rascal.cli.split_audio", fake_split)
+
+    exit_code = main(
+        [
+            "asr",
+            "split-audio",
+            "--input",
+            "raw",
+            "--output",
+            "chunks",
+            "--max-seconds",
+            "45",
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert calls == [("raw", "chunks", 45)]
+    assert "Split audio files: 1" in output
+    assert "audio.wav: 1 part(s)" in output
+
+
 def test_plan_branch_and_stage_parse():
     args = parse_args(["plan", "--branch", "monolog", "--stage", "7m"])
     command = normalize_command(args)

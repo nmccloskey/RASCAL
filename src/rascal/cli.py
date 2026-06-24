@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from rascal import __version__
+from rascal.asr_utils import AsrError, combine_chat_parts, split_audio
 from rascal.config import ConfigError, init_project, load_project_config
 from rascal.diaad_config import DiaadConfigError, write_diaad_config
 from rascal.diaad_invocation import DiaadInvocationError
@@ -388,6 +389,20 @@ def dispatch(args: argparse.Namespace) -> int:
             )
             return 0
 
+    if command.command == "asr":
+        if args.asr_command == "split-audio":
+            results = split_audio(args.input, args.output, max_seconds=args.max_seconds)
+            print(f"Split audio files: {len(results)}")
+            for result in results:
+                print(f"  - {result.input_path.name}: {len(result.output_paths)} part(s)")
+            return 0
+        if args.asr_command == "combine-chat-parts":
+            results = combine_chat_parts(args.input, args.output)
+            print(f"Combined CHAT files: {len(results)}")
+            for result in results:
+                print(f"  - {result.base_name}: {len(result.part_paths)} part(s) -> {result.output_path.name}")
+            return 0
+
     print(f"RASCAL command parsed: {command.command}")
     if command.branch is not None:
         print(f"Branch: {command.branch}")
@@ -426,6 +441,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
     except WorkflowError as exc:
         print(f"RASCAL workflow error: {exc}", file=sys.stderr)
+        return 2
+    except AsrError as exc:
+        print(f"RASCAL ASR helper error: {exc}", file=sys.stderr)
         return 2
 
 
