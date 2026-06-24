@@ -70,6 +70,64 @@ def test_workflow_subcommands_appear_in_help(capsys):
     assert "show" in help_text
 
 
+def test_main_for_workflows_list_outputs_archive(capsys, monkeypatch, tmp_path):
+    archive = tmp_path / "archived_workflows" / "synthetic"
+    archive.mkdir(parents=True)
+    (archive / "workflow_manifest.yaml").write_text(
+        "workflow_id: synthetic_workflow\nname: Synthetic Workflow\nstatus: archived-test\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    exit_code = main(["workflows", "list", "--format", "json"])
+
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["workflows"][0]["workflow_id"] == "synthetic_workflow"
+
+
+def test_main_for_workflows_show_with_files_reports_references(
+    capsys,
+    monkeypatch,
+    tmp_path,
+):
+    archive = tmp_path / "archived_workflows" / "synthetic"
+    archive.mkdir(parents=True)
+    (archive / "workflow_manifest.yaml").write_text(
+        """
+workflow_id: synthetic_workflow
+name: Synthetic Workflow
+key_docs:
+  - README.md
+key_scripts:
+  - src/example.py
+""".strip(),
+        encoding="utf-8",
+    )
+    (archive / "README.md").write_text("# Synthetic\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    exit_code = main(
+        [
+            "workflows",
+            "show",
+            "synthetic_workflow",
+            "--files",
+            "--format",
+            "json",
+        ]
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["workflow_id"] == "synthetic_workflow"
+    assert payload["referenced_files"][0] == {
+        "kind": "doc",
+        "path": "README.md",
+        "exists": True,
+    }
+
+
 def test_asr_subcommands_appear_in_help(capsys):
     parser = build_parser()
 

@@ -34,6 +34,15 @@ from rascal.status import (
     render_status_json,
     render_status_text,
 )
+from rascal.workflows import (
+    WorkflowError,
+    discover_workflows,
+    get_workflow,
+    render_workflow_detail_json,
+    render_workflow_detail_text,
+    render_workflow_list_json,
+    render_workflow_list_text,
+)
 
 
 IMPLEMENTED_IN_LATER_PASS = (
@@ -185,9 +194,15 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="workflow_command",
     )
     workflows_subparsers.required = True
-    workflows_subparsers.add_parser(
+    workflows_list = workflows_subparsers.add_parser(
         "list",
         help="List archived workflows.",
+    )
+    workflows_list.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format (default: text).",
     )
     workflows_show = workflows_subparsers.add_parser(
         "show",
@@ -198,6 +213,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--files",
         action="store_true",
         help="Include referenced docs and script paths.",
+    )
+    workflows_show.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format (default: text).",
     )
 
     diaad_parser = subparsers.add_parser(
@@ -349,6 +370,24 @@ def dispatch(args: argparse.Namespace) -> int:
         )
         return 0
 
+    if command.command == "workflows":
+        if args.workflow_command == "list":
+            discovery = discover_workflows()
+            print(
+                render_workflow_list_json(discovery)
+                if args.format == "json"
+                else render_workflow_list_text(discovery)
+            )
+            return 0
+        if args.workflow_command == "show":
+            workflow = get_workflow(args.workflow_id)
+            print(
+                render_workflow_detail_json(workflow, include_files=args.files)
+                if args.format == "json"
+                else render_workflow_detail_text(workflow, include_files=args.files)
+            )
+            return 0
+
     print(f"RASCAL command parsed: {command.command}")
     if command.branch is not None:
         print(f"Branch: {command.branch}")
@@ -384,6 +423,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
     except StatusError as exc:
         print(f"RASCAL status error: {exc}", file=sys.stderr)
+        return 2
+    except WorkflowError as exc:
+        print(f"RASCAL workflow error: {exc}", file=sys.stderr)
         return 2
 
 
