@@ -1,20 +1,10 @@
-# RASCAL
+# RASCAL- Resources for Analyzing Speech in Clinical Aphasiology Labs
 
 RASCAL is a lab-facing command-line wrapper for
-[DIAAD](https://github.com/nmccloskey/DIAAD). It packages the Temple aphasia lab
+[DIAAD](https://github.com/nmccloskey/DIAAD). It packages the BU-TU lab's discourse analysis
 workflow as profiles, stage registries, generated DIAAD config, preflight
 checks, run manifests, status/next-step guidance, archived workflow discovery,
-and a few Stage 0 ASR helpers.
-
-The active code in this repository is a wrapper scaffold. It does not restore
-the old RASCAL analysis engine, and it delegates analysis work to DIAAD command
-vectors.
-
-## Status
-
-This MVP is intended for careful lab testing with synthetic or non-private data
-before real clinical data are used. Private transcripts, clinical measures, and
-working spreadsheets should stay out of the repository.
+and a few ASR helpers.
 
 ## Install
 
@@ -266,3 +256,4 @@ Current MVP validation:
   unless completion can be inferred from reliable downstream evidence.
 - Keep private clinical data outside the repository and outside generated test
   fixtures.
+- See [DIAAD lineage](https://github.com/nmccloskey/DIAAD/blob/main/docs/lineage.md) for repo history.
