@@ -18,9 +18,6 @@ classifiers = [
 
 dependencies = [
     "diaad>=0.3.1,<0.4.0",
-    "num2words>=0.5.14",
-    "PyYAML>=6.0.2",
-    "openpyxl>=3.1.5",
 ]
 
 [project.scripts]

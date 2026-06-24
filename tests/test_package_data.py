@@ -51,9 +51,9 @@ def test_core_package_import_does_not_require_optional_pydub(monkeypatch):
 def test_pyproject_metadata_matches_wrapper_architecture():
     pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
 
-    assert pyproject["project"]["requires-python"] == ">=3.12"
+    assert pyproject["project"]["requires-python"] == ">=3.12,<3.13"
     assert pyproject["project"]["scripts"] == {"rascal": "rascal.cli:main"}
-    assert "diaad>=0.3.1,<0.4.0" in pyproject["project"]["dependencies"]
+    assert pyproject["project"]["dependencies"] == ["diaad>=0.3.1,<0.4.0"]
     assert "pydub>=0.25.1" in pyproject["project"]["optional-dependencies"]["asr"]
     assert pyproject["tool"]["setuptools"]["packages"]["find"]["where"] == ["src"]
     assert pyproject["tool"]["setuptools"]["package-data"]["rascal"] == [
