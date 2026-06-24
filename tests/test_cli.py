@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tomllib
 from pathlib import Path
+from subprocess import CompletedProcess
 
 import pytest
 
@@ -262,10 +263,18 @@ def test_main_for_run_dry_run_prints_stage_plan(capsys, tmp_path):
     assert "diaad powers analyze --config config/diaad.generated" in output
 
 
-def test_main_for_diaad_prints_passthrough_placeholder(capsys):
+def test_main_for_diaad_runs_passthrough(monkeypatch, capsys):
+    calls = []
+
+    def fake(command, **_kwargs):
+        calls.append(tuple(command))
+        return CompletedProcess(command, 0, stdout="diaad ok\n", stderr="")
+
+    monkeypatch.setattr("rascal.runner.subprocess.run", fake)
+
     exit_code = main(["diaad", "--", "transcripts", "tabularize"])
 
     output = capsys.readouterr().out
     assert exit_code == 0
-    assert "DIAAD passthrough planned: diaad transcripts tabularize" in output
-    assert "later pass" in output
+    assert output == "diaad ok\n"
+    assert calls == [("diaad", "transcripts", "tabularize")]

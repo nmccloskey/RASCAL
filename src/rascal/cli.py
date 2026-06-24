@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from rascal import __version__
 from rascal.config import ConfigError, init_project, load_project_config
 from rascal.diaad_config import DiaadConfigError, write_diaad_config
-from rascal.diaad_invocation import DiaadInvocationError, build_passthrough_command, format_command
+from rascal.diaad_invocation import DiaadInvocationError
 from rascal.planner import PlanError, create_stage_plan, render_plan_json, render_plan_text
 from rascal.preflight import (
     PreflightError,
@@ -19,6 +19,12 @@ from rascal.preflight import (
     run_preflight,
 )
 from rascal.profiles import list_profiles
+from rascal.runner import (
+    RunnerError,
+    render_run_result_text,
+    run_diaad_passthrough,
+    run_stage,
+)
 
 
 IMPLEMENTED_IN_LATER_PASS = (
@@ -273,10 +279,12 @@ def dispatch(args: argparse.Namespace) -> int:
         if not command.diaad_args:
             print("No DIAAD arguments supplied. Use: rascal diaad -- <args>")
             return 2
-        passthrough = build_passthrough_command(command.diaad_args)
-        print(f"DIAAD passthrough planned: {format_command(passthrough)}")
-        print(IMPLEMENTED_IN_LATER_PASS)
-        return 0
+        result = run_diaad_passthrough(command.diaad_args)
+        if result.stdout:
+            print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
+        if result.stderr:
+            print(result.stderr, end="" if result.stderr.endswith("\n") else "\n", file=sys.stderr)
+        return result.returncode
 
     if command.command == "check":
         config = load_project_config(args.config)
@@ -300,13 +308,16 @@ def dispatch(args: argparse.Namespace) -> int:
         print(render_plan_json(plan) if args.format == "json" else render_plan_text(plan))
         return 0
 
-    if command.command == "run" and args.dry_run:
+    if command.command == "run":
         config = load_project_config(args.config)
-        plan = create_stage_plan(config, command.branch or "", command.stage or "")
-        print("RASCAL dry run: no DIAAD commands executed.")
-        print()
-        print(render_plan_text(plan))
-        return 0
+        result = run_stage(
+            config,
+            command.branch or "",
+            command.stage or "",
+            dry_run=args.dry_run,
+        )
+        print(render_run_result_text(result))
+        return result.exit_code
 
     print(f"RASCAL command parsed: {command.command}")
     if command.branch is not None:
@@ -337,6 +348,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
     except PreflightError as exc:
         print(f"RASCAL preflight error: {exc}", file=sys.stderr)
+        return 2
+    except RunnerError as exc:
+        print(f"RASCAL runner error: {exc}", file=sys.stderr)
         return 2
 
 
