@@ -25,6 +25,15 @@ from rascal.runner import (
     run_diaad_passthrough,
     run_stage,
 )
+from rascal.status import (
+    StatusError,
+    build_next_report,
+    build_status_report,
+    render_next_json,
+    render_next_text,
+    render_status_json,
+    render_status_text,
+)
 
 
 IMPLEMENTED_IN_LATER_PASS = (
@@ -319,6 +328,27 @@ def dispatch(args: argparse.Namespace) -> int:
         print(render_run_result_text(result))
         return result.exit_code
 
+    if command.command == "status":
+        config = load_project_config(args.config)
+        report = build_status_report(config)
+        print(
+            render_status_json(report)
+            if args.format == "json"
+            else render_status_text(report)
+        )
+        return 0
+
+    if command.command == "next":
+        config = load_project_config(args.config)
+        status_report = build_status_report(config)
+        next_report = build_next_report(status_report)
+        print(
+            render_next_json(next_report)
+            if args.format == "json"
+            else render_next_text(next_report)
+        )
+        return 0
+
     print(f"RASCAL command parsed: {command.command}")
     if command.branch is not None:
         print(f"Branch: {command.branch}")
@@ -351,6 +381,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
     except RunnerError as exc:
         print(f"RASCAL runner error: {exc}", file=sys.stderr)
+        return 2
+    except StatusError as exc:
+        print(f"RASCAL status error: {exc}", file=sys.stderr)
         return 2
 
 

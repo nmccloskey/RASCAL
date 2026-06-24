@@ -241,6 +241,44 @@ def test_main_for_check_returns_nonzero_when_required_input_is_missing(
     )
 
 
+def test_main_for_status_returns_parseable_json(capsys, tmp_path):
+    result = init_project(tmp_path, profile="lab_full")
+
+    exit_code = main(
+        [
+            "status",
+            "--format",
+            "json",
+            "--config",
+            str(result.config_path),
+        ]
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["profile"] == "lab_full"
+    assert payload["branches"]["common"][0]["stage_id"] == "0"
+
+
+def test_main_for_next_returns_parseable_json(capsys, tmp_path):
+    result = init_project(tmp_path, profile="lab_full")
+
+    exit_code = main(
+        [
+            "next",
+            "--format",
+            "json",
+            "--config",
+            str(result.config_path),
+        ]
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["primary"]["branch"] == "common"
+    assert payload["primary"]["stage_id"] == "0"
+
+
 def test_main_for_run_dry_run_prints_stage_plan(capsys, tmp_path):
     result = init_project(tmp_path, profile="lab_full")
 
