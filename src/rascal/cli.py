@@ -8,6 +8,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from rascal import __version__
+from rascal.config import ConfigError, init_project
+from rascal.profiles import list_profiles
 
 
 IMPLEMENTED_IN_LATER_PASS = (
@@ -54,6 +56,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     init_parser.add_argument(
         "--profile",
+        choices=list_profiles(),
         default="lab_full",
         help="Profile to initialize with (default: lab_full).",
     )
@@ -242,6 +245,20 @@ def dispatch(args: argparse.Namespace) -> int:
     """
 
     command = normalize_command(args)
+    if command.command == "init":
+        result = init_project(
+            args.project,
+            profile=args.profile,
+            layout=args.layout,
+            force=args.force,
+        )
+        print(f"Initialized RASCAL project: {result.project_root}")
+        print(f"Profile: {result.profile_name}")
+        print(f"Layout: {result.layout}")
+        print(f"Config: {result.config_path}")
+        print(f"Directories ensured: {len(result.created_directories)}")
+        return 0
+
     if command.command == "diaad":
         if not command.diaad_args:
             print("No DIAAD arguments supplied. Use: rascal diaad -- <args>")
@@ -262,10 +279,13 @@ def dispatch(args: argparse.Namespace) -> int:
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the RASCAL CLI."""
 
-    args = parse_args(argv)
-    return dispatch(args)
+    try:
+        args = parse_args(argv)
+        return dispatch(args)
+    except ConfigError as exc:
+        print(f"RASCAL configuration error: {exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
     sys.exit(main())
-
