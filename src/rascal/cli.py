@@ -12,6 +12,12 @@ from rascal.config import ConfigError, init_project, load_project_config
 from rascal.diaad_config import DiaadConfigError, write_diaad_config
 from rascal.diaad_invocation import DiaadInvocationError, build_passthrough_command, format_command
 from rascal.planner import PlanError, create_stage_plan, render_plan_json, render_plan_text
+from rascal.preflight import (
+    PreflightError,
+    render_preflight_json,
+    render_preflight_text,
+    run_preflight,
+)
 from rascal.profiles import list_profiles
 
 
@@ -85,17 +91,18 @@ def build_parser() -> argparse.ArgumentParser:
         ("plan", "Show the planned DIAAD commands for a stage."),
         ("run", "Run a RASCAL stage."),
     ):
+        stage_required = name in {"plan", "run"}
         stage_parser = subparsers.add_parser(name, help=help_text)
         stage_parser.add_argument(
             "--branch",
             choices=("common", "monolog", "dialog"),
-            required=True,
-            help="Workflow branch.",
+            required=stage_required,
+            help="Workflow branch (default for check: common).",
         )
         stage_parser.add_argument(
             "--stage",
-            required=True,
-            help="Stage id, such as 4m, 5m_prepare, or 7d.",
+            required=stage_required,
+            help="Stage id, such as 4m, 5m_prepare, or 7d (default for check: 1).",
         )
         stage_parser.add_argument(
             "--config",
@@ -271,6 +278,20 @@ def dispatch(args: argparse.Namespace) -> int:
         print(IMPLEMENTED_IN_LATER_PASS)
         return 0
 
+    if command.command == "check":
+        config = load_project_config(args.config)
+        report = run_preflight(
+            config,
+            branch=command.branch or "common",
+            stage_id=command.stage or "1",
+        )
+        print(
+            render_preflight_json(report)
+            if args.format == "json"
+            else render_preflight_text(report)
+        )
+        return 1 if report.has_errors else 0
+
     if command.command == "plan":
         config = load_project_config(args.config)
         plan = create_stage_plan(config, command.branch or "", command.stage or "")
@@ -313,6 +334,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
     except DiaadConfigError as exc:
         print(f"RASCAL DIAAD config error: {exc}", file=sys.stderr)
+        return 2
+    except PreflightError as exc:
+        print(f"RASCAL preflight error: {exc}", file=sys.stderr)
         return 2
 
 

@@ -190,6 +190,56 @@ def test_main_for_plan_write_config_creates_generated_config(capsys, tmp_path):
     assert (generated_dir / "metadata.yaml").is_file()
 
 
+def test_main_for_check_defaults_to_common_stage(capsys, tmp_path):
+    result = init_project(tmp_path, profile="lab_full")
+
+    exit_code = main(
+        [
+            "check",
+            "--format",
+            "json",
+            "--config",
+            str(result.config_path),
+        ]
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["branch"] == "common"
+    assert payload["stage_id"] == "1"
+    assert payload["counts"]["warning"] >= 1
+
+
+def test_main_for_check_returns_nonzero_when_required_input_is_missing(
+    capsys,
+    tmp_path,
+):
+    result = init_project(tmp_path, profile="lab_full")
+    (result.project_root / "data" / "auto_transcripts").rmdir()
+
+    exit_code = main(
+        [
+            "check",
+            "--branch",
+            "monolog",
+            "--stage",
+            "4m",
+            "--format",
+            "json",
+            "--config",
+            str(result.config_path),
+        ]
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert payload["counts"]["error"] >= 1
+    assert any(
+        result["code"] == "expected_input_missing"
+        for result in payload["results"]
+    )
+
+
 def test_main_for_run_dry_run_prints_stage_plan(capsys, tmp_path):
     result = init_project(tmp_path, profile="lab_full")
 
