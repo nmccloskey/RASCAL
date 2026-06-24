@@ -18,12 +18,11 @@ working spreadsheets should stay out of the repository.
 
 ## Install
 
-For local development with a sibling DIAAD checkout:
+For local development:
 
 ```powershell
 conda create -n rascal python=3.12 -y
 conda activate rascal
-python -m pip install -e "../DIAAD[dev,web,nlp]"
 python -m pip install -e ".[dev]"
 ```
 
@@ -34,6 +33,26 @@ python -m pip install -e ".[asr]"
 ```
 
 The package requires Python `>=3.12,<3.13` and DIAAD `>=0.3.1,<0.4.0`.
+
+## Requirement Locks
+
+Pinned requirement files live in `reqs/`. They mirror the current dependency
+splits:
+
+- `base`: RASCAL plus DIAAD
+- `dev`: base plus RASCAL test tools
+- `asr`: base plus audio helper dependencies
+- `nlp`: RASCAL plus DIAAD's NLP extra
+- `full`: dev, ASR, and NLP together
+
+The `.in` files install RASCAL in editable mode and resolve DIAAD from the
+package metadata in `pyproject.toml`.
+
+Regenerate a split with:
+
+```powershell
+conda run -n rascal python -m piptools compile --no-build-isolation --output-file=reqs\base.txt reqs\base.in
+```
 
 ## Quick Start
 
@@ -236,7 +255,7 @@ Focused tests:
 Current MVP validation:
 
 ```text
-121 passed
+125 passed
 ```
 
 ## Notes For Developers
