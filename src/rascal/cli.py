@@ -8,7 +8,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from rascal import __version__
-from rascal.config import ConfigError, init_project
+from rascal.config import ConfigError, init_project, load_project_config
+from rascal.diaad_invocation import DiaadInvocationError, build_passthrough_command, format_command
+from rascal.planner import PlanError, create_stage_plan, render_plan_json, render_plan_text
 from rascal.profiles import list_profiles
 
 
@@ -263,8 +265,23 @@ def dispatch(args: argparse.Namespace) -> int:
         if not command.diaad_args:
             print("No DIAAD arguments supplied. Use: rascal diaad -- <args>")
             return 2
-        print(f"DIAAD passthrough planned: {' '.join(command.diaad_args)}")
+        passthrough = build_passthrough_command(command.diaad_args)
+        print(f"DIAAD passthrough planned: {format_command(passthrough)}")
         print(IMPLEMENTED_IN_LATER_PASS)
+        return 0
+
+    if command.command == "plan":
+        config = load_project_config(args.config)
+        plan = create_stage_plan(config, command.branch or "", command.stage or "")
+        print(render_plan_json(plan) if args.format == "json" else render_plan_text(plan))
+        return 0
+
+    if command.command == "run" and args.dry_run:
+        config = load_project_config(args.config)
+        plan = create_stage_plan(config, command.branch or "", command.stage or "")
+        print("RASCAL dry run: no DIAAD commands executed.")
+        print()
+        print(render_plan_text(plan))
         return 0
 
     print(f"RASCAL command parsed: {command.command}")
@@ -284,6 +301,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return dispatch(args)
     except ConfigError as exc:
         print(f"RASCAL configuration error: {exc}", file=sys.stderr)
+        return 2
+    except PlanError as exc:
+        print(f"RASCAL planning error: {exc}", file=sys.stderr)
+        return 2
+    except DiaadInvocationError as exc:
+        print(f"RASCAL DIAAD command error: {exc}", file=sys.stderr)
         return 2
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tomllib
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import pytest
 
 from rascal import __version__
 from rascal.cli import build_parser, main, normalize_command, parse_args
+from rascal.config import init_project
 
 
 def test_help_exits_successfully(capsys):
@@ -116,15 +118,71 @@ def test_diaad_passthrough_also_accepts_args_without_separator():
     assert command.diaad_args == ("transcripts", "tabularize")
 
 
-def test_main_for_plan_prints_placeholder(capsys):
-    exit_code = main(["plan", "--branch", "dialog", "--stage", "4d"])
+def test_main_for_plan_prints_stage_plan(capsys, tmp_path):
+    result = init_project(tmp_path, profile="lab_full")
+
+    exit_code = main(
+        [
+            "plan",
+            "--branch",
+            "dialog",
+            "--stage",
+            "4d",
+            "--config",
+            str(result.config_path),
+        ]
+    )
 
     output = capsys.readouterr().out
     assert exit_code == 0
-    assert "RASCAL command parsed: plan" in output
-    assert "Branch: dialog" in output
-    assert "Stage: 4d" in output
-    assert "later pass" in output
+    assert "RASCAL plan: dialog 4d" in output
+    assert "diaad transcripts tabularize --config config/diaad.generated" in output
+
+
+def test_main_for_plan_format_json_returns_parseable_payload(capsys, tmp_path):
+    result = init_project(tmp_path, profile="lab_full")
+
+    exit_code = main(
+        [
+            "plan",
+            "--branch",
+            "monolog",
+            "--stage",
+            "7m",
+            "--format",
+            "json",
+            "--config",
+            str(result.config_path),
+        ]
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["branch"] == "monolog"
+    assert payload["stage_id"] == "7m"
+    assert payload["diaad_command_names"] == ["cus analyze", "templates times", "words files"]
+
+
+def test_main_for_run_dry_run_prints_stage_plan(capsys, tmp_path):
+    result = init_project(tmp_path, profile="lab_full")
+
+    exit_code = main(
+        [
+            "run",
+            "--branch",
+            "dialog",
+            "--stage",
+            "7d",
+            "--dry-run",
+            "--config",
+            str(result.config_path),
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "RASCAL dry run: no DIAAD commands executed." in output
+    assert "diaad powers analyze --config config/diaad.generated" in output
 
 
 def test_main_for_diaad_prints_passthrough_placeholder(capsys):
@@ -132,5 +190,5 @@ def test_main_for_diaad_prints_passthrough_placeholder(capsys):
 
     output = capsys.readouterr().out
     assert exit_code == 0
-    assert "DIAAD passthrough planned: transcripts tabularize" in output
+    assert "DIAAD passthrough planned: diaad transcripts tabularize" in output
     assert "later pass" in output
