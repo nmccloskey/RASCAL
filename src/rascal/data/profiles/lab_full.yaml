@@ -1,0 +1,52 @@
+profile: lab_full
+extends: lab_common
+branches:
+  - monolog
+  - dialog
+monolog:
+  metadata_fields:
+    site:
+      - AC
+      - BU
+      - TU
+    test:
+      - Pre
+      - Post
+      - Maint
+    study_id: "(AC|BU|TU)\\d+"
+    narrative:
+      - CATGrandpa
+      - BrokenWindow
+      - RefusedUmbrella
+      - CatRescue
+      - BirthdayScene
+  stimuli:
+    - CATGrandpa
+    - BrokenWindow
+    - RefusedUmbrella
+    - CatRescue
+    - BirthdayScene
+  corelex_stimuli:
+    - BrokenWindow
+    - RefusedUmbrella
+    - CatRescue
+  cu_dialects:
+    - SAE
+    - AAE
+dialog:
+  metadata_fields:
+    site:
+      - AC
+      - BU
+      - TU
+    test:
+      - Pre
+      - Post
+      - Maint
+    study_id: "(AC|BU|TU)\\d+"
+    communication:
+      - Dialog
+  powers_automation: true
+  powers_requires_human_review: true
+  spacy_model: en_core_web_trf
+

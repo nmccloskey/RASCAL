@@ -1,0 +1,2 @@
+"""Packaged RASCAL stage registries."""
+

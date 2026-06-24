@@ -1,0 +1,20 @@
+profile: lab_dialog
+extends: lab_common
+branch: dialog
+metadata_fields:
+  site:
+    - AC
+    - BU
+    - TU
+  test:
+    - Pre
+    - Post
+    - Maint
+  study_id: "(AC|BU|TU)\\d+"
+  communication:
+    - Dialog
+dialog:
+  powers_automation: true
+  powers_requires_human_review: true
+  spacy_model: en_core_web_trf
+

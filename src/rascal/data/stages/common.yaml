@@ -1,0 +1,31 @@
+branch: common
+stages:
+  "0":
+    name: semi_automated_transcription
+    type: external_manual
+    description: >
+      Prepare trimmed media, run Batchalign or equivalent ASR, complete two
+      independent manual edit rounds, and ensure CHAT filenames parse cleanly.
+    rascal_helpers:
+      - split_audio_chunks
+      - combine_chat_parts
+  "1":
+    name: transcription_reliability_selection
+    type: automated
+    diaad:
+      - transcripts select
+    defaults:
+      reliability_fraction: 0.20
+  "2":
+    name: transcription_reliability_transcription
+    type: manual
+    description: >
+      Prepare reliability transcripts from scratch for selected samples.
+  "3":
+    name: transcription_reliability_evaluation
+    type: automated
+    diaad:
+      - transcripts evaluate
+    related_actions:
+      - transcripts reselect
+

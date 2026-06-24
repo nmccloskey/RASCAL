@@ -1,0 +1,72 @@
+branch: monolog
+stages:
+  4m:
+    name: monolog_transcript_tabulation
+    type: automated
+    diaad:
+      - transcripts tabularize
+    metadata_fields:
+      site:
+        - AC
+        - BU
+        - TU
+      test:
+        - Pre
+        - Post
+        - Maint
+      study_id: "(AC|BU|TU)\\d+"
+      narrative:
+        - CATGrandpa
+        - BrokenWindow
+        - RefusedUmbrella
+        - CatRescue
+        - BirthdayScene
+  5m_prepare:
+    name: cu_file_generation
+    type: automated
+    diaad:
+      - cus files
+  5m:
+    name: cu_coding
+    type: manual
+    description: >
+      Complete CU coding and CU reliability coding, using SAE and AAE columns
+      when configured.
+  6m:
+    name: cu_reliability_evaluation
+    type: automated
+    diaad:
+      - cus evaluate
+    related_actions:
+      - cus reselect
+  7m:
+    name: cu_analysis_and_template_generation
+    type: automated
+    diaad:
+      - cus analyze
+      - templates times
+      - words files
+  8m:
+    name: word_counting_and_speaking_time
+    type: manual
+    description: >
+      Record word counts and participant/client speaking times.
+  9m:
+    name: word_count_reliability_evaluation
+    type: automated
+    diaad:
+      - words evaluate
+    related_actions:
+      - words reselect
+    thresholds:
+      word_count_icc_2_1: 0.90
+  10m:
+    name: word_summaries_corelex_and_exports
+    type: automated
+    diaad:
+      - words analyze
+      - words rates
+      - cus rates
+      - vocab analyze
+      - vocab rates
+

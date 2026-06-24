@@ -1,0 +1,44 @@
+branch: dialog
+stages:
+  4d:
+    name: dialog_transcript_tabulation
+    type: automated
+    diaad:
+      - transcripts tabularize
+    metadata_fields:
+      site:
+        - AC
+        - BU
+        - TU
+      test:
+        - Pre
+        - Post
+        - Maint
+      study_id: "(AC|BU|TU)\\d+"
+      communication:
+        - Dialog
+  5d_prepare:
+    name: powers_file_generation
+    type: automated
+    diaad:
+      - powers files
+    description: >
+      Generate POWERS coding files with optional automated first-pass values.
+  5d:
+    name: powers_file_review_and_coding
+    type: manual
+    description: >
+      Review automated first-pass POWERS values and complete human coding.
+  6d:
+    name: powers_reliability_evaluation
+    type: automated
+    diaad:
+      - powers evaluate
+    related_actions:
+      - powers reselect
+  7d:
+    name: powers_analysis
+    type: automated
+    diaad:
+      - powers analyze
+

@@ -1,0 +1,27 @@
+profile: lab_common
+diaad_executable: diaad
+random_seed: 99
+reliability_fraction: 0.20
+blind_columns:
+  - site
+  - test
+excluded_speakers:
+  - INV
+thresholds:
+  report_only: true
+  quality_bands:
+    minimal: 0.7
+    sufficient: 0.8
+    excellent: 0.9
+  transcription_similarity:
+    metric: levenshtein_similarity
+    bands: quality_bands
+    report_only: true
+  icc:
+    bands: quality_bands
+    report_only: true
+  word_count_icc_2_1:
+    target_band: excellent
+    target_value: 0.9
+    report_only: true
+

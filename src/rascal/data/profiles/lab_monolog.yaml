@@ -1,0 +1,34 @@
+profile: lab_monolog
+extends: lab_common
+branch: monolog
+metadata_fields:
+  site:
+    - AC
+    - BU
+    - TU
+  test:
+    - Pre
+    - Post
+    - Maint
+  study_id: "(AC|BU|TU)\\d+"
+  narrative:
+    - CATGrandpa
+    - BrokenWindow
+    - RefusedUmbrella
+    - CatRescue
+    - BirthdayScene
+monolog:
+  stimuli:
+    - CATGrandpa
+    - BrokenWindow
+    - RefusedUmbrella
+    - CatRescue
+    - BirthdayScene
+  corelex_stimuli:
+    - BrokenWindow
+    - RefusedUmbrella
+    - CatRescue
+  cu_dialects:
+    - SAE
+    - AAE
+
