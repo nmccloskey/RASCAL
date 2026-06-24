@@ -163,6 +163,33 @@ def test_main_for_plan_format_json_returns_parseable_payload(capsys, tmp_path):
     assert payload["diaad_command_names"] == ["cus analyze", "templates times", "words files"]
 
 
+def test_main_for_plan_write_config_creates_generated_config(capsys, tmp_path):
+    result = init_project(tmp_path, profile="lab_full")
+
+    exit_code = main(
+        [
+            "plan",
+            "--branch",
+            "dialog",
+            "--stage",
+            "4d",
+            "--format",
+            "json",
+            "--write-config",
+            "--config",
+            str(result.config_path),
+        ]
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    generated_dir = result.project_root / "config" / "diaad.generated"
+    assert exit_code == 0
+    assert payload["generated_config_path"] == "config/diaad.generated"
+    assert (generated_dir / "project.yaml").is_file()
+    assert (generated_dir / "advanced.yaml").is_file()
+    assert (generated_dir / "metadata.yaml").is_file()
+
+
 def test_main_for_run_dry_run_prints_stage_plan(capsys, tmp_path):
     result = init_project(tmp_path, profile="lab_full")
 

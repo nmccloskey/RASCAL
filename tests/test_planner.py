@@ -102,3 +102,12 @@ def test_plan_json_is_parseable_and_contains_commands(tmp_path):
         ["diaad", "transcripts", "tabularize", "--config", "config/diaad.generated"]
     ]
 
+
+def test_planned_commands_reference_generated_config_path(tmp_path):
+    config = _config(tmp_path)
+    plan = create_stage_plan(config, "monolog", "4m")
+
+    assert plan.generated_config_path == config.resolve_path("diaad_config_dir")
+    assert plan.diaad_commands == (
+        ("diaad", "transcripts", "tabularize", "--config", "config/diaad.generated"),
+    )

@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 from rascal import __version__
 from rascal.config import ConfigError, init_project, load_project_config
+from rascal.diaad_config import DiaadConfigError, write_diaad_config
 from rascal.diaad_invocation import DiaadInvocationError, build_passthrough_command, format_command
 from rascal.planner import PlanError, create_stage_plan, render_plan_json, render_plan_text
 from rascal.profiles import list_profiles
@@ -273,6 +274,8 @@ def dispatch(args: argparse.Namespace) -> int:
     if command.command == "plan":
         config = load_project_config(args.config)
         plan = create_stage_plan(config, command.branch or "", command.stage or "")
+        if args.write_config:
+            write_diaad_config(config, plan)
         print(render_plan_json(plan) if args.format == "json" else render_plan_text(plan))
         return 0
 
@@ -307,6 +310,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
     except DiaadInvocationError as exc:
         print(f"RASCAL DIAAD command error: {exc}", file=sys.stderr)
+        return 2
+    except DiaadConfigError as exc:
+        print(f"RASCAL DIAAD config error: {exc}", file=sys.stderr)
         return 2
 
 
